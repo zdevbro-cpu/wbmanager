@@ -1,0 +1,301 @@
+// wbmanager DB 스키마 초안
+// 근거: data/프로젝트정산_ERD.drawio, data/원방_업무흐름도_상세.drawio, data/원방_데이터흐름도_DFD.drawio
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── 기준정보 ──────────────────────────────
+
+model ItemMaster {
+  id         String   @id @default(uuid())
+  itemCode   String   @unique @map("item_code")
+  category   String   @map("category")       // 대분류: FE, AL, STS, CU, 부품, 중고설비 등
+  subCategory String? @map("sub_category")
+  itemName   String   @map("item_name")
+  basePrice  Decimal? @map("base_price") @db.Decimal(14, 2)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  sortings        Sorting[]
+  inventoryLedger InventoryLedger[]
+  outboundSales   OutboundSale[]
+
+  @@map("item_master")
+}
+
+model Project {
+  id         String    @id @default(uuid())
+  roundName  String    @map("round_name")      // 예: 26-1차
+  buyer      String?   @map("buyer")            // 매입처
+  purchasePrice Decimal? @map("purchase_price") @db.Decimal(14, 2)
+  startDate  DateTime? @map("start_date")
+  endDate    DateTime? @map("end_date")
+  status     String    @default("진행") @map("status") // 진행/완료
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  inbounds          Inbound[]
+  sortings          Sorting[]
+  inventoryLedger   InventoryLedger[]
+  outboundSales     OutboundSale[]
+  wasteOutbounds    WasteOutbound[]
+  transports        Transport[]
+  labors            Labor[]
+  workerAttendances WorkerAttendance[]
+
+  @@map("project")
+}
+
+model Worker {
+  id         String   @id @default(uuid())
+  affiliation String? @map("affiliation") // 소속: 본사/직영/겨를
+  name       String   @map("name")
+  dailyWage  Decimal? @map("daily_wage") @db.Decimal(12, 2)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  attendances WorkerAttendance[]
+
+  @@map("worker")
+}
+
+// ── 물량 트랜잭션 ──────────────────────────
+
+model Inbound {
+  id            String   @id @default(uuid())
+  projectId     String   @map("project_id")
+  project       Project  @relation(fields: [projectId], references: [id])
+  inboundDate   DateTime @map("inbound_date")
+  loadingPoint  String?  @map("loading_point")
+  unloadingPoint String? @map("unloading_point")
+  vehicleNo     String?  @map("vehicle_no")
+  driverName    String?  @map("driver_name")
+  vehicleType   String?  @map("vehicle_type")
+  grossWeight   Decimal  @map("gross_weight") @db.Decimal(12, 3)
+  tareWeight    Decimal  @map("tare_weight") @db.Decimal(12, 3)
+  netWeight     Decimal  @map("net_weight") @db.Decimal(12, 3) // gross - tare
+  storageZone   String?  @map("storage_zone")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  attachments Attachment[]
+
+  @@map("inbound")
+}
+
+model Sorting {
+  id         String   @id @default(uuid())
+  projectId  String   @map("project_id")
+  project    Project  @relation(fields: [projectId], references: [id])
+  itemCode   String   @map("item_code")
+  item       ItemMaster @relation(fields: [itemCode], references: [itemCode])
+  sortDate   DateTime @map("sort_date")
+  sortWeight Decimal  @map("sort_weight") @db.Decimal(12, 3)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("sorting")
+}
+
+model InventoryLedger {
+  id         String   @id @default(uuid())
+  projectId  String   @map("project_id")
+  project    Project  @relation(fields: [projectId], references: [id])
+  itemCode   String   @map("item_code")
+  item       ItemMaster @relation(fields: [itemCode], references: [itemCode])
+  direction  String   @map("direction")   // IN(+) / OUT(-)
+  weight     Decimal  @map("weight") @db.Decimal(12, 3)
+  ledgerDate DateTime @map("ledger_date")
+  refType    String?  @map("ref_type")    // inbound / outbound_sale / waste_outbound 등
+  refId      String?  @map("ref_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("inventory_ledger")
+}
+
+model OutboundSale {
+  id             String   @id @default(uuid())
+  projectId      String   @map("project_id")
+  project        Project  @relation(fields: [projectId], references: [id])
+  itemCode       String   @map("item_code")
+  item           ItemMaster @relation(fields: [itemCode], references: [itemCode])
+  outboundDate   DateTime @map("outbound_date")
+  buyer          String?  @map("buyer")            // 거래처
+  unitPrice      Decimal? @map("unit_price") @db.Decimal(12, 2)
+  settledWeight  Decimal  @map("settled_weight") @db.Decimal(12, 3)
+  amount         Decimal? @map("amount") @db.Decimal(14, 2)
+  taxInvoiceIssued Boolean @default(false) @map("tax_invoice_issued")
+  isPaid         Boolean  @default(false) @map("is_paid")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  attachments Attachment[]
+
+  @@map("outbound_sale")
+}
+
+model WasteOutbound {
+  id           String   @id @default(uuid())
+  projectId    String   @map("project_id")
+  project      Project  @relation(fields: [projectId], references: [id])
+  outboundDate DateTime @map("outbound_date")
+  buyer        String?  @map("buyer")
+  itemName     String?  @map("item_name")
+  weight       Decimal  @map("weight") @db.Decimal(12, 3)
+  amount       Decimal? @map("amount") @db.Decimal(14, 2) // 지출
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  attachments Attachment[]
+
+  @@map("waste_outbound")
+}
+
+// ── 비용 트랜잭션 ──────────────────────────
+
+model Transport {
+  id            String   @id @default(uuid())
+  projectId     String   @map("project_id")
+  project       Project  @relation(fields: [projectId], references: [id])
+  transportDate DateTime @map("transport_date")
+  vehicleNo     String?  @map("vehicle_no")
+  weight        Decimal? @map("weight") @db.Decimal(12, 3)
+  vehicleType   String?  @map("vehicle_type")
+  origin        String?  @map("origin")
+  destination   String?  @map("destination")
+  supplyAmount  Decimal? @map("supply_amount") @db.Decimal(14, 2)
+  taxAmount     Decimal? @map("tax_amount") @db.Decimal(14, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("transport")
+}
+
+model Labor {
+  id           String   @id @default(uuid())
+  projectId    String   @map("project_id")
+  project      Project  @relation(fields: [projectId], references: [id])
+  workDate     DateTime @map("work_date")
+  totalManDays Decimal? @map("total_man_days") @db.Decimal(8, 3)
+  laborCost    Decimal? @map("labor_cost") @db.Decimal(14, 2)
+  mealCost     Decimal? @map("meal_cost") @db.Decimal(14, 2)
+  toolCost     Decimal? @map("tool_cost") @db.Decimal(14, 2)
+  fuelCost     Decimal? @map("fuel_cost") @db.Decimal(14, 2)
+  suppliesCost Decimal? @map("supplies_cost") @db.Decimal(14, 2)
+  totalAmount  Decimal? @map("total_amount") @db.Decimal(14, 2)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("labor")
+}
+
+model WorkerAttendance {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  project   Project  @relation(fields: [projectId], references: [id])
+  workerId  String   @map("worker_id")
+  worker    Worker   @relation(fields: [workerId], references: [id])
+  workDate  DateTime @map("work_date")
+  manDays   Decimal  @map("man_days") @db.Decimal(4, 3) // 0.125 단위
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("worker_attendance")
+}
+
+// ── 총무 (차량/중장비/어테치, 임직원/자격증) ──
+
+model Vehicle {
+  id            String   @id @default(uuid())
+  vehicleNo     String   @unique @map("vehicle_no")
+  vehicleType   String?  @map("vehicle_type") // 법인차량/중장비/어테치
+  inspectionExpiry DateTime? @map("inspection_expiry")
+  currentSite   String?  @map("current_site")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  movements   VehicleMovement[]
+  maintenances VehicleMaintenance[]
+
+  @@map("vehicle")
+}
+
+model VehicleMovement {
+  id          String   @id @default(uuid())
+  vehicleId   String   @map("vehicle_id")
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+  moveDate    DateTime @map("move_date")
+  fromSite    String?  @map("from_site")
+  toSite      String?  @map("to_site")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("vehicle_movement")
+}
+
+model VehicleMaintenance {
+  id            String   @id @default(uuid())
+  vehicleId     String   @map("vehicle_id")
+  vehicle       Vehicle  @relation(fields: [vehicleId], references: [id])
+  maintenanceDate DateTime @map("maintenance_date")
+  description   String?  @map("description")
+  cost          Decimal? @map("cost") @db.Decimal(12, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  attachments Attachment[]
+
+  @@map("vehicle_maintenance")
+}
+
+model Employee {
+  id        String   @id @default(uuid())
+  name      String   @map("name")
+  position  String?  @map("position")
+  department String? @map("department")
+  hireDate  DateTime? @map("hire_date")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  certifications EmployeeCertification[]
+  trainings      EmployeeTraining[]
+
+  @@map("employee")
+}
+
+model EmployeeCertification {
+  id           String    @id @default(uuid())
+  employeeId   String    @map("employee_id")
+  employee     Employee  @relation(fields: [employeeId], references: [id])
+  certName     String    @map("cert_name")
+  acquiredDate DateTime? @map("acquired_date")
+  expiryDate   DateTime? @map("expiry_date")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("employee_certification")
+}
+
+model EmployeeTraining {
+  id           String    @id @default(uuid())
+  employeeId   String    @map("employee_id")
+  employee     Employee  @relation(fields: [employeeId], references: [id])
+  trainingName String    @map("training_name")
+  trainingDate DateTime? @map("training_date")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("employee_training")
+}
+
+// ── 파일/증빙 (Google Drive 참조) ────────────
+
+model Attachment {
+  id          String   @id @default(uuid())
+  driveFileId String   @map("drive_file_id")
+  fileName    String?  @map("file_name")
+  fileType    String?  @map("file_type") // 계량증명서/현장사진/정비명세서 등
+  webViewLink String?  @map("web_view_link")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at")
+
+  inboundId           String? @map("inbound_id")
+  inbound             Inbound? @relation(fields: [inboundId], references: [id])
+  outboundSaleId       String? @map("outbound_sale_id")
+  outboundSale         OutboundSale? @relation(fields: [outboundSaleId], references: [id])
+  wasteOutboundId      String? @map("waste_outbound_id")
+  wasteOutbound        WasteOutbound? @relation(fields: [wasteOutboundId], references: [id])
+  vehicleMaintenanceId String? @map("vehicle_maintenance_id")
+  vehicleMaintenance   VehicleMaintenance? @relation(fields: [vehicleMaintenanceId], references: [id])
+
+  @@map("attachment")
+}

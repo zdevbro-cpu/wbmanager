@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "crosswb-a7083"
+  },
+  "targets": {
+    "crosswb-a7083": {
+      "hosting": {
+        "wbmanager": [
+          "wbmanager"
+        ]
+      }
+    }
+  }
+}

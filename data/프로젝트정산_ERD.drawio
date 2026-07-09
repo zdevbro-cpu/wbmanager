@@ -1,0 +1,78 @@
+<mxfile host="app.diagrams.net" version="24.0.0">
+  <diagram name="프로젝트 정산 ERD" id="settle-erd-1">
+    <mxGraphModel dx="1200" dy="850" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="950" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="프로젝트(차수) 정산 시스템 ｜ 데이터 모델(ERD)" style="text;html=1;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;fontColor=#1f2d3d;" vertex="1" parent="1">
+          <mxGeometry x="40" y="14" width="700" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lgm" value="마스터" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="1"><mxGeometry x="760" y="16" width="70" height="22" as="geometry"/></mxCell>
+        <mxCell id="lgo" value="물량 트랜잭션" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1"><mxGeometry x="836" y="16" width="100" height="22" as="geometry"/></mxCell>
+        <mxCell id="lgc" value="비용 트랜잭션" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1"><mxGeometry x="942" y="16" width="100" height="22" as="geometry"/></mxCell>
+
+        <!-- ===== 마스터 ===== -->
+        <mxCell id="item_master" value="&lt;b&gt;item_master ｜ 품목 마스터&lt;/b&gt;&lt;hr size=1&gt;🔑 item_code&lt;br&gt;대분류 (FE·AL·STS·CU·부품·중고설비)&lt;br&gt;중분류&lt;br&gt;품목명&lt;br&gt;기준단가" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="250" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="project" value="&lt;b&gt;project ｜ 프로젝트(차수)&lt;/b&gt;&lt;hr size=1&gt;🔑 project_id&lt;br&gt;차수명 (26-1차)&lt;br&gt;매입처 (이텍솔루션)&lt;br&gt;매입가&lt;br&gt;시작일 / 종료일&lt;br&gt;상태 (진행/완료)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="520" y="70" width="250" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="worker" value="&lt;b&gt;worker ｜ 작업자&lt;/b&gt;&lt;hr size=1&gt;🔑 worker_id&lt;br&gt;소속 (본사·직영·겨를)&lt;br&gt;이름&lt;br&gt;일당(노임)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="70" width="240" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- ===== 물량 트랜잭션 ===== -->
+        <mxCell id="inbound" value="&lt;b&gt;inbound ｜ 반입&lt;/b&gt;&lt;hr size=1&gt;🔑 inbound_id&lt;br&gt;(FK) project_id&lt;br&gt;반입일&lt;br&gt;상차지 / 하차지&lt;br&gt;차량번호 / 운전자 / 차량타입&lt;br&gt;만차중량 / 공차중량&lt;br&gt;순중량 (=만차−공차)&lt;br&gt;적치 구역코드" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="250" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="sorting" value="&lt;b&gt;sorting ｜ 선별/분류&lt;/b&gt;&lt;hr size=1&gt;🔑 sort_id&lt;br&gt;(FK) project_id&lt;br&gt;(FK) item_code&lt;br&gt;분류일&lt;br&gt;분류중량" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="330" y="300" width="230" height="125" as="geometry" />
+        </mxCell>
+        <mxCell id="inventory_ledger" value="&lt;b&gt;inventory_ledger ｜ 재고원장(이동)&lt;/b&gt;&lt;hr size=1&gt;🔑 ledger_id&lt;br&gt;(FK) project_id&lt;br&gt;(FK) item_code&lt;br&gt;구분 (입고+/출고−)&lt;br&gt;중량&lt;br&gt;일자&lt;br&gt;참조 (ref_type / ref_id)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="600" y="290" width="250" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="outbound_sale" value="&lt;b&gt;outbound_sale ｜ 반출/매각&lt;/b&gt;&lt;hr size=1&gt;🔑 sale_id&lt;br&gt;(FK) project_id&lt;br&gt;(FK) item_code&lt;br&gt;반출일 / 거래처&lt;br&gt;단가 / 정산중량&lt;br&gt;결제금액&lt;br&gt;세금계산서여부 / 입금여부" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="890" y="290" width="250" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="waste_outbound" value="&lt;b&gt;waste_outbound ｜ 폐기물 반출&lt;/b&gt;&lt;hr size=1&gt;🔑 waste_id&lt;br&gt;(FK) project_id&lt;br&gt;반출일 / 거래처&lt;br&gt;품목 / 중량&lt;br&gt;결제금액 (지출)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="560" width="250" height="125" as="geometry" />
+        </mxCell>
+
+        <!-- ===== 비용 트랜잭션 ===== -->
+        <mxCell id="transport" value="&lt;b&gt;transport ｜ 운송비&lt;/b&gt;&lt;hr size=1&gt;🔑 transport_id&lt;br&gt;(FK) project_id&lt;br&gt;운송일&lt;br&gt;차량번호 / 중량·타입&lt;br&gt;발지 / 착지&lt;br&gt;공급가액 / 세액" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="330" y="555" width="230" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="labor" value="&lt;b&gt;labor ｜ 인건비(일 집계)&lt;/b&gt;&lt;hr size=1&gt;🔑 labor_id&lt;br&gt;(FK) project_id&lt;br&gt;작업일&lt;br&gt;공수합계&lt;br&gt;인건비/식대/공도구/유류대/소모품&lt;br&gt;합계금액" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="600" y="560" width="260" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="worker_attendance" value="&lt;b&gt;worker_attendance ｜ 공수 출역&lt;/b&gt;&lt;hr size=1&gt;🔑 att_id&lt;br&gt;(FK) project_id&lt;br&gt;(FK) worker_id&lt;br&gt;작업일&lt;br&gt;공수 (0.125 단위)" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=6;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="900" y="560" width="250" height="125" as="geometry" />
+        </mxCell>
+
+        <!-- ===== 관계 (project 허브) ===== -->
+        <mxCell id="r1" value="1:N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;fontSize=10;" edge="1" parent="1" source="project" target="inbound"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r2" value="1:N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;fontSize=10;" edge="1" parent="1" source="project" target="sorting"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r3" value="1:N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;fontSize=10;" edge="1" parent="1" source="project" target="inventory_ledger"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r4" value="1:N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;fontSize=10;" edge="1" parent="1" source="project" target="outbound_sale"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r5" value="1:N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;fontSize=10;" edge="1" parent="1" source="project" target="waste_outbound"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r6" value="1:N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;fontSize=10;" edge="1" parent="1" source="project" target="labor"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r7" value="1:N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;fontSize=10;" edge="1" parent="1" source="project" target="transport"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r8" value="1:N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;fontSize=10;" edge="1" parent="1" source="project" target="worker_attendance"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- item_master 관계 -->
+        <mxCell id="r9" value="1:N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;fontSize=10;dashed=1;" edge="1" parent="1" source="item_master" target="sorting"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r10" value="1:N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;fontSize=10;dashed=1;" edge="1" parent="1" source="item_master" target="inventory_ledger"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="r11" value="1:N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;fontSize=10;dashed=1;" edge="1" parent="1" source="item_master" target="outbound_sale"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- worker 관계 -->
+        <mxCell id="r12" value="1:N" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;fontSize=10;" edge="1" parent="1" source="worker" target="worker_attendance"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- 집계 파생 -->
+        <mxCell id="r13" value="일자별 집계" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;startArrow=none;endArrow=open;dashed=1;fontSize=10;fontColor=#7f7f00;" edge="1" parent="1" source="worker_attendance" target="labor"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
