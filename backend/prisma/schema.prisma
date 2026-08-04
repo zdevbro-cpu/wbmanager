@@ -10,6 +10,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ── 사용자 인증/승인 ──────────────────────
+
+// Firebase Authentication 계정과 매핑되는 내부 사용자. 가입 후 관리자 승인 전까지는 pending 상태.
+model AppUser {
+  id          String   @id @default(uuid())
+  firebaseUid String   @unique @map("firebase_uid")
+  email       String   @unique
+  name        String?
+  role        String   @default("worker") @map("role") // worker(업무 담당자) | admin(관리자)
+  status      String   @default("pending") @map("status") // pending | approved | rejected
+  createdAt   DateTime @default(now()) @map("created_at")
+  approvedAt  DateTime? @map("approved_at")
+
+  @@map("app_user")
+}
+
 // ── 기준정보 ──────────────────────────────
 
 // 거래처 마스터(매입처/매각처/자회사/폐기물업체 등) — 드롭다운 선택 입력의 기준

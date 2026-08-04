@@ -11,8 +11,11 @@ import {
   ShieldAlert,
   BellRing,
   Settings,
+  ShieldCheck,
+  LogOut,
   type LucideIcon,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface NavItem {
   to: string;
@@ -59,11 +62,15 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
+const ADMIN_ITEM: NavItem = { to: '/users', label: '사용자 승인 관리', icon: ShieldCheck };
 
 export function Layout() {
   const location = useLocation();
-  const current = ALL_ITEMS.find((i) => i.to === location.pathname);
+  const { appUser, logout } = useAuth();
+  const isAdmin = appUser?.role === 'admin';
+  const navGroups = isAdmin ? [...NAV_GROUPS, { label: '시스템', items: [ADMIN_ITEM] }] : NAV_GROUPS;
+  const allItems = navGroups.flatMap((g) => g.items);
+  const current = allItems.find((i) => i.to === location.pathname);
 
   return (
     <div className="flex min-h-screen bg-bg">
@@ -79,7 +86,7 @@ export function Layout() {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 pb-4">
-          {NAV_GROUPS.map((group) => (
+          {navGroups.map((group) => (
             <div key={group.label} className="mb-4">
               <div className="mb-1.5 px-2 text-[10.5px] font-bold uppercase tracking-[1px] text-[#3f5983]">
                 {group.label}
@@ -112,8 +119,21 @@ export function Layout() {
             wbmanager <span className="mx-1 text-text-faint">/</span>{' '}
             <span className="text-text-strong">{current?.label ?? ''}</span>
           </div>
-          <div className="text-[12.5px] text-text-faint">
-            {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+          <div className="flex items-center gap-4">
+            <div className="text-[12.5px] text-text-faint">
+              {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+            <div className="h-4 w-px bg-border-top" />
+            <div className="text-[12.5px] text-text-sub">
+              {appUser?.name ?? appUser?.email} {isAdmin && <span className="text-primary">(관리자)</span>}
+            </div>
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="flex items-center gap-1 text-[12.5px] font-semibold text-text-sub hover:text-text-strong"
+            >
+              <LogOut size={14} /> 로그아웃
+            </button>
           </div>
         </header>
 

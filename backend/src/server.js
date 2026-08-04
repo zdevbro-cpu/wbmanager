@@ -18,6 +18,8 @@ import pnlRoutes from './routes/pnl.routes.js';
 import vehicleRoutes from './routes/vehicle.routes.js';
 import employeeRoutes from './routes/employee.routes.js';
 import alertRoutes from './routes/alert.routes.js';
+import authRoutes from './routes/auth.routes.js';
+import { requireAuth } from './middleware/auth.js';
 
 const app = express();
 app.use(cors());
@@ -26,6 +28,9 @@ app.use(express.json());
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+app.use('/api/auth', authRoutes);
+app.use('/api', requireAuth);
 
 app.use('/api/projects', projectRoutes);
 app.use('/api/inbounds', inboundRoutes);
