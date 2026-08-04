@@ -1,241 +1,241 @@
 <mxfile host="Electron">
   <diagram name="데이터 흐름도(DFD)" id="wonbang-dfd-1">
-    <mxGraphModel dx="2934" dy="1716" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" background="#FFFFFF" math="0" shadow="0">
+    <mxGraphModel dx="2054" dy="1201" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" background="light-dark(#000000,#121212)" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="title" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontColor=#1f2d3d;fontStyle=1;" value="원방 스크랩 관리 시스템 — 데이터 흐름도 (DFD)" vertex="1">
+        <mxCell id="title" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontColor=#1f2d3d;fontStyle=1;labelBackgroundColor=none;" value="원방 스크랩 관리 시스템 — 데이터 흐름도 (DFD)" vertex="1">
           <mxGeometry height="30" width="900" x="40" y="20" as="geometry" />
         </mxCell>
-        <mxCell id="sub" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#555;" value="원천(계근·ecount·올바로) → Excel 원장 → ETL(Python/pandas) → 스테이징 → PostgreSQL → 산출물" vertex="1">
+        <mxCell id="sub" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#555;labelBackgroundColor=none;" value="원천(계근·ecount·올바로) → Excel 원장 → ETL(Python/pandas) → 스테이징 → PostgreSQL → 산출물" vertex="1">
           <mxGeometry height="20" width="1000" x="40" y="52" as="geometry" />
         </mxCell>
-        <mxCell id="bd1" parent="1" style="rounded=1;arcSize=2;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=none;fontSize=13;fontStyle=1;verticalAlign=top;align=center;opacity=60;" value="① 데이터 원천&#xa;(External)" vertex="1">
+        <mxCell id="bd1" parent="1" style="rounded=1;arcSize=2;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=none;fontSize=13;fontStyle=1;verticalAlign=top;align=center;opacity=60;labelBackgroundColor=none;" value="① 데이터 원천&#xa;(External)" vertex="1">
           <mxGeometry height="590" width="310" x="44" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="bd2" parent="1" style="rounded=1;arcSize=2;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=none;fontSize=13;fontStyle=1;verticalAlign=top;align=center;opacity=60;" value="② Excel 원장&#xa;(Raw / 갑지·상세시트)" vertex="1">
+        <mxCell id="bd2" parent="1" style="rounded=1;arcSize=2;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=none;fontSize=13;fontStyle=1;verticalAlign=top;align=center;opacity=60;labelBackgroundColor=none;" value="② Excel 원장&#xa;(Raw / 갑지·상세시트)" vertex="1">
           <mxGeometry height="590" width="310" x="384" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="bd3" parent="1" style="rounded=1;arcSize=2;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=none;fontSize=13;fontStyle=1;verticalAlign=top;align=center;opacity=60;" value="③ ETL 처리&#xa;(Python + pandas)" vertex="1">
+        <mxCell id="bd3" parent="1" style="rounded=1;arcSize=2;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=none;fontSize=13;fontStyle=1;verticalAlign=top;align=center;opacity=60;labelBackgroundColor=none;" value="③ ETL 처리&#xa;(Python + pandas)" vertex="1">
           <mxGeometry height="590" width="320" x="740" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="bd4" parent="1" style="rounded=1;arcSize=2;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=none;fontSize=13;fontStyle=1;verticalAlign=top;align=center;opacity=60;" value="④ 적재 (Staging→PostgreSQL)" vertex="1">
+        <mxCell id="bd4" parent="1" style="rounded=1;arcSize=2;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=none;fontSize=13;fontStyle=1;verticalAlign=top;align=center;opacity=60;labelBackgroundColor=none;" value="④ 적재 (Staging→PostgreSQL)" vertex="1">
           <mxGeometry height="590" width="320" x="1110" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="bd5" parent="1" style="rounded=1;arcSize=2;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=none;fontSize=13;fontStyle=1;verticalAlign=top;align=center;opacity=60;" value="⑤ 산출물&#xa;(Output)" vertex="1">
+        <mxCell id="bd5" parent="1" style="rounded=1;arcSize=2;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=none;fontSize=13;fontStyle=1;verticalAlign=top;align=center;opacity=60;labelBackgroundColor=none;" value="⑤ 산출물&#xa;(Output)" vertex="1">
           <mxGeometry height="590" width="310" x="1484" y="90" as="geometry" />
         </mxCell>
-        <mxCell id="e_geun" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;" value="현장·거래처 계근&#xa;계량증명서&#xa;(차량번호·총중량·공차·실중량)" vertex="1">
+        <mxCell id="e_geun" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;labelBackgroundColor=none;" value="현장·거래처 계근&#xa;계량증명서&#xa;(차량번호·총중량·공차·실중량)" vertex="1">
           <mxGeometry height="66" width="280" x="60" y="140" as="geometry" />
         </mxCell>
-        <mxCell id="e_ecount" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;" value="ecount&#xa;(구매입력·판매입력)&#xa;출고현황 Excel 다운로드" vertex="1">
+        <mxCell id="e_ecount" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;labelBackgroundColor=none;" value="ecount&#xa;(구매입력·판매입력)&#xa;출고현황 Excel 다운로드" vertex="1">
           <mxGeometry height="66" width="280" x="60" y="240" as="geometry" />
         </mxCell>
-        <mxCell id="e_allbaro" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;" value="올바로 시스템&#xa;폐기물 신고&#xa;(기준업체량)" vertex="1">
+        <mxCell id="e_allbaro" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;labelBackgroundColor=none;" value="올바로 시스템&#xa;폐기물 신고&#xa;(기준업체량)" vertex="1">
           <mxGeometry height="60" width="280" x="60" y="340" as="geometry" />
         </mxCell>
-        <mxCell id="e_gongsu" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;" value="현장 공수표&#xa;(작업자×일자 matrix)" vertex="1">
+        <mxCell id="e_gongsu" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;labelBackgroundColor=none;" value="현장 공수표&#xa;(작업자×일자 matrix)" vertex="1">
           <mxGeometry height="54" width="280" x="60" y="430" as="geometry" />
         </mxCell>
-        <mxCell id="e_cost" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;" value="운송·매입·설비반출&#xa;비용 자료" vertex="1">
+        <mxCell id="e_cost" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;labelBackgroundColor=none;" value="운송·매입·설비반출&#xa;비용 자료" vertex="1">
           <mxGeometry height="54" width="280" x="60" y="510" as="geometry" />
         </mxCell>
-        <mxCell id="e_nts" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;" value="국세청 / 세무사랑&#xa;(세금계산서·회계)" vertex="1">
+        <mxCell id="e_nts" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=11;labelBackgroundColor=none;" value="국세청 / 세무사랑&#xa;(세금계산서·회계)" vertex="1">
           <mxGeometry height="56" width="280" x="60" y="590" as="geometry" />
         </mxCell>
-        <mxCell id="r_in" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="원방_현장 스크랩 입고현황&#xa;[스크랩입고량] 시트&#xa;총중량·공차·감량·입고량" vertex="1">
+        <mxCell id="r_in" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="원방_현장 스크랩 입고현황&#xa;[스크랩입고량] 시트&#xa;총중량·공차·감량·입고량" vertex="1">
           <mxGeometry height="64" width="280" x="400" y="140" as="geometry" />
         </mxCell>
-        <mxCell id="r_out" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="원방_거래처별 스크랩 출고현황&#xa;[스크랩출고량] 시트&#xa;공차·총·실·정산중량·감량" vertex="1">
+        <mxCell id="r_out" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="원방_거래처별 스크랩 출고현황&#xa;[스크랩출고량] 시트&#xa;공차·총·실·정산중량·감량" vertex="1">
           <mxGeometry height="64" width="280" x="400" y="222" as="geometry" />
         </mxCell>
-        <mxCell id="r_win" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="폐기물 입고현황&#xa;[폐기물 입고] 시트&#xa;올바로·배출자·입고량" vertex="1">
+        <mxCell id="r_win" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="폐기물 입고현황&#xa;[폐기물 입고] 시트&#xa;올바로·배출자·입고량" vertex="1">
           <mxGeometry height="58" width="280" x="400" y="304" as="geometry" />
         </mxCell>
-        <mxCell id="r_wout" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="폐기물 출고현황&#xa;[폐기물출고량] 시트&#xa;처리자·인계일·올바로" vertex="1">
+        <mxCell id="r_wout" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="폐기물 출고현황&#xa;[폐기물출고량] 시트&#xa;처리자·인계일·올바로" vertex="1">
           <mxGeometry height="58" width="280" x="400" y="378" as="geometry" />
         </mxCell>
-        <mxCell id="r_move" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="재고이동 원장&#xa;(원방↔투플/크로스/SR5/현장)&#xa;상차지·하차지·구분" vertex="1">
+        <mxCell id="r_move" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="재고이동 원장&#xa;(원방↔투플/크로스/SR5/현장)&#xa;상차지·하차지·구분" vertex="1">
           <mxGeometry height="60" width="280" x="400" y="452" as="geometry" />
         </mxCell>
-        <mxCell id="r_gap" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="갑지 (피벗 집계)&#xa;월별·현장별·거래처별 소계" vertex="1">
+        <mxCell id="r_gap" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="갑지 (피벗 집계)&#xa;월별·현장별·거래처별 소계" vertex="1">
           <mxGeometry height="54" width="280" x="400" y="528" as="geometry" />
         </mxCell>
-        <mxCell id="r_gs" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="공수체크&#xa;(matrix 형태)" vertex="1">
+        <mxCell id="r_gs" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="공수체크&#xa;(matrix 형태)" vertex="1">
           <mxGeometry height="48" width="280" x="400" y="600" as="geometry" />
         </mxCell>
-        <mxCell id="p_in" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;" value="P1. 입고 정규화&#xa;컬럼매핑·입고량 산출&#xa;(총−공차−감량)" vertex="1">
+        <mxCell id="p_in" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=none;" value="P1. 입고 정규화&#xa;컬럼매핑·입고량 산출&#xa;(총−공차−감량)" vertex="1">
           <mxGeometry height="64" width="280" x="760" y="140" as="geometry" />
         </mxCell>
-        <mxCell id="p_out" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;" value="P2. 출고 정규화&#xa;정산중량·감량 확정&#xa;거래처별 분기" vertex="1">
+        <mxCell id="p_out" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=none;" value="P2. 출고 정규화&#xa;정산중량·감량 확정&#xa;거래처별 분기" vertex="1">
           <mxGeometry height="64" width="280" x="760" y="222" as="geometry" />
         </mxCell>
-        <mxCell id="p_waste" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;" value="P3. 폐기물 처리&#xa;올바로 기준량 적용" vertex="1">
+        <mxCell id="p_waste" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=none;" value="P3. 폐기물 처리&#xa;올바로 기준량 적용" vertex="1">
           <mxGeometry height="54" width="280" x="760" y="306" as="geometry" />
         </mxCell>
-        <mxCell id="p_move" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;" value="P4. 재고이동 반영&#xa;입고(+)/출고(−) 부호" vertex="1">
+        <mxCell id="p_move" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=none;" value="P4. 재고이동 반영&#xa;입고(+)/출고(−) 부호" vertex="1">
           <mxGeometry height="54" width="280" x="760" y="378" as="geometry" />
         </mxCell>
-        <mxCell id="p_melt" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;" value="P5. 공수 unpivot&#xa;pd.melt → 일자별 인건비" vertex="1">
+        <mxCell id="p_melt" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=none;" value="P5. 공수 unpivot&#xa;pd.melt → 일자별 인건비" vertex="1">
           <mxGeometry height="54" width="280" x="760" y="450" as="geometry" />
         </mxCell>
-        <mxCell id="p_stock" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;" value="P6. 재고원장 산출&#xa;스냅샷 = Σ입고−Σ출고" vertex="1">
+        <mxCell id="p_stock" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=none;" value="P6. 재고원장 산출&#xa;스냅샷 = Σ입고−Σ출고" vertex="1">
           <mxGeometry height="58" width="280" x="760" y="530" as="geometry" />
         </mxCell>
-        <mxCell id="p_pl" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;" value="P7. 손익 집계&#xa;매각−비용 + 재고평가" vertex="1">
+        <mxCell id="p_pl" parent="1" style="rounded=1;arcSize=30;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=1.5;fontSize=11;fontStyle=1;labelBackgroundColor=none;" value="P7. 손익 집계&#xa;매각−비용 + 재고평가" vertex="1">
           <mxGeometry height="60" width="280" x="760" y="610" as="geometry" />
         </mxCell>
-        <mxCell id="s_stg" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;verticalAlign=middle;" value="스테이징 테이블&#xa;stg_계근 / stg_폐기물 / stg_공수&#xa;(원시 적재)" vertex="1">
+        <mxCell id="s_stg" parent="1" style="shape=partialRectangle;top=1;bottom=1;left=0;right=0;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;verticalAlign=middle;labelBackgroundColor=none;" value="스테이징 테이블&#xa;stg_계근 / stg_폐기물 / stg_공수&#xa;(원시 적재)" vertex="1">
           <mxGeometry height="64" width="280" x="1130" y="150" as="geometry" />
         </mxCell>
-        <mxCell id="d_master" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;rounded=1;" value="기준정보&#xa;프로젝트(차수)·거래처·제품·차량" vertex="1">
+        <mxCell id="d_master" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;rounded=1;labelBackgroundColor=none;" value="기준정보&#xa;프로젝트(차수)·거래처·제품·차량" vertex="1">
           <mxGeometry height="64" width="280" x="1130" y="250" as="geometry" />
         </mxCell>
-        <mxCell id="d_weigh" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;rounded=1;" value="계근원장&#xa;(입고·출고 트랜잭션)" vertex="1">
+        <mxCell id="d_weigh" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;rounded=1;labelBackgroundColor=none;" value="계근원장&#xa;(입고·출고 트랜잭션)" vertex="1">
           <mxGeometry height="56" width="280" x="1130" y="344" as="geometry" />
         </mxCell>
-        <mxCell id="d_stock" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;rounded=1;" value="재고원장&#xa;프로젝트×품목 스냅샷" vertex="1">
+        <mxCell id="d_stock" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;rounded=1;labelBackgroundColor=none;" value="재고원장&#xa;프로젝트×품목 스냅샷" vertex="1">
           <mxGeometry height="56" width="280" x="1130" y="428" as="geometry" />
         </mxCell>
-        <mxCell id="d_cost" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;rounded=1;" value="비용원장&#xa;공수·운송·폐기·매입" vertex="1">
+        <mxCell id="d_cost" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;rounded=1;labelBackgroundColor=none;" value="비용원장&#xa;공수·운송·폐기·매입" vertex="1">
           <mxGeometry height="56" width="280" x="1130" y="512" as="geometry" />
         </mxCell>
-        <mxCell id="d_pl" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;rounded=1;" value="손익&#xa;실현+미실현(재고평가)" vertex="1">
+        <mxCell id="d_pl" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;rounded=1;labelBackgroundColor=none;" value="손익&#xa;실현+미실현(재고평가)" vertex="1">
           <mxGeometry height="56" width="280" x="1130" y="596" as="geometry" />
         </mxCell>
-        <mxCell id="o_daily" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=11;" value="일일 출고보고&#xa;(카톡 이미지)" vertex="1">
+        <mxCell id="o_daily" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=11;labelBackgroundColor=none;" value="일일 출고보고&#xa;(카톡 이미지)" vertex="1">
           <mxGeometry height="52" width="280" x="1500" y="150" as="geometry" />
         </mxCell>
-        <mxCell id="o_stockrpt" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=11;" value="재고현황·재고평가&#xa;(프로젝트별/창고별)" vertex="1">
+        <mxCell id="o_stockrpt" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=11;labelBackgroundColor=none;" value="재고현황·재고평가&#xa;(프로젝트별/창고별)" vertex="1">
           <mxGeometry height="52" width="280" x="1500" y="226" as="geometry" />
         </mxCell>
-        <mxCell id="o_ceo" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=11;" value="대표이사 보고&#xa;손익현황 (docx/pdf)" vertex="1">
+        <mxCell id="o_ceo" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=11;labelBackgroundColor=none;" value="대표이사 보고&#xa;손익현황 (docx/pdf)" vertex="1">
           <mxGeometry height="52" width="280" x="1500" y="302" as="geometry" />
         </mxCell>
-        <mxCell id="o_tax" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=11;" value="매출전표·세금계산서&#xa;(ecount→국세청)" vertex="1">
+        <mxCell id="o_tax" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=11;labelBackgroundColor=none;" value="매출전표·세금계산서&#xa;(ecount→국세청)" vertex="1">
           <mxGeometry height="52" width="280" x="1500" y="378" as="geometry" />
         </mxCell>
-        <mxCell id="o_acc" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=11;" value="세무사랑 회계연동" vertex="1">
+        <mxCell id="o_acc" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;fontSize=11;labelBackgroundColor=none;" value="세무사랑 회계연동" vertex="1">
           <mxGeometry height="48" width="280" x="1500" y="454" as="geometry" />
         </mxCell>
-        <mxCell id="f1" edge="1" parent="1" source="e_geun" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="r_in" value="계근값">
+        <mxCell id="f1" edge="1" parent="1" source="e_geun" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="r_in" value="계근값">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="f2" edge="1" parent="1" source="e_geun" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="r_out" value="계근값">
+        <mxCell id="f2" edge="1" parent="1" source="e_geun" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="r_out" value="계근값">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="f3" edge="1" parent="1" source="e_ecount" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="r_in" value="입고 내역">
+        <mxCell id="f3" edge="1" parent="1" source="e_ecount" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="r_in" value="입고 내역">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="f4" edge="1" parent="1" source="e_ecount" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="r_out" value="출고 내역">
+        <mxCell id="f4" edge="1" parent="1" source="e_ecount" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="r_out" value="출고 내역">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="f5" edge="1" parent="1" source="e_allbaro" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b85450;fontSize=9;" target="r_win" value="신고량">
+        <mxCell id="f5" edge="1" parent="1" source="e_allbaro" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b85450;fontSize=9;labelBackgroundColor=none;" target="r_win" value="신고량">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="f6" edge="1" parent="1" source="e_allbaro" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b85450;fontSize=9;" target="r_wout" value="신고량">
+        <mxCell id="f6" edge="1" parent="1" source="e_allbaro" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b85450;fontSize=9;labelBackgroundColor=none;" target="r_wout" value="신고량">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="f7" edge="1" parent="1" source="e_ecount" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="r_move" value="이동 계근">
+        <mxCell id="f7" edge="1" parent="1" source="e_ecount" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="r_move" value="이동 계근">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="f8" edge="1" parent="1" source="e_gongsu" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="r_gs" value="작업 시간">
+        <mxCell id="f8" edge="1" parent="1" source="e_gongsu" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="r_gs" value="작업 시간">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="f9" edge="1" parent="1" source="r_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b8860b;fontSize=9;dashed=1;" target="r_gap" value="집계">
+        <mxCell id="f9" edge="1" parent="1" source="r_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b8860b;fontSize=9;dashed=1;labelBackgroundColor=none;" target="r_gap" value="집계">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="f10" edge="1" parent="1" source="r_win" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b8860b;fontSize=9;dashed=1;" target="r_gap" value="집계">
+        <mxCell id="f10" edge="1" parent="1" source="r_win" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b8860b;fontSize=9;dashed=1;labelBackgroundColor=none;" target="r_gap" value="집계">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="g1" edge="1" parent="1" source="r_in" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="p_in">
+        <mxCell id="g1" edge="1" parent="1" source="r_in" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="p_in">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="g2" edge="1" parent="1" source="r_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="p_out">
+        <mxCell id="g2" edge="1" parent="1" source="r_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="p_out">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="g3" edge="1" parent="1" source="r_win" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="p_waste">
+        <mxCell id="g3" edge="1" parent="1" source="r_win" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="p_waste">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="g4" edge="1" parent="1" source="r_wout" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="p_waste">
+        <mxCell id="g4" edge="1" parent="1" source="r_wout" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="p_waste">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="g5" edge="1" parent="1" source="r_move" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="p_move">
+        <mxCell id="g5" edge="1" parent="1" source="r_move" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="p_move">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="g6" edge="1" parent="1" source="r_gs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="p_melt">
+        <mxCell id="g6" edge="1" parent="1" source="r_gs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="p_melt">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="g7" edge="1" parent="1" source="e_cost" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b85450;fontSize=9;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="p_melt" value="비용">
+        <mxCell id="g7" edge="1" parent="1" source="e_cost" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b85450;fontSize=9;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=none;" target="p_melt" value="비용">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="h1" edge="1" parent="1" source="p_in" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="s_stg" value="upsert">
+        <mxCell id="h1" edge="1" parent="1" source="p_in" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="s_stg" value="upsert">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="h2" edge="1" parent="1" source="p_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="s_stg" value="upsert">
+        <mxCell id="h2" edge="1" parent="1" source="p_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="s_stg" value="upsert">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="h3" edge="1" parent="1" source="p_waste" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="s_stg" value="upsert">
+        <mxCell id="h3" edge="1" parent="1" source="p_waste" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="s_stg" value="upsert">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="h4" edge="1" parent="1" source="p_move" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;entryX=0;entryY=0.2;entryDx=0;entryDy=0;" target="d_stock" value="이동 반영">
+        <mxCell id="h4" edge="1" parent="1" source="p_move" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;entryX=0;entryY=0.2;entryDx=0;entryDy=0;labelBackgroundColor=none;" target="d_stock" value="이동 반영">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="h5" edge="1" parent="1" source="s_stg" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="d_weigh" value="적재">
+        <mxCell id="h5" edge="1" parent="1" source="s_stg" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="d_weigh" value="적재">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="h6" edge="1" parent="1" source="p_melt" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="d_cost" value="인건비">
+        <mxCell id="h6" edge="1" parent="1" source="p_melt" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="d_cost" value="인건비">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="h7" edge="1" parent="1" source="e_cost" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b85450;fontSize=9;dashed=1;" target="d_cost" value="운송·매입">
+        <mxCell id="h7" edge="1" parent="1" source="e_cost" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b85450;fontSize=9;dashed=1;labelBackgroundColor=none;" target="d_cost" value="운송·매입">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="h8" edge="1" parent="1" source="e_ecount" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#6c8ebf;fontSize=9;dashed=1;" target="d_master" value="기준정보 동기화">
+        <mxCell id="h8" edge="1" parent="1" source="e_ecount" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#6c8ebf;fontSize=9;dashed=1;labelBackgroundColor=none;" target="d_master" value="기준정보 동기화">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="i1" edge="1" parent="1" source="d_weigh" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="p_stock" value="입/출고">
+        <mxCell id="i1" edge="1" parent="1" source="d_weigh" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;labelBackgroundColor=none;" target="p_stock" value="입/출고">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="i2" edge="1" parent="1" source="p_stock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="d_stock" value="스냅샷">
+        <mxCell id="i2" edge="1" parent="1" source="p_stock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="d_stock" value="스냅샷">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="i3" edge="1" parent="1" source="d_weigh" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="p_pl" value="매각수입">
+        <mxCell id="i3" edge="1" parent="1" source="d_weigh" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;labelBackgroundColor=none;" target="p_pl" value="매각수입">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="i4" edge="1" parent="1" source="d_cost" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="p_pl" value="발생비용">
+        <mxCell id="i4" edge="1" parent="1" source="d_cost" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;labelBackgroundColor=none;" target="p_pl" value="발생비용">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="i5" edge="1" parent="1" source="d_stock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="p_pl" value="재고평가">
+        <mxCell id="i5" edge="1" parent="1" source="d_stock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;labelBackgroundColor=none;" target="p_pl" value="재고평가">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="i6" edge="1" parent="1" source="p_pl" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="d_pl" value="손익 확정">
+        <mxCell id="i6" edge="1" parent="1" source="p_pl" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="d_pl" value="손익 확정">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="i7" edge="1" parent="1" source="d_master" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#9673a6;fontSize=9;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" target="p_out" value="프로젝트·거래처">
+        <mxCell id="i7" edge="1" parent="1" source="d_master" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#9673a6;fontSize=9;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;labelBackgroundColor=none;" target="p_out" value="프로젝트·거래처">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="i8" edge="1" parent="1" source="d_master" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#9673a6;fontSize=9;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" target="p_in" value="프로젝트">
+        <mxCell id="i8" edge="1" parent="1" source="d_master" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#9673a6;fontSize=9;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;labelBackgroundColor=none;" target="p_in" value="프로젝트">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="j1" edge="1" parent="1" source="r_gap" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b85450;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="o_daily" value="공유파일">
+        <mxCell id="j1" edge="1" parent="1" source="r_gap" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b85450;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;labelBackgroundColor=none;" target="o_daily" value="공유파일">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="j2" edge="1" parent="1" source="d_stock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="o_stockrpt">
+        <mxCell id="j2" edge="1" parent="1" source="d_stock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="o_stockrpt">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="j3" edge="1" parent="1" source="d_pl" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;" target="o_ceo">
+        <mxCell id="j3" edge="1" parent="1" source="d_pl" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;labelBackgroundColor=none;" target="o_ceo">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="j4" edge="1" parent="1" source="e_ecount" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;dashed=1;" target="o_tax" value="전표 발행">
+        <mxCell id="j4" edge="1" parent="1" source="e_ecount" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#4d4d4d;fontSize=9;dashed=1;labelBackgroundColor=none;" target="o_tax" value="전표 발행">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="j5" edge="1" parent="1" source="d_pl" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b85450;fontSize=9;dashed=1;" target="o_acc" value="회계 반영">
+        <mxCell id="j5" edge="1" parent="1" source="d_pl" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#b85450;fontSize=9;dashed=1;labelBackgroundColor=none;" target="o_acc" value="회계 반영">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="j6" edge="1" parent="1" source="e_nts" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#6c8ebf;fontSize=9;dashed=1;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" target="o_tax" value="계산서">
+        <mxCell id="j6" edge="1" parent="1" source="e_nts" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#6c8ebf;fontSize=9;dashed=1;entryX=0;entryY=0.3;entryDx=0;entryDy=0;labelBackgroundColor=none;" target="o_tax" value="계산서">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="j7" edge="1" parent="1" source="e_nts" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#6c8ebf;fontSize=9;dashed=1;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" target="o_acc">
+        <mxCell id="j7" edge="1" parent="1" source="e_nts" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;strokeColor=#6c8ebf;fontSize=9;dashed=1;entryX=0;entryY=0.7;entryDx=0;entryDy=0;labelBackgroundColor=none;" target="o_acc">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
