@@ -1,0 +1,126 @@
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import {
+  Truck,
+  PackageMinus,
+  Trash2,
+  ListTree,
+  BarChart3,
+  FileText,
+  Boxes,
+  TrendingUp,
+  ShieldAlert,
+  BellRing,
+  Settings,
+  type LucideIcon,
+} from 'lucide-react';
+
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: '입출고',
+    items: [
+      { to: '/inbound', label: '입고 등록', icon: Truck },
+      { to: '/outbound', label: '출고 등록', icon: PackageMinus },
+      { to: '/waste-outbound', label: '폐기물 반출 등록', icon: Trash2 },
+    ],
+  },
+  {
+    label: '보고 / 집계',
+    items: [
+      { to: '/ledger', label: '통합 원장 조회', icon: ListTree },
+      { to: '/aggregation', label: '갑지 자동 집계', icon: BarChart3 },
+      { to: '/daily-report', label: '일일 출고보고', icon: FileText },
+    ],
+  },
+  {
+    label: '재고 / 손익',
+    items: [
+      { to: '/inventory', label: '재고 / 재고평가', icon: Boxes },
+      { to: '/pnl', label: '차수 손익 대시보드', icon: TrendingUp },
+    ],
+  },
+  {
+    label: '관리',
+    items: [
+      { to: '/waste', label: '폐기물 / 올바로 관리', icon: ShieldAlert },
+      { to: '/admin-alerts', label: '총무 만료 알림', icon: BellRing },
+      { to: '/masters', label: '마스터 관리', icon: Settings },
+    ],
+  },
+];
+
+const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
+
+export function Layout() {
+  const location = useLocation();
+  const current = ALL_ITEMS.find((i) => i.to === location.pathname);
+
+  return (
+    <div className="flex min-h-screen bg-bg">
+      <aside className="sticky top-0 flex h-screen w-[236px] shrink-0 flex-col bg-sidebar">
+        <div className="flex items-center gap-2 px-5 py-5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-primary text-sm font-extrabold text-white">
+            W
+          </div>
+          <div>
+            <div className="text-[15px] font-extrabold text-text-strong">wbmanager</div>
+            <div className="text-[11px] text-[#5f7ba6]">원방 스크랩 업무지원</div>
+          </div>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-3 pb-4">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="mb-4">
+              <div className="mb-1.5 px-2 text-[10.5px] font-bold uppercase tracking-[1px] text-[#3f5983]">
+                {group.label}
+              </div>
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    [
+                      'mb-0.5 flex items-center gap-2.5 rounded-[9px] border-l-[3px] px-2.5 py-2 text-[13.5px] font-semibold no-underline',
+                      isActive
+                        ? 'border-accent bg-nav-active text-text-strong'
+                        : 'border-transparent text-[#9fb3d1] hover:bg-nav-hover',
+                    ].join(' ')
+                  }
+                >
+                  <item.icon size={16} />
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
+          ))}
+        </nav>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex h-[60px] items-center justify-between border-b border-border-top bg-sidebar px-7">
+          <div className="text-[14px] font-semibold text-text-sub">
+            wbmanager <span className="mx-1 text-text-faint">/</span>{' '}
+            <span className="text-text-strong">{current?.label ?? ''}</span>
+          </div>
+          <div className="text-[12.5px] text-text-faint">
+            {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto px-7 pt-6 pb-12">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}

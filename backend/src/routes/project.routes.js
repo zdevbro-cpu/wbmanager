@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { toISO } from '../lib/date.js';
 
 const router = Router();
 
@@ -9,7 +10,16 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const project = await prisma.project.create({ data: req.body });
+  const { roundName } = req.body;
+  if (!roundName) return res.status(400).json({ error: 'roundName은 필수입니다.' });
+
+  const project = await prisma.project.create({
+    data: {
+      ...req.body,
+      startDate: toISO(req.body.startDate),
+      endDate: toISO(req.body.endDate),
+    },
+  });
   res.status(201).json(project);
 });
 

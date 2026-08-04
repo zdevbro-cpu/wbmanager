@@ -1,4 +1,6 @@
 node_modules/
 .env
+env.prod.yaml
 dist/
 credentials/
+*.log

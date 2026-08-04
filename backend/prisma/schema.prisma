@@ -12,31 +12,64 @@ datasource db {
 
 // ── 기준정보 ──────────────────────────────
 
+// 거래처 마스터(매입처/매각처/자회사/폐기물업체 등) — 드롭다운 선택 입력의 기준
+model Vendor {
+  id          String   @id @default(uuid())
+  name        String   @map("name")
+  vendorType  String?  @map("vendor_type") // 매입처/매각처/자회사/폐기물업체 등
+  isTemporary Boolean  @default(false) @map("is_temporary") // 마스터 미존재 시 임시 등록 여부(추후 승격/매핑)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  projects       Project[]
+  outboundSales  OutboundSale[]
+  wasteOutbounds WasteOutbound[]
+
+  @@map("vendor")
+}
+
 model ItemMaster {
-  id         String   @id @default(uuid())
-  itemCode   String   @unique @map("item_code")
-  category   String   @map("category")       // 대분류: FE, AL, STS, CU, 부품, 중고설비 등
-  subCategory String? @map("sub_category")
-  itemName   String   @map("item_name")
-  basePrice  Decimal? @map("base_price") @db.Decimal(14, 2)
-  createdAt  DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  itemCode    String   @unique @map("item_code")
+  category    String   @map("category")       // 대분류: FE, AL, STS, CU, 부품, 중고설비 등
+  subCategory String?  @map("sub_category")
+  itemName    String   @map("item_name")
+  basePrice   Decimal? @map("base_price") @db.Decimal(14, 2)
+  isTemporary Boolean  @default(false) @map("is_temporary")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   sortings        Sorting[]
   inventoryLedger InventoryLedger[]
   outboundSales   OutboundSale[]
+  wasteOutbounds  WasteOutbound[]
+  priceHistory    ItemPriceHistory[]
 
   @@map("item_master")
 }
 
+// 품목 추정단가 이력 — 재고평가에 사용. projectId가 null이면 전체 적용, 값이 있으면 해당 차수만 적용. (S-YZTHIZ)
+model ItemPriceHistory {
+  id            String    @id @default(uuid())
+  itemCode      String    @map("item_code")
+  item          ItemMaster @relation(fields: [itemCode], references: [itemCode])
+  projectId     String?   @map("project_id")
+  project       Project?  @relation(fields: [projectId], references: [id])
+  price         Decimal   @map("price") @db.Decimal(14, 2)
+  effectiveDate DateTime  @map("effective_date")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("item_price_history")
+}
+
 model Project {
-  id         String    @id @default(uuid())
-  roundName  String    @map("round_name")      // 예: 26-1차
-  buyer      String?   @map("buyer")            // 매입처
-  purchasePrice Decimal? @map("purchase_price") @db.Decimal(14, 2)
-  startDate  DateTime? @map("start_date")
-  endDate    DateTime? @map("end_date")
-  status     String    @default("진행") @map("status") // 진행/완료
-  createdAt  DateTime  @default(now()) @map("created_at")
+  id            String    @id @default(uuid())
+  roundName     String    @map("round_name")      // 예: 26-1차
+  buyerId       String?   @map("buyer_id")         // 매입처(거래처 마스터)
+  buyer         Vendor?   @relation(fields: [buyerId], references: [id])
+  purchasePrice Decimal?  @map("purchase_price") @db.Decimal(14, 2)
+  startDate     DateTime? @map("start_date")
+  endDate       DateTime? @map("end_date")
+  status        String    @default("진행") @map("status") // 진행/완료
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   inbounds          Inbound[]
   sortings          Sorting[]
@@ -46,6 +79,7 @@ model Project {
   transports        Transport[]
   labors            Labor[]
   workerAttendances WorkerAttendance[]
+  priceHistory      ItemPriceHistory[]
 
   @@map("project")
 }
@@ -115,19 +149,23 @@ model InventoryLedger {
 }
 
 model OutboundSale {
-  id             String   @id @default(uuid())
-  projectId      String   @map("project_id")
-  project        Project  @relation(fields: [projectId], references: [id])
-  itemCode       String   @map("item_code")
-  item           ItemMaster @relation(fields: [itemCode], references: [itemCode])
-  outboundDate   DateTime @map("outbound_date")
-  buyer          String?  @map("buyer")            // 거래처
-  unitPrice      Decimal? @map("unit_price") @db.Decimal(12, 2)
-  settledWeight  Decimal  @map("settled_weight") @db.Decimal(12, 3)
-  amount         Decimal? @map("amount") @db.Decimal(14, 2)
-  taxInvoiceIssued Boolean @default(false) @map("tax_invoice_issued")
-  isPaid         Boolean  @default(false) @map("is_paid")
-  createdAt      DateTime @default(now()) @map("created_at")
+  id               String   @id @default(uuid())
+  projectId        String   @map("project_id")
+  project          Project  @relation(fields: [projectId], references: [id])
+  itemCode         String   @map("item_code")
+  item             ItemMaster @relation(fields: [itemCode], references: [itemCode])
+  outboundDate     DateTime @map("outbound_date")
+  buyerId          String?  @map("buyer_id")        // 거래처(매각처)
+  buyer            Vendor?  @relation(fields: [buyerId], references: [id])
+  unitPrice        Decimal? @map("unit_price") @db.Decimal(12, 2)
+  grossWeight      Decimal? @map("gross_weight") @db.Decimal(12, 3)
+  tareWeight       Decimal? @map("tare_weight") @db.Decimal(12, 3)
+  lossWeight       Decimal? @map("loss_weight") @db.Decimal(12, 3) // 감량
+  settledWeight    Decimal  @map("settled_weight") @db.Decimal(12, 3) // 정산중량 = gross - tare - loss
+  amount           Decimal? @map("amount") @db.Decimal(14, 2)
+  taxInvoiceIssued Boolean  @default(false) @map("tax_invoice_issued")
+  isPaid           Boolean  @default(false) @map("is_paid")
+  createdAt        DateTime @default(now()) @map("created_at")
 
   attachments Attachment[]
 
@@ -139,10 +177,16 @@ model WasteOutbound {
   projectId    String   @map("project_id")
   project      Project  @relation(fields: [projectId], references: [id])
   outboundDate DateTime @map("outbound_date")
-  buyer        String?  @map("buyer")
-  itemName     String?  @map("item_name")
+  buyerId      String?  @map("buyer_id")
+  buyer        Vendor?  @relation(fields: [buyerId], references: [id])
+  itemCode     String?  @map("item_code")
+  item         ItemMaster? @relation(fields: [itemCode], references: [itemCode])
+  itemName     String?  @map("item_name") // 품목마스터 미매칭 시 표시용
   weight       Decimal  @map("weight") @db.Decimal(12, 3)
   amount       Decimal? @map("amount") @db.Decimal(14, 2) // 지출
+  olbaroReported Boolean  @default(false) @map("olbaro_reported") // 올바로 신고 상태(O/X)
+  handoverDate   DateTime? @map("handover_date") // 인계일
+  olbaroMemo     String?  @map("olbaro_memo") // 기준업체량 등 메모
   createdAt    DateTime @default(now()) @map("created_at")
 
   attachments Attachment[]

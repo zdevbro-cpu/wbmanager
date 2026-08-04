@@ -1,0 +1,5 @@
+# 클라이언트 시크릿, 인증정보 등 민감 파일 백업 폴더
+backup/
+
+# Firebase CLI 로컬 캐시
+.firebase/
