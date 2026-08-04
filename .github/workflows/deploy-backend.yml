@@ -1,0 +1,47 @@
+name: Deploy backend to Cloud Run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Write env-vars file
+        working-directory: backend
+        run: |
+          cat > env.prod.yaml << EOF
+          DATABASE_URL: "${{ secrets.DATABASE_URL }}"
+          GOOGLE_OAUTH_CLIENT_ID: "${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}"
+          GOOGLE_OAUTH_CLIENT_SECRET: "${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}"
+          GOOGLE_OAUTH_REDIRECT_URI: "${{ secrets.GOOGLE_OAUTH_REDIRECT_URI }}"
+          GOOGLE_OAUTH_REFRESH_TOKEN: "${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}"
+          GOOGLE_DRIVE_FOLDER_ID: "${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}"
+          FIREBASE_PROJECT_ID: "${{ secrets.FIREBASE_PROJECT_ID }}"
+          EOF
+
+      - name: Deploy to Cloud Run
+        working-directory: backend
+        run: |
+          gcloud run deploy wbmanager-api \
+            --source . \
+            --region asia-northeast3 \
+            --allow-unauthenticated \
+            --add-cloudsql-instances crosswb-a7083:asia-northeast3:wbmanager-db \
+            --env-vars-file env.prod.yaml \
+            --quiet \
+            --project crosswb-a7083
