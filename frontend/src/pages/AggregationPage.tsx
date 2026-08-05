@@ -41,7 +41,19 @@ export function AggregationPage() {
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     if (projectId) params.set('projectId', projectId);
-    api.get<Aggregation>(`/api/reports/aggregation?${params.toString()}`).then(setData);
+    api.get<Aggregation>(`/api/reports/aggregation?${params.toString()}`).then((res) =>
+      setData({
+        ...res,
+        byProject: res.byProject ?? [],
+        bySite: res.bySite ?? [],
+        byVendor: res.byVendor ?? [],
+        byItem: res.byItem ?? [],
+        byType: res.byType ?? [],
+        byMonth: res.byMonth ?? [],
+        byDay: res.byDay ?? [],
+        totals: res.totals ?? { inbound: 0, waste_inbound: 0, sorting: 0, outbound_sale: 0, waste_outbound: 0, amount: 0 },
+      }),
+    );
   };
 
   // 기준일/기간 변경 시 즉시 재집계 (S-TCUYZO)
@@ -162,7 +174,7 @@ function FlowCard({ flow }: { flow: { inTotal: number; outTotal: number; remain:
 
 // 월별 추이 — 막대 높이로 물량을, 아래 숫자로 금액을 읽는다.
 function MonthlyTrend({ groups }: { groups: AggregationGroup[] }) {
-  const rows = groups.slice(-12);
+  const rows = (groups ?? []).slice(-12);
   const max = Math.max(1, ...rows.map((g) => g.inbound + g.waste_inbound + g.outbound_sale + g.waste_outbound));
 
   return (
@@ -222,7 +234,7 @@ function ShareCard({
   const value = (g: AggregationGroup) =>
     metric === 'amount' ? g.amount : g.inbound + g.waste_inbound + g.outbound_sale + g.waste_outbound;
 
-  const rows = [...groups].sort((a, b) => value(b) - value(a)).slice(0, 6);
+  const rows = [...(groups ?? [])].sort((a, b) => value(b) - value(a)).slice(0, 6);
   const total = rows.reduce((sum, g) => sum + value(g), 0);
 
   return (
@@ -256,7 +268,8 @@ function ShareCard({
 }
 
 function GroupTable({ title, groups, emptyText }: { title: string; groups: AggregationGroup[]; emptyText?: string }) {
-  const sum = (key: keyof AggregationGroup) => groups.reduce((acc, g) => acc + Number(g[key] ?? 0), 0);
+  const rows = groups ?? [];
+  const sum = (key: keyof AggregationGroup) => rows.reduce((acc, g) => acc + Number(g[key] ?? 0), 0);
 
   return (
     <div>
@@ -276,7 +289,7 @@ function GroupTable({ title, groups, emptyText }: { title: string; groups: Aggre
             </tr>
           </thead>
           <tbody>
-            {groups.map((g) => (
+            {rows.map((g) => (
               <tr key={g.key} className={trCls}>
                 <td className={tdCls}>{g.label}</td>
                 <td className={`${tdCls} tabular text-right`}>{Math.round(g.inbound).toLocaleString()}</td>
@@ -288,7 +301,7 @@ function GroupTable({ title, groups, emptyText }: { title: string; groups: Aggre
                 <td className={`${tdCls} tabular text-right`}>{g.count}</td>
               </tr>
             ))}
-            {groups.length === 0 && (
+            {rows.length === 0 && (
               <tr>
                 <td colSpan={8} className="py-8 text-center text-[13px] text-text-faint">
                   {emptyText ?? '데이터 없음'}
@@ -296,7 +309,7 @@ function GroupTable({ title, groups, emptyText }: { title: string; groups: Aggre
               </tr>
             )}
           </tbody>
-          {groups.length > 0 && (
+          {rows.length > 0 && (
             <tfoot>
               <tr className="border-t-2 border-border bg-hover">
                 <td className={`${tdCls} font-bold text-text-strong`}>합계</td>
@@ -323,8 +336,9 @@ function DensityStrip({ groups, month }: { groups: AggregationGroup[]; month: st
 
   // 표시 구간: 기준 월이 있으면 그 달, 없으면 데이터가 있는 전체 구간
   const days = useMemo(() => {
-    const map = new Map(groups.map((g) => [g.key, total(g)]));
-    const keys = groups.map((g) => g.key).sort();
+    const list = groups ?? [];
+    const map = new Map(list.map((g) => [g.key, total(g)]));
+    const keys = list.map((g) => g.key).sort();
     if (!keys.length) return [] as { date: string; value: number }[];
 
     const start = month ? `${month}-01` : keys[0];
