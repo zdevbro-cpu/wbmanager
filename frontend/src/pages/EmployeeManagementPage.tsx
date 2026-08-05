@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Users, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { useCommonCodes } from '../hooks/useMasters';
+import { Badge } from '../components/ui/Badge';
 import {
   pageTitleCls,
   sectionTitleCls,
@@ -24,11 +25,35 @@ interface CertRow {
 
 interface TrainingRow {
   trainingName: string;
+  trainingType: string;
   trainingDate: string;
+  nextDueDate: string;
 }
 
 const emptyCert: CertRow = { certName: '', acquiredDate: '', expiryDate: '' };
-const emptyTraining: TrainingRow = { trainingName: '', trainingDate: '' };
+const emptyTraining: TrainingRow = { trainingName: '', trainingType: '의무', trainingDate: '', nextDueDate: '' };
+
+const TRAINING_TYPES = ['의무', '보수'];
+
+// 남은 일수 — 예정일이 오늘이면 0, 지났으면 음수
+function daysLeft(due?: string | null) {
+  if (!due) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(due.slice(0, 10));
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
+
+// D-100 형태로 표시하고, D-30 이내부터는 경고색으로 알린다.
+function DDay({ due }: { due?: string | null }) {
+  const left = daysLeft(due);
+  if (left === null) return <span className="text-text-faint">-</span>;
+  if (left < 0) return <Badge tone="red">D+{Math.abs(left)} 경과</Badge>;
+  if (left === 0) return <Badge tone="red">D-DAY</Badge>;
+  if (left <= 30) return <Badge tone="red">D-{left}</Badge>;
+  return <Badge tone="slate">D-{left}</Badge>;
+}
 
 export function EmployeeManagementPage({ embedded = false }: { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -86,7 +111,12 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
           })),
         trainings: trainings
           .filter((t) => t.trainingName.trim())
-          .map((t) => ({ trainingName: t.trainingName, trainingDate: t.trainingDate || undefined })),
+          .map((t) => ({
+            trainingName: t.trainingName,
+            trainingType: t.trainingType || undefined,
+            trainingDate: t.trainingDate || undefined,
+            nextDueDate: t.nextDueDate || undefined,
+          })),
       });
       reset();
       reload();
@@ -153,7 +183,9 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
 
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-[13px] font-semibold text-text-mid">자격사항</label>
+              <label className="text-[13px] font-semibold text-text-mid">
+                자격사항 <span className="font-normal text-text-faint">— 자격증명 / 취득일 / 만료일</span>
+              </label>
               <button type="button" onClick={() => setCerts([...certs, { ...emptyCert }])} className="text-[12px] font-bold text-primary">
                 <Plus size={12} className="inline" /> 행 추가
               </button>
@@ -178,6 +210,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     value={c.acquiredDate}
                     onChange={(e) => setCerts(certs.map((r, ri) => (ri === i ? { ...r, acquiredDate: e.target.value } : r)))}
                     title="취득일"
+                    aria-label="취득일"
                     className={inputCls}
                   />
                   <input
@@ -185,6 +218,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     value={c.expiryDate}
                     onChange={(e) => setCerts(certs.map((r, ri) => (ri === i ? { ...r, expiryDate: e.target.value } : r)))}
                     title="만료일"
+                    aria-label="만료일"
                     className={inputCls}
                   />
                   <button
@@ -202,7 +236,9 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
 
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-[13px] font-semibold text-text-mid">교육이력</label>
+              <label className="text-[13px] font-semibold text-text-mid">
+                교육이력 <span className="font-normal text-text-faint">— 교육명 / 구분 / 이수일 / 다음 예정일</span>
+              </label>
               <button
                 type="button"
                 onClick={() => setTrainings([...trainings, { ...emptyTraining }])}
@@ -228,13 +264,39 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     placeholder="교육명"
                     className={inputCls}
                   />
+                  <select
+                    value={t.trainingType}
+                    onChange={(e) =>
+                      setTrainings(trainings.map((r, ri) => (ri === i ? { ...r, trainingType: e.target.value } : r)))
+                    }
+                    title="구분"
+                    aria-label="교육 구분"
+                    className={`${inputCls} w-[84px] shrink-0 px-2`}
+                  >
+                    {TRAINING_TYPES.map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     type="date"
                     value={t.trainingDate}
                     onChange={(e) =>
                       setTrainings(trainings.map((r, ri) => (ri === i ? { ...r, trainingDate: e.target.value } : r)))
                     }
-                    title="교육일"
+                    title="이수일"
+                    aria-label="이수일"
+                    className={inputCls}
+                  />
+                  <input
+                    type="date"
+                    value={t.nextDueDate}
+                    onChange={(e) =>
+                      setTrainings(trainings.map((r, ri) => (ri === i ? { ...r, nextDueDate: e.target.value } : r)))
+                    }
+                    title="다음 교육 예정일"
+                    aria-label="다음 교육 예정일"
                     className={inputCls}
                   />
                   <button
@@ -273,7 +335,8 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                   <th className={thCls}>성명</th>
                   <th className={thCls}>연락처</th>
                   <th className={thCls}>부서/직급</th>
-                  <th className={thCls}>자격사항</th>
+                  <th className={thCls}>자격사항(만료일)</th>
+                  <th className={thCls}>교육(구분 · 다음 예정)</th>
                 </tr>
               </thead>
               <tbody>
@@ -289,11 +352,27 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                             .join(', ')
                         : '-'}
                     </td>
+                    <td className={tdCls}>
+                      {emp.trainings?.length ? (
+                        <div className="space-y-1">
+                          {emp.trainings.map((t) => (
+                            <div key={t.id} className="flex items-center gap-1.5">
+                              {t.trainingType && <Badge tone={t.trainingType === '의무' ? 'amber' : 'blue'}>{t.trainingType}</Badge>}
+                              <span>{t.trainingName}</span>
+                              {t.nextDueDate && <span className="text-text-faint">{t.nextDueDate.slice(0, 10)}</span>}
+                              <DDay due={t.nextDueDate} />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {employees.length === 0 && (
                   <tr>
-                    <td className={`${tdCls} text-text-faint`} colSpan={4}>
+                    <td className={`${tdCls} text-text-faint`} colSpan={5}>
                       등록된 임직원이 없습니다.
                     </td>
                   </tr>

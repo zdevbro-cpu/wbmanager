@@ -41,7 +41,9 @@ router.post('/', async (req, res) => {
             trainings: {
               create: trainingRows.map((t) => ({
                 trainingName: t.trainingName,
+                trainingType: t.trainingType,
                 trainingDate: toISO(t.trainingDate),
+                nextDueDate: toISO(t.nextDueDate),
               })),
             },
           }
@@ -88,7 +90,12 @@ router.post('/:id/trainings', async (req, res) => {
   const { trainingName } = req.body;
   if (!trainingName) return res.status(400).json({ error: 'trainingName은 필수입니다.' });
   const training = await prisma.employeeTraining.create({
-    data: { ...req.body, employeeId: req.params.id, trainingDate: toISO(req.body.trainingDate) },
+    data: {
+      ...req.body,
+      employeeId: req.params.id,
+      trainingDate: toISO(req.body.trainingDate),
+      nextDueDate: toISO(req.body.nextDueDate),
+    },
   });
   res.status(201).json(training);
 });

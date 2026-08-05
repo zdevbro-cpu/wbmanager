@@ -163,7 +163,9 @@ export interface EmployeeTraining {
   id: string;
   employeeId: string;
   trainingName: string;
-  trainingDate?: string | null;
+  trainingType?: string | null; // 의무 / 보수
+  trainingDate?: string | null; // 이수일
+  nextDueDate?: string | null; // 다음 교육 예정일
 }
 
 export interface Employee {

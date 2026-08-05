@@ -421,7 +421,9 @@ model EmployeeTraining {
   employeeId   String    @map("employee_id")
   employee     Employee  @relation(fields: [employeeId], references: [id])
   trainingName String    @map("training_name")
-  trainingDate DateTime? @map("training_date")
+  trainingType String?   @map("training_type")   // 의무 / 보수
+  trainingDate DateTime? @map("training_date")   // 이수일
+  nextDueDate  DateTime? @map("next_due_date")   // 다음 교육 예정일 — D-day 산출 기준
   createdAt    DateTime  @default(now()) @map("created_at")
 
   @@map("employee_training")
