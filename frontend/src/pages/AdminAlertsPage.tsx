@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BellRing, Truck, Award } from 'lucide-react';
 import { api } from '../api/client';
 import { Badge } from '../components/ui/Badge';
@@ -12,7 +13,7 @@ import {
   tdCls,
   trCls,
 } from '../components/ui/classes';
-import type { ExpiringAlerts, ExpiringItem, Vehicle, Employee } from '../types';
+import type { ExpiringAlerts, ExpiringItem, Employee } from '../types';
 
 const TYPE_LABEL: Record<string, string> = {
   vehicle_inspection: '차량검사',
@@ -22,7 +23,6 @@ const TYPE_LABEL: Record<string, string> = {
 export function AdminAlertsPage() {
   const [threshold, setThreshold] = useState(30);
   const [alerts, setAlerts] = useState<ExpiringAlerts | null>(null);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
 
   const search = () => {
@@ -31,7 +31,6 @@ export function AdminAlertsPage() {
 
   useEffect(() => {
     search();
-    api.get<Vehicle[]>('/api/vehicles').then(setVehicles);
     api.get<Employee[]>('/api/employees').then(setEmployees);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threshold]);
@@ -61,22 +60,18 @@ export function AdminAlertsPage() {
       )}
 
       <div className="mt-8 flex flex-wrap gap-10">
-        <VehicleRegister onRegistered={search} />
         <EmployeeRegister onRegistered={() => api.get<Employee[]>('/api/employees').then(setEmployees)} />
         <CertificationRegister employees={employees} onRegistered={search} />
       </div>
 
-      <div className="mt-8">
-        <h2 className={`${sectionTitleCls} mb-2`}>등록된 차량/중장비</h2>
-        <ul className="space-y-1">
-          {vehicles.map((v) => (
-            <li key={v.id} className="text-[13px] text-text-mid">
-              {v.vehicleNo} ({v.vehicleType ?? '-'}) — 검사만료:{' '}
-              <span className="tabular">{v.inspectionExpiry ? v.inspectionExpiry.slice(0, 10) : '미등록'}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* 차량/중장비 등록·정비이력·검사관리는 시스템 관리 > 차량/장비 관리 탭으로 이동했다. */}
+      <p className="mt-8 text-[13px] text-text-sub">
+        차량/중장비 등록·정비이력·검사 문서는{' '}
+        <Link to="/system?tab=vehicles" className="font-semibold text-primary hover:underline">
+          시스템 관리 &gt; 차량/장비 관리
+        </Link>
+        에서 관리합니다.
+      </p>
     </div>
   );
 }
@@ -127,49 +122,16 @@ function AlertGroup({ title, items, tone }: { title: string; items: ExpiringItem
   );
 }
 
-function VehicleRegister({ onRegistered }: { onRegistered: () => void }) {
-  const [vehicleNo, setVehicleNo] = useState('');
-  const [vehicleType, setVehicleType] = useState('');
-  const [inspectionExpiry, setInspectionExpiry] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!vehicleNo) return;
-    await api.post('/api/vehicles', { vehicleNo, vehicleType: vehicleType || undefined, inspectionExpiry: inspectionExpiry || undefined });
-    setVehicleNo('');
-    setVehicleType('');
-    setInspectionExpiry('');
-    onRegistered();
-  };
-
-  return (
-    <div>
-      <h2 className={`${sectionTitleCls} mb-2`}>차량/중장비 등록</h2>
-      <form onSubmit={handleSubmit} className="flex w-[260px] flex-col gap-2">
-        <input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} placeholder="차량번호" className={inputCls} />
-        <input
-          value={vehicleType}
-          onChange={(e) => setVehicleType(e.target.value)}
-          placeholder="구분(법인차량/중장비/어테치)"
-          className={inputCls}
-        />
-        <input type="date" value={inspectionExpiry} onChange={(e) => setInspectionExpiry(e.target.value)} className={inputCls} />
-        <button type="submit" className={primaryBtnCls}>
-          등록
-        </button>
-      </form>
-    </div>
-  );
-}
-
 function EmployeeRegister({ onRegistered }: { onRegistered: () => void }) {
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    await api.post('/api/employees', { name });
+    await api.post('/api/employees', { name, phone: phone || undefined });
     setName('');
+    setPhone('');
     onRegistered();
   };
 
@@ -178,6 +140,8 @@ function EmployeeRegister({ onRegistered }: { onRegistered: () => void }) {
       <h2 className={`${sectionTitleCls} mb-2`}>임직원 등록</h2>
       <form onSubmit={handleSubmit} className="flex w-[260px] flex-col gap-2">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="이름" className={inputCls} />
+        {/* 입출고 등록에서 운전자를 고르면 이 연락처가 자동으로 채워진다. */}
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="연락처 (010-0000-0000)" className={inputCls} />
         <button type="submit" className={primaryBtnCls}>
           등록
         </button>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BarChart3, Inbox, PackageMinus, Trash2, Coins, Layers } from 'lucide-react';
+import { BarChart3, Inbox, PackageMinus, Recycle, Trash2, Coins, Layers } from 'lucide-react';
 import { api } from '../api/client';
 import { useProjects } from '../hooks/useMasters';
 import { SummaryCard } from '../components/ui/SummaryCard';
@@ -57,8 +57,9 @@ export function AggregationPage() {
 
       {data && (
         <div className="space-y-8">
-          <div className="grid grid-cols-5 gap-4">
+          <div className="grid grid-cols-6 gap-4">
             <SummaryCard icon={Inbox} color="#60a5fa" label="입고" value={`${data.totals.inbound.toLocaleString()}kg`} />
+            <SummaryCard icon={Recycle} color="#fb923c" label="폐기물입고" value={`${data.totals.waste_inbound.toLocaleString()}kg`} />
             <SummaryCard icon={Layers} color="#a78bfa" label="선별" value={`${data.totals.sorting.toLocaleString()}kg`} />
             <SummaryCard icon={PackageMinus} color="#22c55e" label="매각" value={`${data.totals.outbound_sale.toLocaleString()}kg`} />
             <SummaryCard icon={Trash2} color="#f59e0b" label="폐기물반출" value={`${data.totals.waste_outbound.toLocaleString()}kg`} />
@@ -83,6 +84,7 @@ function GroupTable({ title, groups }: { title: string; groups: AggregationGroup
             <tr className="border-y border-border">
               <th className={thCls}>항목</th>
               <th className={thCls}>입고</th>
+              <th className={thCls}>폐기물입고</th>
               <th className={thCls}>선별</th>
               <th className={thCls}>매각</th>
               <th className={thCls}>폐기물반출</th>
@@ -95,6 +97,7 @@ function GroupTable({ title, groups }: { title: string; groups: AggregationGroup
               <tr key={g.key} className={trCls}>
                 <td className={tdCls}>{g.label}</td>
                 <td className={`${tdCls} tabular`}>{g.inbound}</td>
+                <td className={`${tdCls} tabular`}>{g.waste_inbound}</td>
                 <td className={`${tdCls} tabular`}>{g.sorting}</td>
                 <td className={`${tdCls} tabular`}>{g.outbound_sale}</td>
                 <td className={`${tdCls} tabular`}>{g.waste_outbound}</td>
@@ -104,7 +107,7 @@ function GroupTable({ title, groups }: { title: string; groups: AggregationGroup
             ))}
             {groups.length === 0 && (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-[13px] text-text-faint">
+                <td colSpan={8} className="py-8 text-center text-[13px] text-text-faint">
                   데이터 없음
                 </td>
               </tr>

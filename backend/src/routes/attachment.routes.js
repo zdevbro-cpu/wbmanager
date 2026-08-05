@@ -8,13 +8,15 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 
 const LINK_FIELDS = {
   inbound: 'inboundId',
+  waste_inbound: 'wasteInboundId',
   outbound_sale: 'outboundSaleId',
   waste_outbound: 'wasteOutboundId',
   vehicle_maintenance: 'vehicleMaintenanceId',
+  vehicle: 'vehicleId',
 };
 
 // 계량증명서/현장사진 등 증빙 파일을 Google Drive에 업로드하고, 지정된 트랜잭션에 연결한다.
-// form-data: file, fileType, parentType(inbound|outbound_sale|waste_outbound|vehicle_maintenance), parentId
+// form-data: file, fileType, parentType(inbound|waste_inbound|outbound_sale|waste_outbound|vehicle_maintenance), parentId
 router.post('/', upload.single('file'), async (req, res) => {
   const { fileType, parentType, parentId } = req.body;
   if (!req.file) return res.status(400).json({ error: 'file은 필수입니다.' });

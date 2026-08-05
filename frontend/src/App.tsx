@@ -3,11 +3,12 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
 import { PendingApprovalPage } from './pages/PendingApprovalPage';
-import { UserApprovalPage } from './pages/UserApprovalPage';
-import { InboundFormPage } from './pages/InboundFormPage';
-import { OutboundFormPage } from './pages/OutboundFormPage';
+import { InboundListPage } from './pages/InboundListPage';
+import { OutboundListPage } from './pages/OutboundListPage';
+import { WasteInboundListPage } from './pages/WasteInboundListPage';
 import { WasteOutboundFormPage } from './pages/WasteOutboundFormPage';
-import { MasterManagementPage } from './pages/MasterManagementPage';
+import { SystemAdminPage } from './pages/SystemAdminPage';
+import { EcountExportPage } from './pages/EcountExportPage';
 import { LedgerPage } from './pages/LedgerPage';
 import { AggregationPage } from './pages/AggregationPage';
 import { DailyReportPage } from './pages/DailyReportPage';
@@ -30,18 +31,21 @@ function Gate() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Navigate to="/inbound" replace />} />
-        <Route path="/inbound" element={<InboundFormPage />} />
-        <Route path="/outbound" element={<OutboundFormPage />} />
+        <Route path="/inbound" element={<InboundListPage />} />
+        <Route path="/outbound" element={<OutboundListPage />} />
+        <Route path="/waste-inbound" element={<WasteInboundListPage />} />
         <Route path="/waste-outbound" element={<WasteOutboundFormPage />} />
         <Route path="/ledger" element={<LedgerPage />} />
         <Route path="/aggregation" element={<AggregationPage />} />
         <Route path="/daily-report" element={<DailyReportPage />} />
+        <Route path="/ecount-export" element={<EcountExportPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/pnl" element={<PnlPage />} />
         <Route path="/waste" element={<WasteManagementPage />} />
         <Route path="/admin-alerts" element={<AdminAlertsPage />} />
-        <Route path="/masters" element={<MasterManagementPage />} />
-        {appUser.role === 'admin' && <Route path="/users" element={<UserApprovalPage />} />}
+        <Route path="/system" element={<SystemAdminPage />} />
+        <Route path="/masters" element={<Navigate to="/system" replace />} />
+        <Route path="/users" element={<Navigate to="/system?tab=users" replace />} />
         <Route path="*" element={<Navigate to="/inbound" replace />} />
       </Route>
     </Routes>

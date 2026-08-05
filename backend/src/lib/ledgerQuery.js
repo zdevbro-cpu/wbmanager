@@ -1,6 +1,6 @@
 import { prisma } from './prisma.js';
 
-// 입고·출고·폐기물반출·선별을 하나의 통합 원장 형태로 정규화해서 반환한다.
+// 입고·폐기물입고·출고·폐기물반출·선별을 하나의 통합 원장 형태로 정규화해서 반환한다.
 // filters: { from, to, projectId, vendorId, itemCode, type }
 export async function queryLedger(filters = {}) {
   const { from, to, projectId, vendorId, itemCode, type } = filters;
@@ -14,10 +14,12 @@ export async function queryLedger(filters = {}) {
   if (!type || type === 'inbound') {
     const inbounds = await prisma.inbound.findMany({
       where: {
+        deletedAt: null,
         ...(projectId ? { projectId } : {}),
+        ...(itemCode ? { itemCode } : {}),
         ...(Object.keys(dateRange).length ? { inboundDate: dateRange } : {}),
       },
-      include: { project: true, attachments: true },
+      include: { project: true, item: true, attachments: true },
       orderBy: { inboundDate: 'desc' },
     });
     rows.push(
@@ -29,8 +31,37 @@ export async function queryLedger(filters = {}) {
         projectName: r.project?.roundName ?? null,
         vendorId: null,
         vendorName: null,
-        itemCode: null,
-        itemName: null,
+        itemCode: r.itemCode,
+        itemName: r.item?.itemName ?? r.itemName,
+        weight: r.netWeight,
+        amount: null,
+        attachmentCount: r.attachments.length,
+      })),
+    );
+  }
+
+  if (!type || type === 'waste_inbound') {
+    const wasteInbounds = await prisma.wasteInbound.findMany({
+      where: {
+        deletedAt: null,
+        ...(projectId ? { projectId } : {}),
+        ...(itemCode ? { itemCode } : {}),
+        ...(Object.keys(dateRange).length ? { receiveDate: dateRange } : {}),
+      },
+      include: { project: true, item: true, attachments: true },
+      orderBy: { receiveDate: 'desc' },
+    });
+    rows.push(
+      ...wasteInbounds.map((r) => ({
+        type: 'waste_inbound',
+        id: r.id,
+        date: r.receiveDate,
+        projectId: r.projectId,
+        projectName: r.project?.roundName ?? null,
+        vendorId: null,
+        vendorName: null,
+        itemCode: r.itemCode,
+        itemName: r.item?.itemName ?? r.itemName,
         weight: r.netWeight,
         amount: null,
         attachmentCount: r.attachments.length,
@@ -69,6 +100,7 @@ export async function queryLedger(filters = {}) {
   if (!type || type === 'outbound_sale') {
     const outbounds = await prisma.outboundSale.findMany({
       where: {
+        deletedAt: null,
         ...(projectId ? { projectId } : {}),
         ...(vendorId ? { buyerId: vendorId } : {}),
         ...(itemCode ? { itemCode } : {}),
@@ -130,7 +162,9 @@ export async function queryLedger(filters = {}) {
 
 const DETAIL_LOOKUP = {
   inbound: (id) =>
-    prisma.inbound.findUnique({ where: { id }, include: { project: true, attachments: true } }),
+    prisma.inbound.findUnique({ where: { id }, include: { project: true, item: true, attachments: true } }),
+  waste_inbound: (id) =>
+    prisma.wasteInbound.findUnique({ where: { id }, include: { project: true, item: true, attachments: true } }),
   sorting: (id) =>
     prisma.sorting.findUnique({ where: { id }, include: { project: true, item: true } }),
   outbound_sale: (id) =>

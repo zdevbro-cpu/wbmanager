@@ -8,6 +8,7 @@ import type { LedgerRow, LedgerDetail, LedgerType } from '../types';
 
 const TYPE_LABEL: Record<LedgerType, string> = {
   inbound: '입고',
+  waste_inbound: '폐기물입고',
   sorting: '선별',
   outbound_sale: '매각',
   waste_outbound: '폐기물반출',
@@ -15,6 +16,7 @@ const TYPE_LABEL: Record<LedgerType, string> = {
 
 const TYPE_TONE: Record<LedgerType, BadgeTone> = {
   inbound: 'blue',
+  waste_inbound: 'amber',
   sorting: 'purple',
   outbound_sale: 'green',
   waste_outbound: 'amber',

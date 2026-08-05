@@ -8,7 +8,7 @@ import type { AppUser } from '../context/AuthContext';
 const STATUS_LABEL: Record<string, string> = { pending: '대기중', approved: '승인됨', rejected: '거절됨' };
 const STATUS_TONE: Record<string, BadgeTone> = { pending: 'amber', approved: 'green', rejected: 'red' };
 
-export function UserApprovalPage() {
+export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
   const [users, setUsers] = useState<AppUser[]>([]);
 
   const load = () => {
@@ -31,10 +31,12 @@ export function UserApprovalPage() {
 
   return (
     <div>
-      <div className="mb-5 flex items-center gap-2">
-        <ShieldCheck size={20} className="text-primary" />
-        <h1 className={pageTitleCls}>사용자 승인 관리</h1>
-      </div>
+      {!embedded && (
+        <div className="mb-5 flex items-center gap-2">
+          <ShieldCheck size={20} className="text-primary" />
+          <h1 className={pageTitleCls}>사용자 승인 관리</h1>
+        </div>
+      )}
 
       <div className={tableWrapCls}>
         <table className="w-full border-collapse">

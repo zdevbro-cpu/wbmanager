@@ -5,12 +5,13 @@ import { api } from '../api/client';
 interface FileUploadProps {
   label: string;
   fileType: string;
-  parentType: 'inbound' | 'outbound_sale' | 'waste_outbound' | 'vehicle_maintenance';
+  parentType: 'inbound' | 'waste_inbound' | 'outbound_sale' | 'waste_outbound' | 'vehicle_maintenance' | 'vehicle';
   parentId: string;
+  onUploaded?: () => void;
 }
 
 // 계량증명서 등 증빙 파일을 Google Drive에 업로드하고 트랜잭션에 연결한다.
-export function FileUpload({ label, fileType, parentType, parentId }: FileUploadProps) {
+export function FileUpload({ label, fileType, parentType, parentId, onUploaded }: FileUploadProps) {
   const [status, setStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,6 +28,7 @@ export function FileUpload({ label, fileType, parentType, parentId }: FileUpload
     try {
       await api.post('/api/attachments', formData);
       setStatus('done');
+      onUploaded?.();
     } catch {
       setStatus('error');
     }

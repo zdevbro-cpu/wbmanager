@@ -1,17 +1,18 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   Truck,
+  Recycle,
   PackageMinus,
   Trash2,
   ListTree,
   BarChart3,
   FileText,
+  FileSpreadsheet,
   Boxes,
   TrendingUp,
   ShieldAlert,
   BellRing,
   Settings,
-  ShieldCheck,
   LogOut,
   type LucideIcon,
 } from 'lucide-react';
@@ -32,8 +33,9 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: '입출고',
     items: [
-      { to: '/inbound', label: '입고 등록', icon: Truck },
-      { to: '/outbound', label: '출고 등록', icon: PackageMinus },
+      { to: '/inbound', label: '입고 현황', icon: Truck },
+      { to: '/waste-inbound', label: '폐기물 입고 현황', icon: Recycle },
+      { to: '/outbound', label: '출고 현황', icon: PackageMinus },
       { to: '/waste-outbound', label: '폐기물 반출 등록', icon: Trash2 },
     ],
   },
@@ -43,6 +45,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/ledger', label: '통합 원장 조회', icon: ListTree },
       { to: '/aggregation', label: '갑지 자동 집계', icon: BarChart3 },
       { to: '/daily-report', label: '일일 출고보고', icon: FileText },
+      { to: '/ecount-export', label: 'ecount 내보내기', icon: FileSpreadsheet },
     ],
   },
   {
@@ -57,18 +60,19 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/waste', label: '폐기물 / 올바로 관리', icon: ShieldAlert },
       { to: '/admin-alerts', label: '총무 만료 알림', icon: BellRing },
-      { to: '/masters', label: '마스터 관리', icon: Settings },
     ],
   },
+  {
+    label: '시스템',
+    items: [{ to: '/system', label: '시스템 관리', icon: Settings }],
+  },
 ];
-
-const ADMIN_ITEM: NavItem = { to: '/users', label: '사용자 승인 관리', icon: ShieldCheck };
 
 export function Layout() {
   const location = useLocation();
   const { appUser, logout } = useAuth();
   const isAdmin = appUser?.role === 'admin';
-  const navGroups = isAdmin ? [...NAV_GROUPS, { label: '시스템', items: [ADMIN_ITEM] }] : NAV_GROUPS;
+  const navGroups = NAV_GROUPS;
   const allItems = navGroups.flatMap((g) => g.items);
   const current = allItems.find((i) => i.to === location.pathname);
 

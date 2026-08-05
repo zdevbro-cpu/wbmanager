@@ -12,6 +12,7 @@ router.get('/aggregation', async (req, res) => {
 
 const TYPE_LABEL = {
   inbound: '입고',
+  waste_inbound: '폐기물입고',
   sorting: '선별',
   outbound_sale: '매각',
   waste_outbound: '폐기물반출',

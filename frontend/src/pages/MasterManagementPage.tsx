@@ -3,24 +3,25 @@ import { Settings, Layers } from 'lucide-react';
 import { api } from '../api/client';
 import { useVendors, useItemMasters, useProjects } from '../hooks/useMasters';
 import { Badge } from '../components/ui/Badge';
-import { pageTitleCls, sectionTitleCls, primaryBtnCls, outlineBtnCls, inputCls, cardPadCls } from '../components/ui/classes';
+import { pageTitleCls, sectionTitleCls, outlineBtnCls, inputCls, cardPadCls } from '../components/ui/classes';
 import type { Vendor, ItemMaster, Project } from '../types';
 
-export function MasterManagementPage() {
+export function MasterManagementPage({ embedded = false }: { embedded?: boolean }) {
   const { vendors, reload: reloadVendors } = useVendors();
   const { items, reload: reloadItems } = useItemMasters();
   const { projects, reload: reloadProjects } = useProjects();
 
   return (
     <div>
-      <div className="mb-5 flex items-center gap-2">
-        <Settings size={20} className="text-primary" />
-        <h1 className={pageTitleCls}>마스터 관리</h1>
-      </div>
+      {!embedded && (
+        <div className="mb-5 flex items-center gap-2">
+          <Settings size={20} className="text-primary" />
+          <h1 className={pageTitleCls}>마스터 관리</h1>
+        </div>
+      )}
 
-      <ProjectSection projects={projects} vendors={vendors} reload={reloadProjects} />
-
-      <div className="mt-8 flex flex-wrap gap-6">
+      <div className="flex flex-wrap gap-6">
+        <ProjectSection projects={projects} vendors={vendors} reload={reloadProjects} />
         <VendorSection vendors={vendors} reload={reloadVendors} />
         <ItemSection items={items} reload={reloadItems} />
       </div>
@@ -48,7 +49,7 @@ function ProjectSection({ projects, vendors, reload }: { projects: Project[]; ve
   };
 
   return (
-    <div>
+    <div className="flex-1 min-w-[300px]">
       <div className="mb-2 flex items-center gap-1.5">
         <Layers size={16} className="text-text-sub" />
         <h2 className={sectionTitleCls}>프로젝트(차수) 마스터</h2>
@@ -69,7 +70,7 @@ function ProjectSection({ projects, vendors, reload }: { projects: Project[]; ve
           ))}
         </select>
         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={`${inputCls} w-auto`} />
-        <button type="submit" className={primaryBtnCls}>
+        <button type="submit" className={`${outlineBtnCls} shrink-0`}>
           추가
         </button>
       </form>

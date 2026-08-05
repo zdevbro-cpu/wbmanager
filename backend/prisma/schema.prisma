@@ -53,8 +53,11 @@ model ItemMaster {
   isTemporary Boolean  @default(false) @map("is_temporary")
   createdAt   DateTime @default(now()) @map("created_at")
 
-  sortings        Sorting[]
+  sortings        Sorting[] @relation("SortingItem")
+  sourceSortings  Sorting[] @relation("SortingSourceItem")
   inventoryLedger InventoryLedger[]
+  inbounds        Inbound[]
+  wasteInbounds   WasteInbound[]
   outboundSales   OutboundSale[]
   wasteOutbounds  WasteOutbound[]
   priceHistory    ItemPriceHistory[]
@@ -88,6 +91,7 @@ model Project {
   createdAt     DateTime  @default(now()) @map("created_at")
 
   inbounds          Inbound[]
+  wasteInbounds     WasteInbound[]
   sortings          Sorting[]
   inventoryLedger   InventoryLedger[]
   outboundSales     OutboundSale[]
@@ -114,36 +118,82 @@ model Worker {
 
 // ── 물량 트랜잭션 ──────────────────────────
 
+// 현장 스크랩 입고(반입) — 원본 대조: data/.../원방_현장 스크랩 입고 현황_Sample.xlsx `스크랩입고량` 시트,
+// ecount 구매입력 화면(3. 입고(구매)입력.png)
 model Inbound {
   id            String   @id @default(uuid())
   projectId     String   @map("project_id")
   project       Project  @relation(fields: [projectId], references: [id])
-  inboundDate   DateTime @map("inbound_date")
+  inboundDate   DateTime @map("inbound_date")     // 상차일
   loadingPoint  String?  @map("loading_point")
-  unloadingPoint String? @map("unloading_point")
+  unloadingPoint String? @map("unloading_point")  // 하차지: 원방/세화철강/선진알앤디 등
   vehicleNo     String?  @map("vehicle_no")
-  driverName    String?  @map("driver_name")
-  vehicleType   String?  @map("vehicle_type")
-  grossWeight   Decimal  @map("gross_weight") @db.Decimal(12, 3)
-  tareWeight    Decimal  @map("tare_weight") @db.Decimal(12, 3)
-  netWeight     Decimal  @map("net_weight") @db.Decimal(12, 3) // gross - tare
+  driverName    String?  @map("driver_name")      // 운전자
+  driverPhone   String?  @map("driver_phone")     // 연락처
+  vehicleType   String?  @map("vehicle_type")     // 차종: 집게차/카고/암롤트럭/방통차 등
+  itemCode      String?  @map("item_code")        // 제품명(품목 마스터)
+  item          ItemMaster? @relation(fields: [itemCode], references: [itemCode])
+  itemName      String?  @map("item_name")        // 품목마스터 미매칭 시 표시용
+  grossWeight   Decimal  @map("gross_weight") @db.Decimal(12, 3)  // 총중량
+  tareWeight    Decimal  @map("tare_weight") @db.Decimal(12, 3)   // 공차중량
+  lossWeight    Decimal? @map("loss_weight") @db.Decimal(12, 3)   // 감량
+  netWeight     Decimal  @map("net_weight") @db.Decimal(12, 3)    // 입고량 = 총중량 - 공차중량 - 감량
+  stockWeight   Decimal? @map("stock_weight") @db.Decimal(12, 3)  // 재고반영중량(ecount 필수) — 기본값은 입고량과 동기화
   storageZone   String?  @map("storage_zone")
+  memo          String?  @map("memo")             // 비고
   createdAt     DateTime @default(now()) @map("created_at")
+  deletedAt     DateTime? @map("deleted_at")      // 소프트 삭제
 
   attachments Attachment[]
 
   @@map("inbound")
 }
 
+// 현장 폐기물 입고 — 원본 대조: 위 샘플 엑셀 `폐기물 입고` 시트.
+// 스크랩 입고와 컬럼 구성이 동일하고 인수일/인계일/올바로/배출자가 추가된다.
+model WasteInbound {
+  id             String   @id @default(uuid())
+  projectId      String   @map("project_id")
+  project        Project  @relation(fields: [projectId], references: [id])
+  receiveDate    DateTime @map("receive_date")      // 인수일
+  handoverDate   DateTime? @map("handover_date")    // 인계일
+  olbaroReported Boolean  @default(false) @map("olbaro_reported") // 올바로 신고 상태(O/X)
+  dischargerName String?  @map("discharger_name")   // 배출자: 케이엠티엘에스/크로스특수/원방 등
+  unloadingPoint String?  @map("unloading_point")   // 하차지: 투플러스/주원/도솔환경산업 등
+  vehicleNo      String?  @map("vehicle_no")
+  driverName     String?  @map("driver_name")
+  driverPhone    String?  @map("driver_phone")
+  vehicleType    String?  @map("vehicle_type")
+  itemCode       String?  @map("item_code")         // 제품명(폐합성수지/폐판넬/폐콘크리트 등)
+  item           ItemMaster? @relation(fields: [itemCode], references: [itemCode])
+  itemName       String?  @map("item_name")
+  grossWeight    Decimal  @map("gross_weight") @db.Decimal(12, 3)
+  tareWeight     Decimal  @map("tare_weight") @db.Decimal(12, 3)
+  lossWeight     Decimal? @map("loss_weight") @db.Decimal(12, 3)
+  netWeight      Decimal  @map("net_weight") @db.Decimal(12, 3) // 입고량 = 총중량 - 공차중량 - 감량
+  memo           String?  @map("memo")
+  createdAt      DateTime @default(now()) @map("created_at")
+  deletedAt      DateTime? @map("deleted_at")     // 소프트 삭제
+
+  attachments Attachment[]
+
+  @@map("waste_inbound")
+}
+
+// 선별은 재고를 늘리는 행위가 아니라 품목을 바꾸는 재분류다.
+// 재고원장에는 원품목 OUT + 확정품목 IN(순증 0)으로 기록한다.
+// 근거: 갑지의 재고량 = 입고량 - 출고량 (원방_거래처별 스크랩 출고 현황_Sample.xlsx 갑지 시트)
 model Sorting {
-  id         String   @id @default(uuid())
-  projectId  String   @map("project_id")
-  project    Project  @relation(fields: [projectId], references: [id])
-  itemCode   String   @map("item_code")
-  item       ItemMaster @relation(fields: [itemCode], references: [itemCode])
-  sortDate   DateTime @map("sort_date")
-  sortWeight Decimal  @map("sort_weight") @db.Decimal(12, 3)
-  createdAt  DateTime @default(now()) @map("created_at")
+  id             String   @id @default(uuid())
+  projectId      String   @map("project_id")
+  project        Project  @relation(fields: [projectId], references: [id])
+  sourceItemCode String?  @map("source_item_code")  // 선별 전 품목(미지정 시 미분류)
+  sourceItem     ItemMaster? @relation("SortingSourceItem", fields: [sourceItemCode], references: [itemCode])
+  itemCode       String   @map("item_code")          // 선별 후 확정 품목
+  item           ItemMaster @relation("SortingItem", fields: [itemCode], references: [itemCode])
+  sortDate       DateTime @map("sort_date")
+  sortWeight     Decimal  @map("sort_weight") @db.Decimal(12, 3)
+  createdAt      DateTime @default(now()) @map("created_at")
 
   @@map("sorting")
 }
@@ -164,24 +214,40 @@ model InventoryLedger {
   @@map("inventory_ledger")
 }
 
+// 스크랩 출고(매각) — 원본 대조: 원방_거래처별 스크랩 출고 현황_Sample.xlsx `스크랩출고량`/거래처별 시트,
+// ecount 판매입력 화면(6. 판매입력.png)
 model OutboundSale {
   id               String   @id @default(uuid())
   projectId        String   @map("project_id")
   project          Project  @relation(fields: [projectId], references: [id])
   itemCode         String   @map("item_code")
   item             ItemMaster @relation(fields: [itemCode], references: [itemCode])
-  outboundDate     DateTime @map("outbound_date")
+  outboundDate     DateTime @map("outbound_date")   // 계량일
   buyerId          String?  @map("buyer_id")        // 거래처(매각처)
   buyer            Vendor?  @relation(fields: [buyerId], references: [id])
+  loadingPoint     String?  @map("loading_point")   // 상차지: 원방 등
+  vehicleType      String?  @map("vehicle_type")    // 차종
+  vehicleNo        String?  @map("vehicle_no")
+  driverName       String?  @map("driver_name")     // 운전자
+  driverPhone      String?  @map("driver_phone")    // 연락처
   unitPrice        Decimal? @map("unit_price") @db.Decimal(12, 2)
   grossWeight      Decimal? @map("gross_weight") @db.Decimal(12, 3)
   tareWeight       Decimal? @map("tare_weight") @db.Decimal(12, 3)
+  actualWeight     Decimal? @map("actual_weight") @db.Decimal(12, 3)   // 실중량 = 총중량 - 공차중량
+  preLossWeight    Decimal? @map("pre_loss_weight") @db.Decimal(12, 3) // 거래처 감량 전 실중량
   lossWeight       Decimal? @map("loss_weight") @db.Decimal(12, 3) // 감량
   settledWeight    Decimal  @map("settled_weight") @db.Decimal(12, 3) // 정산중량 = gross - tare - loss
-  amount           Decimal? @map("amount") @db.Decimal(14, 2)
+  stockWeight      Decimal? @map("stock_weight") @db.Decimal(12, 3)  // 재고반영중량(ecount 필수) — 기본값은 정산중량과 동기화
+  amount           Decimal? @map("amount") @db.Decimal(14, 2)        // 공급가액 = 정산중량 × 단가
+  vatAmount        Decimal? @map("vat_amount") @db.Decimal(14, 2)    // 부가세
+  category         String?  @map("category")        // 구분: 출고/보류/기타
+  isSubsidiary     Boolean  @default(false) @map("is_subsidiary")  // 자회사 출고 여부
+  memo             String?  @map("memo")            // 비고(특이사항)
   taxInvoiceIssued Boolean  @default(false) @map("tax_invoice_issued")
   isPaid           Boolean  @default(false) @map("is_paid")
+  paidDate         DateTime? @map("paid_date")      // 입금일
   createdAt        DateTime @default(now()) @map("created_at")
+  deletedAt        DateTime? @map("deleted_at")      // 소프트 삭제
 
   attachments Attachment[]
 
@@ -271,6 +337,7 @@ model Vehicle {
 
   movements   VehicleMovement[]
   maintenances VehicleMaintenance[]
+  attachments Attachment[]   // 차량등록증/보험증서/검사증 등 차량 관련 문서
 
   @@map("vehicle")
 }
@@ -304,6 +371,7 @@ model VehicleMaintenance {
 model Employee {
   id        String   @id @default(uuid())
   name      String   @map("name")
+  phone     String?  @map("phone")        // 연락처 — 입출고 등록 시 운전자 선택하면 자동 채움
   position  String?  @map("position")
   department String? @map("department")
   hireDate  DateTime? @map("hire_date")
@@ -344,18 +412,22 @@ model Attachment {
   id          String   @id @default(uuid())
   driveFileId String   @map("drive_file_id")
   fileName    String?  @map("file_name")
-  fileType    String?  @map("file_type") // 계량증명서/현장사진/정비명세서 등
+  fileType    String?  @map("file_type") // 계량증명서/현장사진/정비명세서/차량등록증/검사증 등
   webViewLink String?  @map("web_view_link")
   uploadedAt  DateTime @default(now()) @map("uploaded_at")
 
   inboundId           String? @map("inbound_id")
   inbound             Inbound? @relation(fields: [inboundId], references: [id])
+  wasteInboundId       String? @map("waste_inbound_id")
+  wasteInbound         WasteInbound? @relation(fields: [wasteInboundId], references: [id])
   outboundSaleId       String? @map("outbound_sale_id")
   outboundSale         OutboundSale? @relation(fields: [outboundSaleId], references: [id])
   wasteOutboundId      String? @map("waste_outbound_id")
   wasteOutbound        WasteOutbound? @relation(fields: [wasteOutboundId], references: [id])
   vehicleMaintenanceId String? @map("vehicle_maintenance_id")
   vehicleMaintenance   VehicleMaintenance? @relation(fields: [vehicleMaintenanceId], references: [id])
+  vehicleId            String? @map("vehicle_id")
+  vehicle              Vehicle? @relation(fields: [vehicleId], references: [id])
 
   @@map("attachment")
 }

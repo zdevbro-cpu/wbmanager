@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
-import type { Vendor, ItemMaster, Project } from '../types';
+import type { Vendor, ItemMaster, Project, Vehicle, Employee } from '../types';
 
 export function useVendors() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -65,4 +65,34 @@ export function useProjects() {
   }, [reload]);
 
   return { projects, reload };
+}
+
+// 입출고 등록의 차량번호는 차량등록관리(차량 마스터)에서 선택한다.
+export function useVehicles() {
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+
+  const reload = useCallback(() => {
+    api.get<Vehicle[]>('/api/vehicles').then(setVehicles);
+  }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  return { vehicles, reload };
+}
+
+// 입출고 등록의 운전자는 등록된 임직원 목록에서 선택한다.
+export function useEmployees() {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  const reload = useCallback(() => {
+    api.get<Employee[]>('/api/employees').then(setEmployees);
+  }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  return { employees, reload };
 }

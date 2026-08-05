@@ -64,6 +64,15 @@ router.post('/:id/maintenances', async (req, res) => {
   res.status(201).json(maintenance);
 });
 
+// 차량등록증/보험증서/검사증 등 차량에 직접 연결된 문서 목록
+router.get('/:id/attachments', async (req, res) => {
+  const attachments = await prisma.attachment.findMany({
+    where: { vehicleId: req.params.id },
+    orderBy: { uploadedAt: 'desc' },
+  });
+  res.json(attachments);
+});
+
 router.get('/:id/maintenances', async (req, res) => {
   const maintenances = await prisma.vehicleMaintenance.findMany({
     where: { vehicleId: req.params.id },

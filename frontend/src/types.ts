@@ -26,10 +26,46 @@ export interface Inbound {
   id: string;
   projectId: string;
   inboundDate: string;
+  unloadingPoint?: string | null;
+  vehicleType?: string | null;
   vehicleNo?: string | null;
+  driverName?: string | null;
+  driverPhone?: string | null;
+  itemCode?: string | null;
+  itemName?: string | null;
   grossWeight: string;
   tareWeight: string;
+  lossWeight?: string | null;
   netWeight: string;
+  stockWeight?: string | null;
+  memo?: string | null;
+  project?: Project;
+  item?: ItemMaster;
+  attachments?: Attachment[];
+}
+
+export interface WasteInbound {
+  id: string;
+  projectId: string;
+  receiveDate: string;
+  handoverDate?: string | null;
+  olbaroReported: boolean;
+  dischargerName?: string | null;
+  unloadingPoint?: string | null;
+  vehicleType?: string | null;
+  vehicleNo?: string | null;
+  driverName?: string | null;
+  driverPhone?: string | null;
+  itemCode?: string | null;
+  itemName?: string | null;
+  grossWeight: string;
+  tareWeight: string;
+  lossWeight?: string | null;
+  netWeight: string;
+  memo?: string | null;
+  project?: Project;
+  item?: ItemMaster;
+  attachments?: Attachment[];
 }
 
 export interface OutboundSale {
@@ -38,7 +74,29 @@ export interface OutboundSale {
   itemCode: string;
   outboundDate: string;
   buyerId?: string | null;
+  loadingPoint?: string | null;
+  vehicleType?: string | null;
+  vehicleNo?: string | null;
+  driverName?: string | null;
+  driverPhone?: string | null;
+  unitPrice?: string | null;
+  grossWeight?: string | null;
+  tareWeight?: string | null;
+  actualWeight?: string | null;
+  preLossWeight?: string | null;
+  lossWeight?: string | null;
   settledWeight: string;
+  stockWeight?: string | null;
+  amount?: string | null;
+  vatAmount?: string | null;
+  category?: string | null;
+  isSubsidiary?: boolean;
+  memo?: string | null;
+  paidDate?: string | null;
+  project?: Project;
+  item?: ItemMaster;
+  buyer?: Vendor;
+  attachments?: Attachment[];
 }
 
 export interface WasteOutbound {
@@ -67,8 +125,18 @@ export interface Vehicle {
 export interface Employee {
   id: string;
   name: string;
+  phone?: string | null;
   position?: string | null;
   department?: string | null;
+}
+
+export interface VehicleMaintenance {
+  id: string;
+  vehicleId: string;
+  maintenanceDate: string;
+  description?: string | null;
+  cost?: string | null;
+  attachments?: Attachment[];
 }
 
 export interface ExpiringItem {
@@ -86,7 +154,7 @@ export interface ExpiringAlerts {
   imminent: ExpiringItem[];
 }
 
-export type LedgerType = 'inbound' | 'sorting' | 'outbound_sale' | 'waste_outbound';
+export type LedgerType = 'inbound' | 'waste_inbound' | 'sorting' | 'outbound_sale' | 'waste_outbound';
 
 export interface LedgerRow {
   type: LedgerType;
@@ -125,6 +193,7 @@ export interface AggregationGroup {
   key: string;
   label: string;
   inbound: number;
+  waste_inbound: number;
   sorting: number;
   outbound_sale: number;
   waste_outbound: number;
@@ -168,6 +237,19 @@ export interface InventoryValuation {
   totalValuation: number;
 }
 
+export interface LedgerEntryDetail {
+  place?: string | null;         // 입고=하차지, 출고=상차지
+  counterparty?: string | null;  // 거래처 / 배출자 / 선별 상대품목
+  vehicleType?: string | null;
+  vehicleNo?: string | null;
+  driverName?: string | null;
+  driverPhone?: string | null;
+  grossWeight?: string | null;
+  tareWeight?: string | null;
+  lossWeight?: string | null;
+  memo?: string | null;
+}
+
 export interface LedgerEntry {
   id: string;
   direction: 'IN' | 'OUT';
@@ -175,6 +257,7 @@ export interface LedgerEntry {
   ledgerDate: string;
   refType: string | null;
   refId: string | null;
+  detail?: LedgerEntryDetail | null;
 }
 
 export interface ProjectPnl {

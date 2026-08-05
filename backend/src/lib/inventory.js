@@ -41,12 +41,123 @@ export async function getInventorySnapshot({ projectId, itemCode } = {}) {
   }));
 }
 
+// 원장 행에는 중량만 있어 어떤 차량이 무엇을 싣고 왔는지 알 수 없다.
+// 원본 트랜잭션을 붙여 원본 엑셀 시트 수준의 항목을 함께 내려준다.
+const SOURCE_LOADERS = {
+  inbound: (ids) =>
+    prisma.inbound.findMany({ where: { id: { in: ids } }, include: { item: true } }),
+  waste_inbound: (ids) =>
+    prisma.wasteInbound.findMany({ where: { id: { in: ids } }, include: { item: true } }),
+  outbound_sale: (ids) =>
+    prisma.outboundSale.findMany({ where: { id: { in: ids } }, include: { item: true, buyer: true } }),
+  waste_outbound: (ids) =>
+    prisma.wasteOutbound.findMany({ where: { id: { in: ids } }, include: { item: true, buyer: true } }),
+  sorting: (ids) =>
+    prisma.sorting.findMany({ where: { id: { in: ids } }, include: { item: true, sourceItem: true } }),
+};
+
+// 트랜잭션 종류별로 컬럼 이름이 달라 드릴다운 표시용 공통 형태로 정규화한다.
+function toDetail(refType, r) {
+  if (!r) return null;
+  switch (refType) {
+    case 'inbound':
+      return {
+        place: r.unloadingPoint, // 하차지
+        counterparty: null,
+        vehicleType: r.vehicleType,
+        vehicleNo: r.vehicleNo,
+        driverName: r.driverName,
+        driverPhone: r.driverPhone,
+        grossWeight: r.grossWeight,
+        tareWeight: r.tareWeight,
+        lossWeight: r.lossWeight,
+        memo: r.memo,
+      };
+    case 'waste_inbound':
+      return {
+        place: r.unloadingPoint,
+        counterparty: r.dischargerName, // 배출자
+        vehicleType: r.vehicleType,
+        vehicleNo: r.vehicleNo,
+        driverName: r.driverName,
+        driverPhone: r.driverPhone,
+        grossWeight: r.grossWeight,
+        tareWeight: r.tareWeight,
+        lossWeight: r.lossWeight,
+        memo: r.memo,
+      };
+    case 'outbound_sale':
+      return {
+        place: r.loadingPoint, // 상차지
+        counterparty: r.buyer?.name ?? null,
+        vehicleType: r.vehicleType,
+        vehicleNo: r.vehicleNo,
+        driverName: r.driverName,
+        driverPhone: r.driverPhone,
+        grossWeight: r.grossWeight,
+        tareWeight: r.tareWeight,
+        lossWeight: r.lossWeight,
+        memo: r.memo,
+      };
+    case 'waste_outbound':
+      return {
+        place: null,
+        counterparty: r.buyer?.name ?? null,
+        vehicleType: null,
+        vehicleNo: null,
+        driverName: null,
+        driverPhone: null,
+        grossWeight: null,
+        tareWeight: null,
+        lossWeight: null,
+        memo: r.olbaroMemo,
+      };
+    case 'sorting':
+      return {
+        place: null,
+        // 선별은 원품목 → 확정품목 재분류이므로 상대 품목을 보여준다.
+        counterparty: r.sourceItem?.itemName ?? r.item?.itemName ?? null,
+        vehicleType: null,
+        vehicleNo: null,
+        driverName: null,
+        driverPhone: null,
+        grossWeight: null,
+        tareWeight: null,
+        lossWeight: null,
+        memo: null,
+      };
+    default:
+      return null;
+  }
+}
+
 // 특정 프로젝트×품목의 재고원장 상세 내역 (드릴다운, S-HPWLTV)
 export async function getInventoryEntries(projectId, itemCode) {
-  return prisma.inventoryLedger.findMany({
+  const entries = await prisma.inventoryLedger.findMany({
     where: { projectId, itemCode },
     orderBy: { ledgerDate: 'desc' },
   });
+
+  // refType별로 한 번씩만 조회한다 (건별 조회 시 N+1이 된다).
+  const idsByType = new Map();
+  for (const e of entries) {
+    if (!e.refType || !e.refId || !SOURCE_LOADERS[e.refType]) continue;
+    if (!idsByType.has(e.refType)) idsByType.set(e.refType, new Set());
+    idsByType.get(e.refType).add(e.refId);
+  }
+
+  const sourceByType = new Map();
+  await Promise.all(
+    [...idsByType.entries()].map(async ([refType, ids]) => {
+      const records = await SOURCE_LOADERS[refType]([...ids]);
+      sourceByType.set(refType, new Map(records.map((r) => [r.id, r])));
+    }),
+  );
+
+  return entries.map((e) => ({
+    ...e,
+    detail: toDetail(e.refType, sourceByType.get(e.refType)?.get(e.refId)),
+  }));
 }
 
 // 해당 품목/프로젝트에 적용할 추정단가를 조회한다.

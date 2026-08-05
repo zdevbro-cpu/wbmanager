@@ -3,12 +3,12 @@ export function buildAggregation(rows) {
   const byProject = new Map();
   const byVendor = new Map();
   const byItem = new Map();
-  const totals = { inbound: 0, sorting: 0, outbound_sale: 0, waste_outbound: 0, amount: 0 };
+  const totals = { inbound: 0, waste_inbound: 0, sorting: 0, outbound_sale: 0, waste_outbound: 0, amount: 0 };
 
   const addTo = (map, key, label, row) => {
     if (!key) return;
     if (!map.has(key)) {
-      map.set(key, { key, label, inbound: 0, sorting: 0, outbound_sale: 0, waste_outbound: 0, amount: 0, count: 0 });
+      map.set(key, { key, label, inbound: 0, waste_inbound: 0, sorting: 0, outbound_sale: 0, waste_outbound: 0, amount: 0, count: 0 });
     }
     const entry = map.get(key);
     entry[row.type] += Number(row.weight ?? 0);
