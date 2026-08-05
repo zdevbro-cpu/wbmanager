@@ -139,8 +139,10 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
     }
   };
 
+  const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
+
   return (
-    <div className={embedded ? '' : 'max-w-[520px]'}>
+    <div className={embedded ? '' : 'max-w-[720px]'}>
       {!embedded && (
         <div className="mb-5 flex items-center gap-2">
           <PackageMinus size={20} className="text-primary" />
@@ -148,35 +150,35 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className={`${cardPadCls} space-y-3.5`}>
-        <div>
-          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">프로젝트(차수)</label>
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required className={inputCls}>
-            <option value="">선택</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.roundName}
-              </option>
-            ))}
-          </select>
-        </div>
+      <form onSubmit={handleSubmit} className={`${cardPadCls} space-y-4`}>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+          <div>
+            <label className={labelCls}>프로젝트(차수)</label>
+            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required className={inputCls}>
+              <option value="">선택</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.roundName}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div>
-          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">계량일</label>
-          <input type="date" value={outboundDate} onChange={(e) => setOutboundDate(e.target.value)} required className={inputCls} />
-        </div>
+          <div>
+            <label className={labelCls}>계량일</label>
+            <input type="date" value={outboundDate} onChange={(e) => setOutboundDate(e.target.value)} required className={inputCls} />
+          </div>
 
-        <div>
-          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">상차지</label>
-          <input
-            value={loadingPoint}
-            onChange={(e) => setLoadingPoint(e.target.value)}
-            placeholder="원방 등"
-            className={inputCls}
-          />
-        </div>
+          <div className="col-span-2">
+            <label className={labelCls}>상차지</label>
+            <input
+              value={loadingPoint}
+              onChange={(e) => setLoadingPoint(e.target.value)}
+              placeholder="원방 등"
+              className={inputCls}
+            />
+          </div>
 
-        <div className="grid grid-cols-2 gap-x-3 gap-y-3.5">
           <VehicleDriverFields
             vehicleType={vehicleType}
             setVehicleType={setVehicleType}
@@ -187,86 +189,84 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
             driverPhone={driverPhone}
             setDriverPhone={setDriverPhone}
           />
-        </div>
 
-        <MasterSelect
-          label="거래처(매각처)"
-          options={vendors.map((v) => ({ value: v.id, label: v.name, isTemporary: v.isTemporary }))}
-          value={buyerId}
-          onChange={setBuyerId}
-          onQuickCreate={quickCreateVendor}
-        />
+          <div className="col-span-2">
+            <MasterSelect
+              label="거래처(매각처)"
+              options={vendors.map((v) => ({ value: v.id, label: v.name, isTemporary: v.isTemporary }))}
+              value={buyerId}
+              onChange={setBuyerId}
+              onQuickCreate={quickCreateVendor}
+            />
+          </div>
 
-        <MasterSelect
-          label="제품명(품목)"
-          options={items.map((i) => ({ value: i.itemCode, label: `${i.itemName} (${i.itemCode})`, isTemporary: i.isTemporary }))}
-          value={itemCode}
-          onChange={setItemCode}
-          onQuickCreate={quickCreateItem}
-        />
+          <div className="col-span-2">
+            <MasterSelect
+              label="제품명(품목)"
+              options={items.map((i) => ({ value: i.itemCode, label: `${i.itemName} (${i.itemCode})`, isTemporary: i.isTemporary }))}
+              value={itemCode}
+              onChange={setItemCode}
+              onQuickCreate={quickCreateItem}
+            />
+          </div>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">공차중량(kg)</label>
+          <div>
+            <label className={labelCls}>공차중량(kg)</label>
             <input type="number" step="0.001" value={tareWeight} onChange={(e) => setTareWeight(e.target.value)} className={inputCls} />
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">총중량(kg)</label>
+          <div>
+            <label className={labelCls}>총중량(kg)</label>
             <input type="number" step="0.001" value={grossWeight} onChange={(e) => setGrossWeight(e.target.value)} className={inputCls} />
           </div>
-        </div>
 
-        <p className="text-[13px] text-text-sub">
-          실중량(자동계산): <span className="tabular font-bold text-text-strong">{actualWeight}</span> kg
-          <span className="ml-1 text-text-faint">= 총중량 − 공차중량</span>
-        </p>
+          <p className="col-span-2 text-[13px] text-text-sub">
+            실중량(자동계산): <span className="tabular font-bold text-text-strong">{actualWeight}</span> kg
+            <span className="ml-1 text-text-faint">= 총중량 − 공차중량</span>
+          </p>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">거래처 감량 전 실중량(kg)</label>
+          <div>
+            <label className={labelCls}>거래처 감량 전 실중량(kg)</label>
             <input type="number" step="0.001" value={preLossWeight} onChange={(e) => setPreLossWeight(e.target.value)} className={inputCls} />
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">감량(kg)</label>
+          <div>
+            <label className={labelCls}>감량(kg)</label>
             <input type="number" step="0.001" value={lossWeight} onChange={(e) => setLossWeight(e.target.value)} className={inputCls} />
           </div>
-        </div>
 
-        <p className="text-[13px] text-text-sub">
-          정산중량(자동계산): <span className="tabular font-bold text-text-strong">{settledWeight}</span> kg
-          <span className="ml-1 text-text-faint">= 총중량 − 공차중량 − 감량</span>
-        </p>
+          <p className="col-span-2 text-[13px] text-text-sub">
+            정산중량(자동계산): <span className="tabular font-bold text-text-strong">{settledWeight}</span> kg
+            <span className="ml-1 text-text-faint">= 총중량 − 공차중량 − 감량</span>
+          </p>
 
-        <div>
-          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">재고반영중량(kg)</label>
-          <input
-            type="number"
-            step="0.001"
-            value={stockWeightValue === '-' ? '' : stockWeightValue}
-            onChange={(e) => setStockWeight(e.target.value)}
-            className={inputCls}
-          />
-          {stockMismatch && (
-            <p className="mt-1 flex items-center gap-1 text-[12.5px] text-danger">
-              <AlertTriangle size={13} /> 정산중량({settledWeight}kg)과 일치하지 않습니다. 확인 후 저장하세요.
-            </p>
-          )}
-        </div>
+          <div className="col-span-2">
+            <label className={labelCls}>재고반영중량(kg)</label>
+            <input
+              type="number"
+              step="0.001"
+              value={stockWeightValue === '-' ? '' : stockWeightValue}
+              onChange={(e) => setStockWeight(e.target.value)}
+              className={inputCls}
+            />
+            {stockMismatch && (
+              <p className="mt-1 flex items-center gap-1 text-[12.5px] text-danger">
+                <AlertTriangle size={13} /> 정산중량({settledWeight}kg)과 일치하지 않습니다. 확인 후 저장하세요.
+              </p>
+            )}
+          </div>
 
-        <div>
-          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">단가(원)</label>
-          <input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className={inputCls} />
-        </div>
+          <div className="col-span-2">
+            <label className={labelCls}>단가(원)</label>
+            <input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className={inputCls} />
+          </div>
 
-        <p className="text-[13px] text-text-sub">
-          공급가액: <span className="tabular font-bold text-text-strong">{amountNum === null ? '-' : amountNum.toLocaleString()}</span> 원
-          <span className="mx-2 text-text-faint">/</span>
-          부가세: <span className="tabular font-bold text-text-strong">{vatNum === null ? '-' : vatNum.toLocaleString()}</span> 원
-        </p>
+          <p className="col-span-2 text-[13px] text-text-sub">
+            공급가액: <span className="tabular font-bold text-text-strong">{amountNum === null ? '-' : amountNum.toLocaleString()}</span> 원
+            <span className="mx-2 text-text-faint">/</span>
+            부가세: <span className="tabular font-bold text-text-strong">{vatNum === null ? '-' : vatNum.toLocaleString()}</span> 원
+          </p>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">구분</label>
+          <div>
+            <label className={labelCls}>구분</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
               <option value="">선택</option>
               {CATEGORIES.map((c) => (
@@ -276,28 +276,28 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
               ))}
             </select>
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">입금일</label>
+          <div>
+            <label className={labelCls}>입금일</label>
             <input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className={inputCls} />
+          </div>
+
+          <label className="col-span-2 flex items-center gap-2 text-[13px] font-semibold text-text-mid">
+            <input
+              type="checkbox"
+              checked={isSubsidiary}
+              onChange={(e) => setIsSubsidiary(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            자회사 출고
+          </label>
+
+          <div className="col-span-2">
+            <label className={labelCls}>비고(특이사항)</label>
+            <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
-          <input
-            type="checkbox"
-            checked={isSubsidiary}
-            onChange={(e) => setIsSubsidiary(e.target.checked)}
-            className="h-4 w-4 accent-primary"
-          />
-          자회사 출고
-        </label>
-
-        <div>
-          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">비고(특이사항)</label>
-          <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
-        </div>
-
-        <div className="grid grid-cols-2 gap-x-3">
+        <div className="grid grid-cols-2 gap-x-4">
           <StagedFileUpload label="계량증명서" files={certFiles} setFiles={setCertFiles} />
           <StagedFileUpload label="참고 서류" files={refFiles} setFiles={setRefFiles} />
         </div>
