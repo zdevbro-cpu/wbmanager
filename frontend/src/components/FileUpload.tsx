@@ -5,7 +5,7 @@ import { api } from '../api/client';
 interface FileUploadProps {
   label: string;
   fileType: string;
-  parentType: 'inbound' | 'waste_inbound' | 'outbound_sale' | 'waste_outbound' | 'vehicle_maintenance' | 'vehicle';
+  parentType: 'inbound' | 'waste_inbound' | 'outbound_sale' | 'waste_outbound' | 'vehicle_maintenance' | 'vehicle' | 'asset';
   parentId: string;
   onUploaded?: () => void;
 }

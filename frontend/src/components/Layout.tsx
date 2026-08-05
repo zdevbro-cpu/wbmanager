@@ -59,6 +59,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: '관리',
     items: [
       { to: '/waste', label: '폐기물 / 올바로 관리', icon: ShieldAlert },
+      { to: '/assets', label: '자산 관리 (차량·장비)', icon: Boxes },
+      { to: '/vehicles', label: '차량/장비 정비·이동', icon: Truck },
       { to: '/admin-alerts', label: '총무 만료 알림', icon: BellRing },
     ],
   },

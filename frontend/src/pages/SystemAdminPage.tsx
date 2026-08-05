@@ -1,20 +1,18 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { MasterManagementPage } from './MasterManagementPage';
 import { CommonCodePage } from './CommonCodePage';
 import { EmployeeManagementPage } from './EmployeeManagementPage';
-import { VehicleManagementPage } from './VehicleManagementPage';
 import { UserApprovalPage } from './UserApprovalPage';
 import { pageTitleCls } from '../components/ui/classes';
 
-type Tab = 'codes' | 'masters' | 'employees' | 'vehicles' | 'users';
+type Tab = 'codes' | 'masters' | 'employees' | 'users';
 
 function initialTab(param: string | null, isAdmin: boolean): Tab {
   if (param === 'codes') return 'codes';
   if (param === 'employees') return 'employees';
-  if (param === 'vehicles') return 'vehicles';
   if (param === 'users' && isAdmin) return 'users';
   return 'masters';
 }
@@ -24,6 +22,9 @@ export function SystemAdminPage() {
   const isAdmin = appUser?.role === 'admin';
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>(initialTab(searchParams.get('tab'), isAdmin));
+
+  // 차량/장비 관리는 사이드바 메뉴로 옮겼다. 기존 링크는 그쪽으로 넘긴다.
+  if (searchParams.get('tab') === 'vehicles') return <Navigate to="/vehicles" replace />;
 
   return (
     <div>
@@ -42,9 +43,6 @@ export function SystemAdminPage() {
         <TabButton active={tab === 'employees'} onClick={() => setTab('employees')}>
           임직원 관리
         </TabButton>
-        <TabButton active={tab === 'vehicles'} onClick={() => setTab('vehicles')}>
-          차량/장비 관리
-        </TabButton>
         {isAdmin && (
           <TabButton active={tab === 'users'} onClick={() => setTab('users')}>
             사용자 승인 관리
@@ -56,8 +54,6 @@ export function SystemAdminPage() {
         <CommonCodePage embedded />
       ) : tab === 'employees' ? (
         <EmployeeManagementPage embedded />
-      ) : tab === 'vehicles' ? (
-        <VehicleManagementPage embedded />
       ) : tab === 'users' && isAdmin ? (
         <UserApprovalPage embedded />
       ) : (

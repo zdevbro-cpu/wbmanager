@@ -4,6 +4,15 @@ import { toISO } from '../lib/date.js';
 
 const router = Router();
 
+// 다음 교육 예정일 = 이수일 + 주기(개월). 직접 입력한 예정일이 있으면 그 값을 우선한다.
+function resolveNextDue({ nextDueDate, trainingDate, cycleMonths }) {
+  if (nextDueDate) return toISO(nextDueDate);
+  if (!trainingDate || !cycleMonths) return undefined;
+  const due = new Date(trainingDate);
+  due.setMonth(due.getMonth() + Number(cycleMonths));
+  return due.toISOString();
+}
+
 router.get('/', async (req, res) => {
   const employees = await prisma.employee.findMany({
     orderBy: { name: 'asc' },
@@ -43,7 +52,8 @@ router.post('/', async (req, res) => {
                 trainingName: t.trainingName,
                 trainingType: t.trainingType,
                 trainingDate: toISO(t.trainingDate),
-                nextDueDate: toISO(t.nextDueDate),
+                cycleMonths: t.cycleMonths ? Number(t.cycleMonths) : undefined,
+                nextDueDate: resolveNextDue(t),
               })),
             },
           }
@@ -94,7 +104,8 @@ router.post('/:id/trainings', async (req, res) => {
       ...req.body,
       employeeId: req.params.id,
       trainingDate: toISO(req.body.trainingDate),
-      nextDueDate: toISO(req.body.nextDueDate),
+      cycleMonths: req.body.cycleMonths ? Number(req.body.cycleMonths) : undefined,
+      nextDueDate: resolveNextDue(req.body),
     },
   });
   res.status(201).json(training);

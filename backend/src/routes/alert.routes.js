@@ -26,12 +26,19 @@ function daysUntil(date) {
 router.get('/expiring', async (req, res) => {
   const threshold = Number(req.query.days ?? 30);
 
-  const [vehicles, certs] = await Promise.all([
+  const [vehicles, certs, trainings, assetSchedules] = await Promise.all([
     prisma.vehicle.findMany({ where: { inspectionExpiry: { not: null } } }),
     prisma.employeeCertification.findMany({
       where: { expiryDate: { not: null } },
       include: { employee: true },
     }),
+    // 의무·보수 교육의 다음 예정일도 같은 기준으로 알린다.
+    prisma.employeeTraining.findMany({
+      where: { nextDueDate: { not: null } },
+      include: { employee: true },
+    }),
+    // 자산 일정(보험만료/정기검사/점검/교정/리스만료) — 설계문서상 알림 소스는 asset_schedule 하나로 통합
+    prisma.assetSchedule.findMany({ where: { status: { not: '완료' } }, include: { asset: true } }),
   ]);
 
   const items = [
@@ -48,6 +55,20 @@ router.get('/expiring', async (req, res) => {
       targetName: `${c.employee?.name ?? ''} - ${c.certName}`,
       expiryDate: c.expiryDate,
       daysLeft: daysUntil(c.expiryDate),
+    })),
+    ...trainings.map((t) => ({
+      type: 'training',
+      targetId: t.id,
+      targetName: `${t.employee?.name ?? ''} - ${t.trainingName}${t.trainingType ? ` (${t.trainingType}교육)` : ''}`,
+      expiryDate: t.nextDueDate,
+      daysLeft: daysUntil(t.nextDueDate),
+    })),
+    ...assetSchedules.map((s) => ({
+      type: 'asset_schedule',
+      targetId: s.id,
+      targetName: `${s.asset?.assetNo ?? ''} ${s.asset?.name ?? ''} - ${s.scheduleType}`,
+      expiryDate: s.dueDate,
+      daysLeft: daysUntil(s.dueDate),
     })),
   ]
     .filter((i) => i.daysLeft <= threshold)

@@ -27,11 +27,25 @@ interface TrainingRow {
   trainingName: string;
   trainingType: string;
   trainingDate: string;
+  cycleMonths: string;
   nextDueDate: string;
 }
 
+// 다음 교육 예정일 = 이수일 + 주기(개월)
+function addMonths(date: string, months: number) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0, 10);
+}
+
 const emptyCert: CertRow = { certName: '', acquiredDate: '', expiryDate: '' };
-const emptyTraining: TrainingRow = { trainingName: '', trainingType: '의무', trainingDate: '', nextDueDate: '' };
+const emptyTraining: TrainingRow = {
+  trainingName: '',
+  trainingType: '의무',
+  trainingDate: '',
+  cycleMonths: '12',
+  nextDueDate: '',
+};
 
 const TRAINING_TYPES = ['의무', '보수'];
 
@@ -115,6 +129,8 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
             trainingName: t.trainingName,
             trainingType: t.trainingType || undefined,
             trainingDate: t.trainingDate || undefined,
+            cycleMonths: t.cycleMonths ? Number(t.cycleMonths) : undefined,
+            // 비워 두면 이수일 + 주기로 서버가 산출한다.
             nextDueDate: t.nextDueDate || undefined,
           })),
       });
@@ -237,7 +253,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-[13px] font-semibold text-text-mid">
-                교육이력 <span className="font-normal text-text-faint">— 교육명 / 구분 / 이수일 / 다음 예정일</span>
+                교육이력 <span className="font-normal text-text-faint">— 교육명 / 구분 / 이수일 / 주기(개월) / 다음 예정일(자동)</span>
               </label>
               <button
                 type="button"
@@ -290,13 +306,26 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     className={inputCls}
                   />
                   <input
+                    type="number"
+                    min="1"
+                    value={t.cycleMonths}
+                    onChange={(e) =>
+                      setTrainings(trainings.map((r, ri) => (ri === i ? { ...r, cycleMonths: e.target.value } : r)))
+                    }
+                    title="교육 주기(개월)"
+                    aria-label="교육 주기(개월)"
+                    placeholder="주기"
+                    className={`${inputCls} w-[72px] shrink-0 px-2`}
+                  />
+                  <input
                     type="date"
                     value={t.nextDueDate}
                     onChange={(e) =>
                       setTrainings(trainings.map((r, ri) => (ri === i ? { ...r, nextDueDate: e.target.value } : r)))
                     }
-                    title="다음 교육 예정일"
+                    title="다음 교육 예정일 — 비우면 이수일 + 주기로 자동 산출"
                     aria-label="다음 교육 예정일"
+                    placeholder={t.trainingDate && t.cycleMonths ? addMonths(t.trainingDate, Number(t.cycleMonths)) : ''}
                     className={inputCls}
                   />
                   <button

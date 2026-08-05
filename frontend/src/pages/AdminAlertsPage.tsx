@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BellRing, Truck, Award } from 'lucide-react';
+import { BellRing, Truck, Award, GraduationCap } from 'lucide-react';
 import { api } from '../api/client';
 import { Badge } from '../components/ui/Badge';
 import {
@@ -18,6 +18,13 @@ import type { ExpiringAlerts, ExpiringItem, Employee } from '../types';
 const TYPE_LABEL: Record<string, string> = {
   vehicle_inspection: '차량검사',
   certification: '자격증',
+  training: '교육',
+};
+
+const TYPE_ICON: Record<string, typeof Truck> = {
+  vehicle_inspection: Truck,
+  certification: Award,
+  training: GraduationCap,
 };
 
 export function AdminAlertsPage() {
@@ -67,8 +74,8 @@ export function AdminAlertsPage() {
       {/* 차량/중장비 등록·정비이력·검사관리는 시스템 관리 > 차량/장비 관리 탭으로 이동했다. */}
       <p className="mt-8 text-[13px] text-text-sub">
         차량/중장비 등록·정비이력·검사 문서는{' '}
-        <Link to="/system?tab=vehicles" className="font-semibold text-primary hover:underline">
-          시스템 관리 &gt; 차량/장비 관리
+        <Link to="/vehicles" className="font-semibold text-primary hover:underline">
+          관리 &gt; 차량/장비 정비·이동
         </Link>
         에서 관리합니다.
       </p>
@@ -97,8 +104,11 @@ function AlertGroup({ title, items, tone }: { title: string; items: ExpiringItem
               <tr key={`${i.type}-${i.targetId}`} className={trCls}>
                 <td className={tdCls}>
                   <span className="inline-flex items-center gap-1.5">
-                    {i.type === 'vehicle_inspection' ? <Truck size={13} /> : <Award size={13} />}
-                    {TYPE_LABEL[i.type]}
+                    {(() => {
+                      const Icon = TYPE_ICON[i.type] ?? Award;
+                      return <Icon size={13} />;
+                    })()}
+                    {TYPE_LABEL[i.type] ?? i.type}
                   </span>
                 </td>
                 <td className={tdCls}>{i.targetName}</td>

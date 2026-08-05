@@ -400,6 +400,7 @@ model Employee {
 
   certifications EmployeeCertification[]
   trainings      EmployeeTraining[]
+  managedAssets  Asset[]
 
   @@map("employee")
 }
@@ -423,10 +424,98 @@ model EmployeeTraining {
   trainingName String    @map("training_name")
   trainingType String?   @map("training_type")   // 의무 / 보수
   trainingDate DateTime? @map("training_date")   // 이수일
+  cycleMonths  Int?      @map("cycle_months")    // 교육 주기(개월) — 이수일 + 주기 = 다음 예정일
   nextDueDate  DateTime? @map("next_due_date")   // 다음 교육 예정일 — D-day 산출 기준
   createdAt    DateTime  @default(now()) @map("created_at")
 
   @@map("employee_training")
+}
+
+// ── 자산(차량·장비) 통합 관리 ────────────────
+// 근거: data/차량장비_자산관리_설계정리.md — 자산 마스터 + 유형별 상세 1:1 분리, 일정은 asset_schedule 하나로 통합.
+// 1차 범위(자산 마스터·유형별 상세·일정·첨부)만 구현하고 배정/운행일지/정비/비용은 이후 단계로 둔다.
+model Asset {
+  id              String    @id @default(uuid())
+  assetNo         String    @unique @map("asset_no")     // 자산번호 V-2026-001 / E-2026-001
+  assetType       String    @map("asset_type")           // VEHICLE / EQUIPMENT
+  category        String?   @map("category")             // 승용/화물/지게차/발전기 등
+  name            String    @map("name")
+  modelName       String?   @map("model_name")
+  manufacturer    String?   @map("manufacturer")
+  serialNo        String?   @map("serial_no")            // 제조번호 / 차대번호
+  ownerDept       String?   @map("owner_dept")           // 관리 부서
+  managerEmpId    String?   @map("manager_emp_id")       // 관리 책임자
+  manager         Employee? @relation(fields: [managerEmpId], references: [id])
+  location        String?   @map("location")             // 보관/주차 위치
+  ownershipType   String?   @map("ownership_type")       // 자가/리스/렌트/임차
+  acquiredAt      DateTime? @map("acquired_at")
+  acquireCost     Decimal?  @map("acquire_cost") @db.Decimal(14, 2)
+  usefulLifeMonth Int?      @map("useful_life_month")
+  status          String    @default("가용") @map("status") // 가용/사용중/정비중/유휴/매각/폐기/분실
+  disposedAt      DateTime? @map("disposed_at")
+  disposeReason   String?   @map("dispose_reason")
+  memo            String?   @map("memo")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  vehicle     AssetVehicle?
+  equipment   AssetEquipment?
+  schedules   AssetSchedule[]
+  attachments Attachment[]
+
+  @@map("asset")
+}
+
+model AssetVehicle {
+  assetId          String    @id @map("asset_id")
+  asset            Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  plateNo          String?   @map("plate_no")
+  vin              String?   @map("vin")
+  vehicleType      String?   @map("vehicle_type")      // 승용/승합/화물/특수
+  fuelType         String?   @map("fuel_type")
+  yearModel        String?   @map("year_model")
+  loadCapacity     String?   @map("load_capacity")
+  currentMileage   Int?      @map("current_mileage")
+  insuranceCompany String?   @map("insurance_company")
+  insuranceEnd     DateTime? @map("insurance_end")     // 만료 알림 대상
+  inspectionNext   DateTime? @map("inspection_next")   // 정기검사 만료 알림 대상
+  leaseCompany     String?   @map("lease_company")
+  leaseEnd         DateTime? @map("lease_end")
+
+  @@map("asset_vehicle")
+}
+
+model AssetEquipment {
+  assetId              String    @id @map("asset_id")
+  asset                Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  spec                 String?   @map("spec")
+  powerType            String?   @map("power_type")
+  requiresLicense      Boolean   @default(false) @map("requires_license")
+  licenseType          String?   @map("license_type")
+  isLegalInspection    Boolean   @default(false) @map("is_legal_inspection")
+  inspectionCycleMonth Int?      @map("inspection_cycle_month")
+  inspectionNext       DateTime? @map("inspection_next")
+  calibrationNext      DateTime? @map("calibration_next")
+  warrantyEnd          DateTime? @map("warranty_end")
+  quantity             Int?      @map("quantity")
+
+  @@map("asset_equipment")
+}
+
+// 보험만료·정기검사·정기점검·교정·리스만료를 한 테이블로 모아 알림 로직을 하나로 유지한다.
+model AssetSchedule {
+  id              String    @id @default(uuid())
+  assetId         String    @map("asset_id")
+  asset           Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  scheduleType    String    @map("schedule_type") // 보험만료/정기검사/정기점검/교정/리스만료/소모품교체
+  dueDate         DateTime  @map("due_date")
+  alertDaysBefore Int       @default(30) @map("alert_days_before")
+  status          String    @default("예정") @map("status") // 예정/완료/지연
+  completedAt     DateTime? @map("completed_at")
+  memo            String?   @map("memo")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@map("asset_schedule")
 }
 
 // ── 공통코드 ────────────────────────────────
@@ -466,6 +555,8 @@ model Attachment {
   vehicleMaintenance   VehicleMaintenance? @relation(fields: [vehicleMaintenanceId], references: [id])
   vehicleId            String? @map("vehicle_id")
   vehicle              Vehicle? @relation(fields: [vehicleId], references: [id])
+  assetId              String? @map("asset_id")
+  asset                Asset? @relation(fields: [assetId], references: [id])
 
   @@map("attachment")
 }

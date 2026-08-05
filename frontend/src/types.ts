@@ -143,6 +143,74 @@ export interface Vehicle {
   currentSite?: string | null;
 }
 
+export interface AssetVehicleDetail {
+  assetId: string;
+  plateNo?: string | null;
+  vin?: string | null;
+  vehicleType?: string | null;
+  fuelType?: string | null;
+  yearModel?: string | null;
+  loadCapacity?: string | null;
+  currentMileage?: number | null;
+  insuranceCompany?: string | null;
+  insuranceEnd?: string | null;
+  inspectionNext?: string | null;
+  leaseCompany?: string | null;
+  leaseEnd?: string | null;
+}
+
+export interface AssetEquipmentDetail {
+  assetId: string;
+  spec?: string | null;
+  powerType?: string | null;
+  requiresLicense?: boolean;
+  licenseType?: string | null;
+  isLegalInspection?: boolean;
+  inspectionCycleMonth?: number | null;
+  inspectionNext?: string | null;
+  calibrationNext?: string | null;
+  warrantyEnd?: string | null;
+  quantity?: number | null;
+}
+
+export interface AssetSchedule {
+  id: string;
+  assetId: string;
+  scheduleType: string;
+  dueDate: string;
+  alertDaysBefore: number;
+  status: string;
+  completedAt?: string | null;
+  memo?: string | null;
+}
+
+export interface Asset {
+  id: string;
+  assetNo: string;
+  assetType: 'VEHICLE' | 'EQUIPMENT';
+  category?: string | null;
+  name: string;
+  modelName?: string | null;
+  manufacturer?: string | null;
+  serialNo?: string | null;
+  ownerDept?: string | null;
+  managerEmpId?: string | null;
+  manager?: Employee;
+  location?: string | null;
+  ownershipType?: string | null;
+  acquiredAt?: string | null;
+  acquireCost?: string | null;
+  usefulLifeMonth?: number | null;
+  status: string;
+  disposedAt?: string | null;
+  disposeReason?: string | null;
+  memo?: string | null;
+  vehicle?: AssetVehicleDetail | null;
+  equipment?: AssetEquipmentDetail | null;
+  schedules?: AssetSchedule[];
+  attachments?: Attachment[];
+}
+
 export interface CommonCode {
   id: string;
   group: string;
@@ -189,7 +257,7 @@ export interface VehicleMaintenance {
 }
 
 export interface ExpiringItem {
-  type: 'vehicle_inspection' | 'certification';
+  type: 'vehicle_inspection' | 'certification' | 'training' | 'asset_schedule';
   targetId: string;
   targetName: string;
   expiryDate: string;
