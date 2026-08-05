@@ -397,6 +397,25 @@ export interface SavedReport {
   createdAt: string;
 }
 
+export interface DiaryDay {
+  date: string;
+  weekday: number;
+  count: number;
+  totalWeight: number;
+  totalAmount: number;
+  saleCount: number;
+  saleWeight: number;
+  wasteCount: number;
+  wasteWeight: number;
+  byProject: { projectName: string; count: number; weight: number; amount: number }[];
+  reports: { id: string; title: string; createdAt: string }[];
+}
+
+export interface DiaryResponse {
+  month: string;
+  days: DiaryDay[];
+}
+
 export interface DailyReport {
   date: string;
   rows: LedgerRow[];

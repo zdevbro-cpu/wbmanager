@@ -4,6 +4,7 @@ import { buildAggregation } from '../lib/aggregation.js';
 import { prisma } from '../lib/prisma.js';
 import { getProjectPnl } from '../lib/pnl.js';
 import { buildPnlReport, buildDailyReport } from '../lib/reportBuilder.js';
+import { buildPnlDocx, buildDailyDocx } from '../lib/docxBuilder.js';
 import { toISO } from '../lib/date.js';
 
 const router = Router();
@@ -102,6 +103,8 @@ router.post('/publish', async (req, res) => {
         title: built.title,
         content: built.content,
         summary: built.summary,
+        // 워드 문서를 언제든 같은 내용으로 다시 만들 수 있게 발행 시점 값을 남긴다.
+        payload: { ...pnl, reportDate },
       },
       include: { project: true },
     });
@@ -143,6 +146,7 @@ router.post('/publish', async (req, res) => {
         title: built.title,
         content: built.content,
         summary: built.summary,
+        payload: { date, groups, summary: built.summary },
       },
       include: { project: true },
     });
@@ -184,6 +188,88 @@ router.get('/published/:id/export', async (req, res) => {
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="report.txt"; filename*=UTF-8''${encodedName}`);
   res.send(report.content);
+});
+
+// 워드 문서 — 대표이사 보고 양식으로 내려받는다.
+router.get('/published/:id/docx', async (req, res) => {
+  const report = await prisma.report.findUnique({ where: { id: req.params.id } });
+  if (!report) return res.status(404).json({ error: 'not found' });
+  if (!report.payload) {
+    return res.status(409).json({ error: '이 보고서는 워드 양식 데이터 없이 발행되어 다시 발행해야 합니다.' });
+  }
+
+  const buffer =
+    report.reportType === 'pnl' ? await buildPnlDocx(report.payload) : await buildDailyDocx(report.payload);
+
+  const encodedName = encodeURIComponent(`${report.title}.docx`);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  res.setHeader('Content-Disposition', `attachment; filename="report.docx"; filename*=UTF-8''${encodedName}`);
+  res.send(buffer);
+});
+
+// 다이어리 화면용 — 한 달치 일자별 출고 요약과 그날 발행된 보고서를 함께 준다.
+router.get('/daily-diary', async (req, res) => {
+  const { month, projectId } = req.query;
+  if (!month) return res.status(400).json({ error: 'month는 필수입니다(YYYY-MM).' });
+
+  const [y, m] = month.split('-').map(Number);
+  const from = `${month}-01`;
+  const to = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+
+  const [rows, reports] = await Promise.all([
+    queryLedger({ from, to, projectId }),
+    prisma.report.findMany({
+      where: { reportType: 'daily', reportDate: { gte: new Date(from), lte: new Date(`${to}T23:59:59`) } },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ]);
+
+  const outboundRows = rows.filter((r) => r.type === 'outbound_sale' || r.type === 'waste_outbound');
+
+  const byDate = new Map();
+  for (const r of outboundRows) {
+    const key = new Date(r.date).toISOString().slice(0, 10);
+    if (!byDate.has(key)) byDate.set(key, []);
+    byDate.get(key).push(r);
+  }
+
+  const days = [];
+  const last = new Date(to);
+  for (const cur = new Date(from); cur <= last; cur.setDate(cur.getDate() + 1)) {
+    const date = cur.toISOString().slice(0, 10);
+    const dayRows = byDate.get(date) ?? [];
+    const sum = (list, key) => list.reduce((acc, r) => acc + Number(r[key] ?? 0), 0);
+    const sales = dayRows.filter((r) => r.type === 'outbound_sale');
+    const wastes = dayRows.filter((r) => r.type === 'waste_outbound');
+
+    const projectMap = new Map();
+    for (const r of dayRows) {
+      const key = r.projectName ?? '-';
+      if (!projectMap.has(key)) projectMap.set(key, { projectName: key, count: 0, weight: 0, amount: 0 });
+      const e = projectMap.get(key);
+      e.count += 1;
+      e.weight += Number(r.weight ?? 0);
+      e.amount += Number(r.amount ?? 0);
+    }
+
+    days.push({
+      date,
+      weekday: cur.getDay(),
+      count: dayRows.length,
+      totalWeight: sum(dayRows, 'weight'),
+      totalAmount: sum(dayRows, 'amount'),
+      saleCount: sales.length,
+      saleWeight: sum(sales, 'weight'),
+      wasteCount: wastes.length,
+      wasteWeight: sum(wastes, 'weight'),
+      byProject: [...projectMap.values()].sort((a, b) => b.weight - a.weight),
+      reports: reports
+        .filter((rep) => rep.reportDate.toISOString().slice(0, 10) === date)
+        .map((rep) => ({ id: rep.id, title: rep.title, createdAt: rep.createdAt })),
+    });
+  }
+
+  res.json({ month, days });
 });
 
 router.delete('/published/:id', async (req, res) => {

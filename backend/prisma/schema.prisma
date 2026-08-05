@@ -597,6 +597,7 @@ model Report {
   title      String   @map("title")
   content    String   @map("content")
   summary    Json?    @map("summary")
+  payload    Json?    @map("payload")   // 워드 문서를 다시 만들기 위한 구조화 데이터
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("report")

@@ -518,6 +518,7 @@ async function seed() {
         title: built.title,
         content: built.content,
         summary: built.summary,
+        payload: { date, groups, summary: built.summary },
       },
     });
     reportCount += 1;
@@ -535,6 +536,7 @@ async function seed() {
         title: built.title,
         content: built.content,
         summary: built.summary,
+        payload: { ...pnl, reportDate },
       },
     });
     reportCount += 1;
