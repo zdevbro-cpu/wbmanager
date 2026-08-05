@@ -14,6 +14,7 @@ const LINK_FIELDS = {
   vehicle_maintenance: 'vehicleMaintenanceId',
   vehicle: 'vehicleId',
   asset: 'assetId',
+  asset_maintenance: 'assetMaintenanceId',
 };
 
 // 계량증명서/현장사진 등 증빙 파일을 Google Drive에 업로드하고, 지정된 트랜잭션에 연결한다.

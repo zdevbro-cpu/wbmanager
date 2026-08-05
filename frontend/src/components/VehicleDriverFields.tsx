@@ -60,7 +60,7 @@ export function VehicleDriverFields({
           ))}
         </select>
         {vehicles.length === 0 && (
-          <p className="mt-1 text-[12px] text-text-faint">시스템 관리 &gt; 차량/장비 관리에서 먼저 등록하세요.</p>
+          <p className="mt-1 text-[12px] text-text-faint">관리 &gt; 자산 관리에서 먼저 등록하세요.</p>
         )}
       </div>
 

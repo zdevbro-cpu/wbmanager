@@ -70,3 +70,50 @@ export async function readWeighingCertificate(buffer, mimeType = 'image/jpeg') {
   }
   return { enabled: true, fields };
 }
+
+// 차량등록증(자동차등록증) — 자산 등록 시 드래그앤드롭으로 올리면 차량 상세를 채운다.
+const VEHICLE_PROMPT = `이 이미지는 한국의 자동차등록증입니다. 아래 필드를 JSON으로만 추출하세요.
+값이 없으면 빈 문자열("")로. 날짜는 YYYY-MM-DD 형식으로.
+숫자는 단위/콤마를 빼고 숫자만 넣으세요.
+{
+  "plateNo": "자동차등록번호(예: 86노1445)",
+  "vin": "차대번호",
+  "vehicleType": "차종(승용/승합/화물/특수)",
+  "modelName": "차명(모델명)",
+  "manufacturer": "제작사",
+  "fuelType": "사용연료(휘발유/경유/LPG/전기/수소/하이브리드)",
+  "yearModel": "연식(년식)",
+  "registeredAt": "최초등록일(YYYY-MM-DD)",
+  "loadCapacity": "적재중량(kg 또는 톤 표기 그대로)",
+  "ownerName": "소유자"
+}`;
+
+export async function readVehicleRegistration(buffer, mimeType = 'image/jpeg') {
+  if (!model) return { enabled: false, fields: {} };
+
+  const result = await model.generateContent([
+    VEHICLE_PROMPT,
+    { inlineData: { data: buffer.toString('base64'), mimeType } },
+  ]);
+  const text = result.response.text();
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) {
+    console.warn('[ocr] 차량등록증 JSON 추출 실패');
+    return { enabled: true, fields: {} };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(match[0]);
+  } catch (e) {
+    console.warn('[ocr] 차량등록증 JSON 파싱 실패:', e.message);
+    return { enabled: true, fields: {} };
+  }
+
+  const fields = {};
+  for (const [k, v] of Object.entries(parsed)) {
+    if (v === '' || v == null) continue;
+    fields[k] = String(v).trim();
+  }
+  return { enabled: true, fields };
+}

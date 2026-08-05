@@ -38,6 +38,11 @@ router.get('/:id', async (req, res) => {
       manager: true,
       attachments: true,
       schedules: { orderBy: { dueDate: 'asc' } },
+      maintenances: {
+        include: { vendor: true, attachments: true },
+        orderBy: [{ completedAt: 'desc' }, { requestedAt: 'desc' }],
+      },
+      movements: { orderBy: { moveDate: 'desc' } },
     },
   });
   if (!asset) return res.status(404).json({ error: '자산을 찾을 수 없습니다.' });
@@ -169,6 +174,88 @@ router.patch('/:id/schedules/:scheduleId', async (req, res) => {
 
 router.delete('/:id/schedules/:scheduleId', async (req, res) => {
   const deleted = await prisma.assetSchedule.delete({ where: { id: req.params.scheduleId } });
+  res.json(deleted);
+});
+
+// ── 정비 이력 ──
+// 다음 예정일을 넣으면 asset_schedule 일정을 함께 만들어 알림 소스를 하나로 유지한다(설계문서 3.6).
+router.post('/:id/maintenances', async (req, res) => {
+  const { maintType, nextDueDate, requestedAt, startedAt, completedAt, cost, mileageAt, hoursAt, nextDueMileage } = req.body;
+  if (!maintType) return res.status(400).json({ error: 'maintType은 필수입니다.' });
+
+  const created = await prisma.$transaction(async (tx) => {
+    const maintenance = await tx.assetMaintenance.create({
+      data: {
+        ...req.body,
+        assetId: req.params.id,
+        requestedAt: toISO(requestedAt),
+        startedAt: toISO(startedAt),
+        completedAt: toISO(completedAt),
+        nextDueDate: toISO(nextDueDate),
+        cost: num(cost),
+        mileageAt: num(mileageAt),
+        hoursAt: num(hoursAt),
+        nextDueMileage: num(nextDueMileage),
+      },
+    });
+    if (nextDueDate) {
+      await tx.assetSchedule.create({
+        data: {
+          assetId: req.params.id,
+          scheduleType: maintType === '법정검사' ? '정기검사' : '정기점검',
+          dueDate: toISO(nextDueDate),
+          memo: `${maintType} 후속`,
+        },
+      });
+    }
+    // 정비 시점 계기판은 자산의 현재 주행거리에도 반영한다(파생값 갱신).
+    if (mileageAt) {
+      await tx.assetVehicle.updateMany({ where: { assetId: req.params.id }, data: { currentMileage: num(mileageAt) } });
+    }
+    return maintenance;
+  });
+
+  res.status(201).json(created);
+});
+
+router.patch('/:id/maintenances/:maintId', async (req, res) => {
+  const { status, completedAt, action, cost } = req.body;
+  const updated = await prisma.assetMaintenance.update({
+    where: { id: req.params.maintId },
+    data: {
+      ...(status !== undefined ? { status } : {}),
+      ...(completedAt !== undefined ? { completedAt: toISO(completedAt) } : {}),
+      ...(action !== undefined ? { action } : {}),
+      ...(cost !== undefined ? { cost: num(cost) } : {}),
+    },
+  });
+  res.json(updated);
+});
+
+router.delete('/:id/maintenances/:maintId', async (req, res) => {
+  const deleted = await prisma.assetMaintenance.delete({ where: { id: req.params.maintId } });
+  res.json(deleted);
+});
+
+// ── 이동 내역 ──
+router.post('/:id/movements', async (req, res) => {
+  const { moveDate, fromSite, toSite, memo } = req.body;
+  if (!moveDate) return res.status(400).json({ error: 'moveDate는 필수입니다.' });
+
+  const movement = await prisma.$transaction(async (tx) => {
+    const created = await tx.assetMovement.create({
+      data: { assetId: req.params.id, moveDate: toISO(moveDate), fromSite, toSite, memo },
+    });
+    // 최신 도착지를 자산의 현재 위치로 반영한다.
+    if (toSite) await tx.asset.update({ where: { id: req.params.id }, data: { location: toSite } });
+    return created;
+  });
+
+  res.status(201).json(movement);
+});
+
+router.delete('/:id/movements/:movementId', async (req, res) => {
+  const deleted = await prisma.assetMovement.delete({ where: { id: req.params.movementId } });
   res.json(deleted);
 });
 

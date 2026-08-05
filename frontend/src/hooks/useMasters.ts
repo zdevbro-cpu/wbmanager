@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
-import type { Vendor, ItemMaster, Project, Vehicle, Employee, CommonCode } from '../types';
+import type { Vendor, ItemMaster, Project, Vehicle, Employee, CommonCode, Asset } from '../types';
 
 export function useVendors() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -67,12 +67,24 @@ export function useProjects() {
   return { projects, reload };
 }
 
-// 입출고 등록의 차량번호는 차량등록관리(차량 마스터)에서 선택한다.
+// 입출고 등록의 차량번호는 자산 관리에 등록된 차량에서 선택한다.
 export function useVehicles() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
   const reload = useCallback(() => {
-    api.get<Vehicle[]>('/api/vehicles').then(setVehicles);
+    api.get<Asset[]>('/api/assets?assetType=VEHICLE').then((assets) =>
+      setVehicles(
+        assets
+          .filter((a) => a.vehicle?.plateNo)
+          .map((a) => ({
+            id: a.id,
+            vehicleNo: a.vehicle?.plateNo ?? '',
+            vehicleType: a.vehicle?.vehicleType ?? a.category ?? null,
+            inspectionExpiry: a.vehicle?.inspectionNext ?? null,
+            currentSite: a.location ?? null,
+          })),
+      ),
+    );
   }, []);
 
   useEffect(() => {

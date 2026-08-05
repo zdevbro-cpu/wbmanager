@@ -39,6 +39,7 @@ model Vendor {
   projects       Project[]
   outboundSales  OutboundSale[]
   wasteOutbounds WasteOutbound[]
+  assetMaintenances AssetMaintenance[]
 
   @@map("vendor")
 }
@@ -459,10 +460,12 @@ model Asset {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  vehicle     AssetVehicle?
-  equipment   AssetEquipment?
-  schedules   AssetSchedule[]
-  attachments Attachment[]
+  vehicle      AssetVehicle?
+  equipment    AssetEquipment?
+  schedules    AssetSchedule[]
+  maintenances AssetMaintenance[]
+  movements    AssetMovement[]
+  attachments  Attachment[]
 
   @@map("asset")
 }
@@ -519,6 +522,47 @@ model AssetSchedule {
   @@map("asset_schedule")
 }
 
+// 정비·수리·점검 이력. 다음 예정일을 넣으면 asset_schedule 일정이 함께 생성되어 알림에 잡힌다.
+model AssetMaintenance {
+  id             String    @id @default(uuid())
+  assetId        String    @map("asset_id")
+  asset          Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  maintType      String    @map("maint_type")      // 정기점검/수리/소모품교체/사고수리/법정검사/교정
+  vendorId       String?   @map("vendor_id")       // 정비업체
+  vendor         Vendor?   @relation(fields: [vendorId], references: [id])
+  requestedAt    DateTime? @map("requested_at")
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  mileageAt      Int?      @map("mileage_at")      // 시점 계기판
+  hoursAt        Int?      @map("hours_at")        // 시점 가동시간
+  symptom        String?   @map("symptom")
+  action         String?   @map("action")
+  parts          String?   @map("parts")
+  cost           Decimal?  @map("cost") @db.Decimal(14, 2)
+  nextDueDate    DateTime? @map("next_due_date")
+  nextDueMileage Int?      @map("next_due_mileage")
+  status         String    @default("요청") @map("status") // 요청/진행중/완료/취소
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  attachments Attachment[]
+
+  @@map("asset_maintenance")
+}
+
+// 자산 이동 내역(현장 간 이동). 최신 도착지는 asset.location에 반영한다.
+model AssetMovement {
+  id        String   @id @default(uuid())
+  assetId   String   @map("asset_id")
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  moveDate  DateTime @map("move_date")
+  fromSite  String?  @map("from_site")
+  toSite    String?  @map("to_site")
+  memo      String?  @map("memo")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("asset_movement")
+}
+
 // ── 공통코드 ────────────────────────────────
 // 배출자·운반자·상차지·차종 등 자유 텍스트로 입력되던 반복 값을 한 곳에서 관리한다.
 // 값 하나짜리 목록만 담으며, 차량·임직원처럼 이력이 붙는 대상은 별도 마스터를 유지한다.
@@ -558,6 +602,8 @@ model Attachment {
   vehicle              Vehicle? @relation(fields: [vehicleId], references: [id])
   assetId              String? @map("asset_id")
   asset                Asset? @relation(fields: [assetId], references: [id])
+  assetMaintenanceId   String? @map("asset_maintenance_id")
+  assetMaintenance     AssetMaintenance? @relation(fields: [assetMaintenanceId], references: [id])
 
   @@map("attachment")
 }

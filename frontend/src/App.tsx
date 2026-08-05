@@ -9,7 +9,7 @@ import { WasteInboundListPage } from './pages/WasteInboundListPage';
 import { WasteOutboundListPage } from './pages/WasteOutboundListPage';
 import { AssetManagementPage } from './pages/AssetManagementPage';
 import { EmployeeManagementPage } from './pages/EmployeeManagementPage';
-import { VehicleManagementPage } from './pages/VehicleManagementPage';
+import { MaintenancePage } from './pages/MaintenancePage';
 import { SystemAdminPage } from './pages/SystemAdminPage';
 import { EcountExportPage } from './pages/EcountExportPage';
 import { LedgerPage } from './pages/LedgerPage';
@@ -46,7 +46,8 @@ function Gate() {
         <Route path="/pnl" element={<PnlPage />} />
         <Route path="/waste" element={<WasteManagementPage />} />
         <Route path="/assets" element={<AssetManagementPage />} />
-        <Route path="/vehicles" element={<VehicleManagementPage />} />
+        <Route path="/maintenances" element={<MaintenancePage />} />
+        <Route path="/vehicles" element={<Navigate to="/assets" replace />} />
         <Route path="/employees" element={<EmployeeManagementPage />} />
         <Route path="/admin-alerts" element={<AdminAlertsPage />} />
         <Route path="/system" element={<SystemAdminPage />} />

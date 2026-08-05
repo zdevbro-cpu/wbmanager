@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Boxes, Plus, Eye, Car, Wrench, RotateCcw } from 'lucide-react';
+import { Boxes, Plus, Eye, Car, Wrench, RotateCcw, ScanLine, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { useCommonCodes, useEmployees } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FileUpload } from '../components/FileUpload';
+import { StagedFileUpload } from '../components/StagedFileUpload';
+import { AssetMaintenanceForm } from '../components/AssetMaintenanceForm';
+import { uploadStagedFiles } from '../lib/uploadStaged';
+import { API_BASE_URL } from '../api/client';
+import { auth } from '../lib/firebase';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import {
@@ -283,6 +288,10 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
     warrantyEnd: '',
     quantity: '',
   });
+  const [regFiles, setRegFiles] = useState<File[]>([]);
+  const [contractFiles, setContractFiles] = useState<File[]>([]);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [ocrNote, setOcrNote] = useState('');
   const [requiresLicense, setRequiresLicense] = useState(false);
   const [isLegalInspection, setIsLegalInspection] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -306,12 +315,69 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
     return rows;
   };
 
+  // 차량등록증을 올리면 Gemini OCR로 읽어 빈 칸만 채운다. 이미 입력한 값은 덮어쓰지 않는다.
+  const runOcr = async (picked: File[]) => {
+    const file = picked[0];
+    if (!file || assetType !== 'VEHICLE') return;
+    setOcrBusy(true);
+    setOcrNote('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch(`${API_BASE_URL}/api/ocr/vehicle-registration`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      const data: { enabled: boolean; fields: Record<string, string>; error?: string } = await res.json();
+
+      if (!data.enabled) {
+        setOcrNote('OCR이 설정되지 않아 자동 인식을 건너뜁니다. 직접 입력해 주세요.');
+        return;
+      }
+      if (data.error) setOcrNote(data.error);
+
+      const f = data.fields ?? {};
+      const filled: string[] = [];
+      const fillVehicle: Record<string, string> = {};
+      const fillForm: Record<string, string> = {};
+
+      const put = (target: Record<string, string>, current: string, key: string, value?: string, label?: string) => {
+        if (value && !current) {
+          target[key] = value;
+          if (label) filled.push(label);
+        }
+      };
+
+      put(fillVehicle, vehicle.plateNo, 'plateNo', f.plateNo, '차량번호');
+      put(fillVehicle, vehicle.vin, 'vin', f.vin, '차대번호');
+      put(fillVehicle, vehicle.vehicleType, 'vehicleType', f.vehicleType, '차종');
+      put(fillVehicle, vehicle.fuelType, 'fuelType', f.fuelType, '연료');
+      put(fillVehicle, vehicle.yearModel, 'yearModel', f.yearModel, '연식');
+      put(fillVehicle, vehicle.loadCapacity, 'loadCapacity', f.loadCapacity, '적재중량');
+      put(fillForm, form.modelName, 'modelName', f.modelName, '모델');
+      put(fillForm, form.manufacturer, 'manufacturer', f.manufacturer, '제조사');
+      put(fillForm, form.serialNo, 'serialNo', f.vin, '차대번호(제조번호)');
+      put(fillForm, form.name, 'name', f.modelName, '자산명');
+
+      if (Object.keys(fillVehicle).length) setVehicle((v) => ({ ...v, ...fillVehicle }));
+      if (Object.keys(fillForm).length) setForm((o) => ({ ...o, ...fillForm }));
+      if (filled.length) setOcrNote(`차량등록증에서 ${filled.join(', ')} 항목을 채웠습니다. 확인 후 수정하세요.`);
+      else if (!data.error) setOcrNote('인식된 값이 없거나 이미 입력된 항목뿐입니다.');
+    } catch {
+      setOcrNote('인식에 실패했습니다. 직접 입력해 주세요.');
+    } finally {
+      setOcrBusy(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
     try {
-      await api.post('/api/assets', {
+      const asset = await api.post<{ id: string }>('/api/assets', {
         ...clean(form),
         assetType,
         ...(assetType === 'VEHICLE'
@@ -319,6 +385,15 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
           : { equipment: { ...clean(equipment), requiresLicense, isLegalInspection } }),
         schedules: buildSchedules(),
       });
+      // 첨부는 자산 id가 있어야 붙일 수 있어 등록 성공 후 올린다.
+      await uploadStagedFiles(
+        [
+          { fileType: '차량등록증', files: regFiles },
+          { fileType: '계약서', files: contractFiles },
+        ],
+        'asset',
+        asset.id,
+      );
       onCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : '등록 실패');
@@ -645,6 +720,31 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
           <label className={labelCls}>비고</label>
           <input value={form.memo} onChange={(e) => set({ memo: e.target.value })} className={inputCls} />
         </div>
+
+        <p className="col-span-3 border-t border-border pt-3 text-[13px] font-bold text-text-strong">
+          첨부 서류
+          {assetType === 'VEHICLE' && (
+            <span className="ml-1 text-[12px] font-normal text-text-faint">
+              — 차량등록증을 올리면 차량번호·차대번호·차종·연료·연식을 자동으로 읽어 빈 칸을 채웁니다.
+            </span>
+          )}
+        </p>
+
+        <StagedFileUpload
+          label={assetType === 'VEHICLE' ? '차량등록증' : '규격서 · 매뉴얼'}
+          files={regFiles}
+          setFiles={setRegFiles}
+          onAdd={runOcr}
+          busy={ocrBusy}
+          hint={assetType === 'VEHICLE' ? '올리면 차량 정보를 자동 인식합니다' : undefined}
+        />
+        <StagedFileUpload label="계약서" files={contractFiles} setFiles={setContractFiles} hint="리스·렌트·매매 계약서" />
+
+        {ocrNote && (
+          <p className="col-span-3 flex items-center gap-1.5 text-[12.5px] text-primary">
+            <ScanLine size={14} /> {ocrNote}
+          </p>
+        )}
       </div>
 
       {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
@@ -663,6 +763,9 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
   const [asset, setAsset] = useState<Asset | null>(null);
   const { labels: scheduleTypes } = useCommonCodes('일정 구분');
   const [scheduleType, setScheduleType] = useState('');
+  const [addingMaint, setAddingMaint] = useState(false);
+  const [moveDate, setMoveDate] = useState('');
+  const [moveTo, setMoveTo] = useState('');
   const [dueDate, setDueDate] = useState('');
 
   const load = useCallback(() => {
@@ -824,6 +927,164 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                       <tr>
                         <td colSpan={5} className="py-6 text-center text-[13px] text-text-faint">
                           등록된 일정이 없습니다.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <div className="mb-2 flex items-center gap-2">
+                <h3 className={`${sectionTitleCls} text-[15px]`}>정비 이력</h3>
+                <button
+                  type="button"
+                  onClick={() => setAddingMaint(!addingMaint)}
+                  className={`${outlineBtnCls} ml-auto h-8 px-3 text-[12.5px]`}
+                >
+                  <Plus size={14} /> 정비 등록
+                </button>
+              </div>
+
+              {addingMaint && (
+                <div className="mb-3">
+                  <AssetMaintenanceForm
+                    assetId={assetId}
+                    onDone={() => {
+                      setAddingMaint(false);
+                      load();
+                      onChanged();
+                    }}
+                    onCancel={() => setAddingMaint(false)}
+                  />
+                </div>
+              )}
+
+              <div className={tableWrapCls}>
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-y border-border">
+                      <th className={thCls}>구분</th>
+                      <th className={thCls}>완료일</th>
+                      <th className={thCls}>업체</th>
+                      <th className={thCls}>조치</th>
+                      <th className={thCls}>계기판</th>
+                      <th className={thCls}>비용</th>
+                      <th className={thCls}>다음 예정</th>
+                      <th className={thCls}>상태</th>
+                      <th className={thCls}>관리</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(asset.maintenances ?? []).map((m) => (
+                      <tr key={m.id} className={trCls}>
+                        <td className={tdCls}>{m.maintType}</td>
+                        <td className={`${tdCls} tabular`}>{date(m.completedAt)}</td>
+                        <td className={tdCls}>{show(m.vendor?.name)}</td>
+                        <td className={tdCls}>{show(m.action ?? m.symptom)}</td>
+                        <td className={`${tdCls} tabular`}>{show(m.mileageAt)}</td>
+                        <td className={`${tdCls} tabular`}>{m.cost ? Number(m.cost).toLocaleString() : '-'}</td>
+                        <td className={`${tdCls} tabular`}>{date(m.nextDueDate)}</td>
+                        <td className={tdCls}>
+                          <Badge tone={m.status === '완료' ? 'green' : 'amber'}>{m.status}</Badge>
+                        </td>
+                        <td className={tdCls}>
+                          <button
+                            type="button"
+                            title="삭제"
+                            onClick={async () => {
+                              if (!window.confirm('이 정비 이력을 삭제하시겠습니까?')) return;
+                              await api.del(`/api/assets/${assetId}/maintenances/${m.id}`);
+                              load();
+                              onChanged();
+                            }}
+                            className="text-text-faint hover:text-danger"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {(asset.maintenances ?? []).length === 0 && (
+                      <tr>
+                        <td colSpan={9} className="py-6 text-center text-[13px] text-text-faint">
+                          등록된 정비 이력이 없습니다.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <h3 className={`${sectionTitleCls} mb-2 text-[15px]`}>이동 이력</h3>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!moveDate) return;
+                  await api.post(`/api/assets/${assetId}/movements`, {
+                    moveDate,
+                    fromSite: asset.location || undefined,
+                    toSite: moveTo || undefined,
+                  });
+                  setMoveDate('');
+                  setMoveTo('');
+                  load();
+                  onChanged();
+                }}
+                className="mb-2 flex gap-2"
+              >
+                <input type="date" value={moveDate} onChange={(e) => setMoveDate(e.target.value)} className={`${inputCls} w-[150px]`} />
+                <input
+                  value={moveTo}
+                  onChange={(e) => setMoveTo(e.target.value)}
+                  placeholder="도착지(현장)"
+                  className={`${inputCls} w-[200px]`}
+                />
+                <button type="submit" className={`${primaryBtnCls} shrink-0 whitespace-nowrap px-4`}>
+                  이동 등록
+                </button>
+              </form>
+
+              <div className={tableWrapCls}>
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-y border-border">
+                      <th className={thCls}>이동일</th>
+                      <th className={thCls}>출발지</th>
+                      <th className={thCls}>도착지</th>
+                      <th className={thCls}>관리</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(asset.movements ?? []).map((mv) => (
+                      <tr key={mv.id} className={trCls}>
+                        <td className={`${tdCls} tabular`}>{date(mv.moveDate)}</td>
+                        <td className={tdCls}>{show(mv.fromSite)}</td>
+                        <td className={tdCls}>{show(mv.toSite)}</td>
+                        <td className={tdCls}>
+                          <button
+                            type="button"
+                            title="삭제"
+                            onClick={async () => {
+                              if (!window.confirm('이 이동 이력을 삭제하시겠습니까?')) return;
+                              await api.del(`/api/assets/${assetId}/movements/${mv.id}`);
+                              load();
+                              onChanged();
+                            }}
+                            className="text-text-faint hover:text-danger"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {(asset.movements ?? []).length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-6 text-center text-[13px] text-text-faint">
+                          등록된 이동 이력이 없습니다.
                         </td>
                       </tr>
                     )}

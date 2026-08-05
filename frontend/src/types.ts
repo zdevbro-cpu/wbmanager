@@ -184,6 +184,37 @@ export interface AssetSchedule {
   memo?: string | null;
 }
 
+export interface AssetMaintenance {
+  id: string;
+  assetId: string;
+  maintType: string;
+  vendorId?: string | null;
+  vendor?: Vendor;
+  requestedAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  mileageAt?: number | null;
+  hoursAt?: number | null;
+  symptom?: string | null;
+  action?: string | null;
+  parts?: string | null;
+  cost?: string | null;
+  nextDueDate?: string | null;
+  nextDueMileage?: number | null;
+  status: string;
+  asset?: Asset;
+  attachments?: Attachment[];
+}
+
+export interface AssetMovement {
+  id: string;
+  assetId: string;
+  moveDate: string;
+  fromSite?: string | null;
+  toSite?: string | null;
+  memo?: string | null;
+}
+
 export interface Asset {
   id: string;
   assetNo: string;
@@ -208,6 +239,8 @@ export interface Asset {
   vehicle?: AssetVehicleDetail | null;
   equipment?: AssetEquipmentDetail | null;
   schedules?: AssetSchedule[];
+  maintenances?: AssetMaintenance[];
+  movements?: AssetMovement[];
   attachments?: Attachment[];
 }
 

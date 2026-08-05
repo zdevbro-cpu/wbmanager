@@ -75,8 +75,8 @@ export function AdminAlertsPage() {
       {/* 차량/중장비 등록·정비이력·검사관리는 시스템 관리 > 차량/장비 관리 탭으로 이동했다. */}
       <p className="mt-8 text-[13px] text-text-sub">
         차량/중장비 등록·정비이력·검사 문서는{' '}
-        <Link to="/vehicles" className="font-semibold text-primary hover:underline">
-          관리 &gt; 차량/장비 정비·이동
+        <Link to="/assets" className="font-semibold text-primary hover:underline">
+          관리 &gt; 자산 관리
         </Link>
         에서 관리합니다.
       </p>

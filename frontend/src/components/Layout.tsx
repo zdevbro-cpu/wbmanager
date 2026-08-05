@@ -9,6 +9,7 @@ import {
   FileText,
   FileSpreadsheet,
   Boxes,
+  Wrench,
   TrendingUp,
   ShieldAlert,
   BellRing,
@@ -61,7 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/waste', label: '폐기물 / 올바로 관리', icon: ShieldAlert },
       { to: '/assets', label: '자산 관리 (차량·장비)', icon: Boxes },
-      { to: '/vehicles', label: '차량/장비 정비·이동', icon: Truck },
+      { to: '/maintenances', label: '정비 현황', icon: Wrench },
       { to: '/employees', label: '임직원 관리', icon: Users },
       { to: '/admin-alerts', label: '총무 만료 알림', icon: BellRing },
     ],

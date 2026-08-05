@@ -1,6 +1,6 @@
 import { api } from '../api/client';
 
-export type ParentType = 'inbound' | 'waste_inbound' | 'outbound_sale' | 'waste_outbound' | 'vehicle' | 'vehicle_maintenance';
+export type ParentType = 'inbound' | 'waste_inbound' | 'outbound_sale' | 'waste_outbound' | 'vehicle' | 'vehicle_maintenance' | 'asset';
 
 // 등록 성공 직후 담아 뒀던 파일들을 순서대로 업로드한다.
 export async function uploadStagedFiles(
