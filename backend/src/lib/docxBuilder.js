@@ -113,7 +113,27 @@ function docFrom(children) {
 
 // 손익 현황 보고 — 원본 문서의 5개 절 구성을 그대로 따른다.
 export async function buildPnlDocx(payload) {
-  const p = payload;
+  // 예전에 발행된 보고서는 일부 항목이 없을 수 있어 기본값으로 채운다.
+  const p = {
+    roundName: '-',
+    reportDate: new Date().toISOString().slice(0, 10),
+    salesRevenue: 0,
+    totalCost: 0,
+    purchaseCost: 0,
+    realizedPnl: 0,
+    inventoryValuation: 0,
+    expectedFinalPnl: 0,
+    inboundWeight: 0,
+    soldWeight: 0,
+    wasteOutWeight: 0,
+    remainingWeight: 0,
+    recoveryRate: 0,
+    avgSalePrice: 0,
+    purchaseRecoveryGap: 0,
+    ...payload,
+    salesByItem: payload?.salesByItem ?? [],
+    inventoryDetail: payload?.inventoryDetail ?? [],
+  };
   const children = [
     title(`${p.roundName}${p.roundNo ? ` ${p.roundNo}` : ''} 손익 현황 보고`),
     subtitle('손익 현황 보고 — 대표이사 보고용'),
@@ -212,7 +232,9 @@ const TYPE_LABEL = { outbound_sale: '매각', waste_outbound: '폐기물반출' 
 
 // 일일 출고보고 — 앞단 전체 요약 표 + 진행 프로젝트별 상세 표
 export async function buildDailyDocx(payload) {
-  const { date, groups, summary } = payload;
+  const date = payload?.date ?? new Date().toISOString().slice(0, 10);
+  const groups = (payload?.groups ?? []).map((g) => ({ ...g, rows: g.rows ?? [] }));
+  const summary = payload?.summary ?? { count: 0, totalWeight: 0, totalAmount: 0 };
   const activeGroups = groups.filter((g) => g.rows.length > 0);
   const sum = (rows, key) => rows.reduce((acc, r) => acc + Number(r[key] ?? 0), 0);
 

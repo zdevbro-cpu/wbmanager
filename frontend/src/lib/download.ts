@@ -19,6 +19,19 @@ export async function downloadFile(path: string, fallbackName: string) {
   const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
   const fileName = encoded ? decodeURIComponent(encoded) : fallbackName;
 
+  // 오류가 JSON/HTML로 돌아오면 파일로 저장하지 않고 사유를 알린다.
+  const contentType = res.headers.get('Content-Type') ?? '';
+  if (contentType.includes('application/json') || contentType.includes('text/html')) {
+    const text = await res.text();
+    let message = '파일을 받지 못했습니다.';
+    try {
+      message = JSON.parse(text).error ?? message;
+    } catch {
+      /* HTML 오류 페이지면 원문 대신 기본 메시지를 쓴다 */
+    }
+    throw new Error(message);
+  }
+
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

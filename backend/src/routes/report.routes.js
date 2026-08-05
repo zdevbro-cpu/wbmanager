@@ -194,17 +194,30 @@ router.get('/published/:id/export', async (req, res) => {
 router.get('/published/:id/docx', async (req, res) => {
   const report = await prisma.report.findUnique({ where: { id: req.params.id } });
   if (!report) return res.status(404).json({ error: 'not found' });
-  if (!report.payload) {
-    return res.status(409).json({ error: '이 보고서는 워드 양식 데이터 없이 발행되어 다시 발행해야 합니다.' });
+
+  try {
+    let payload = report.payload;
+    // 양식 데이터 없이 발행된 예전 손익보고는 현재 데이터로 다시 계산해 문서를 만든다.
+    if (!payload && report.reportType === 'pnl' && report.projectId) {
+      const pnl = await getProjectPnl(report.projectId);
+      payload = pnl ? { ...pnl, reportDate: report.reportDate.toISOString().slice(0, 10) } : null;
+    }
+    if (!payload) {
+      return res.status(409).json({ error: '이 보고서는 워드 양식 데이터 없이 발행되어 다시 발행해야 합니다.' });
+    }
+
+    const buffer = report.reportType === 'pnl' ? await buildPnlDocx(payload) : await buildDailyDocx(payload);
+
+    const encodedName = encodeURIComponent(`${report.title}.docx`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="report.docx"; filename*=UTF-8''${encodedName}`);
+    res.setHeader('Content-Length', String(buffer.length));
+    // Express의 본문 변환을 거치지 않도록 바이너리를 그대로 내보낸다.
+    res.end(buffer);
+  } catch (err) {
+    console.error('[report] 워드 생성 실패:', err);
+    res.status(500).json({ error: '워드 문서를 만들지 못했습니다. 보고서를 다시 발행해 주세요.' });
   }
-
-  const buffer =
-    report.reportType === 'pnl' ? await buildPnlDocx(report.payload) : await buildDailyDocx(report.payload);
-
-  const encodedName = encodeURIComponent(`${report.title}.docx`);
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-  res.setHeader('Content-Disposition', `attachment; filename="report.docx"; filename*=UTF-8''${encodedName}`);
-  res.send(buffer);
 });
 
 // 다이어리 화면용 — 한 달치 일자별 출고 요약과 그날 발행된 보고서를 함께 준다.
