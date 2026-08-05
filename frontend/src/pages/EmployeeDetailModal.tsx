@@ -9,6 +9,7 @@ import { primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes
 import type { Employee } from '../types';
 
 const TRAINING_TYPES = ['의무', '보수'];
+const CERT_TYPES = ['국가기술자격', '면허', '교육이수증', '기타'];
 
 function addMonths(date: string, months: number) {
   const d = new Date(date);
@@ -77,14 +78,16 @@ export function EmployeeDetailModal({
     onChanged();
   };
 
-  const certs = [...(emp?.certifications ?? [])].sort(
-    (a, b) =>
-      new Date(b.expiryDate ?? b.acquiredDate ?? 0).getTime() - new Date(a.expiryDate ?? a.acquiredDate ?? 0).getTime(),
-  );
-  const trainings = [...(emp?.trainings ?? [])].sort(
-    (a, b) =>
-      new Date(b.nextDueDate ?? b.trainingDate ?? 0).getTime() - new Date(a.nextDueDate ?? a.trainingDate ?? 0).getTime(),
-  );
+  // 만료가 임박한 순. 여러 건을 보유했을 때 급한 것이 먼저 보여야 한다.
+  const byUrgency = <T,>(rows: T[], due: (r: T) => string | null | undefined) =>
+    [...rows].sort((a, b) => {
+      const da = due(a) ? new Date(due(a) as string).getTime() : Number.POSITIVE_INFINITY;
+      const db = due(b) ? new Date(due(b) as string).getTime() : Number.POSITIVE_INFINITY;
+      return da - db;
+    });
+
+  const certs = byUrgency(emp?.certifications ?? [], (c) => c.expiryDate ?? c.acquiredDate);
+  const trainings = byUrgency(emp?.trainings ?? [], (t) => t.nextDueDate ?? t.trainingDate);
 
   const removeCert = async (id: string) => {
     if (!window.confirm('이 자격 이력을 삭제하시겠습니까?')) return;
@@ -179,6 +182,7 @@ export function EmployeeDetailModal({
               certs[0] ? (
                 <div className="grid grid-cols-2 gap-x-5 gap-y-2">
                   <Field label="자격증명" value={certs[0].certName} />
+                  <Field label="구분" value={certs[0].certType ?? '-'} />
                   <Field label="취득일" value={day(certs[0].acquiredDate)} />
                   <Field label="만료일" value={day(certs[0].expiryDate)} />
                   <div className="flex justify-between gap-3">
@@ -190,7 +194,7 @@ export function EmployeeDetailModal({
             }
             rows={certs.slice(1).map((c) => ({
               id: c.id,
-              badge: <Badge tone="slate">자격</Badge>,
+              badge: <Badge tone="slate">{c.certType ?? '자격'}</Badge>,
               summary: `${c.certName} · ${day(c.acquiredDate)} ~ ${day(c.expiryDate)}`,
               onRemove: () => removeCert(c.id),
             }))}
@@ -263,21 +267,23 @@ function HistorySection({
 
   return (
     <div>
-      <h3 className="mb-2 text-[14px] font-extrabold text-text-strong">최근 {title}</h3>
+      {/* 삭제 버튼을 카드 위에 겹쳐 놓으면 우측 정렬된 첫 줄 값(취득일·구분)을 가린다.
+          제목 줄에 두어 값과 부딪히지 않게 한다. */}
+      <div className="mb-2 flex items-center gap-2">
+        <h3 className="text-[14px] font-extrabold text-text-strong">최근 {title}</h3>
+        {onRemoveLatest && (
+          <button
+            type="button"
+            onClick={onRemoveLatest}
+            title="삭제"
+            className="ml-auto flex items-center gap-1 text-[12px] text-text-faint hover:text-danger"
+          >
+            <Trash2 size={13} /> 삭제
+          </button>
+        )}
+      </div>
       {latest ? (
-        <div className="relative rounded-[10px] border border-border bg-input p-3.5">
-          {latest}
-          {onRemoveLatest && (
-            <button
-              type="button"
-              onClick={onRemoveLatest}
-              title="삭제"
-              className="absolute top-2 right-2 text-text-faint hover:text-danger"
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
-        </div>
+        <div className="rounded-[10px] border border-border bg-input p-3.5">{latest}</div>
       ) : (
         <p className="text-[13px] text-text-faint">{emptyText}</p>
       )}
@@ -328,6 +334,7 @@ function CertForm({
   onCancel: () => void;
 }) {
   const [certName, setCertName] = useState('');
+  const [certType, setCertType] = useState(CERT_TYPES[0]);
   const [acquiredDate, setAcquiredDate] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
 
@@ -336,6 +343,7 @@ function CertForm({
     if (!certName.trim()) return;
     await api.post(`/api/employees/${employeeId}/certifications`, {
       certName,
+      certType: certType || undefined,
       acquiredDate: acquiredDate || undefined,
       expiryDate: expiryDate || undefined,
     });
@@ -347,7 +355,7 @@ function CertForm({
       <p className="mb-2 text-[13px] font-bold text-text-strong">
         자격 이력 추가 <span className="font-normal text-text-faint">— 갱신 시에도 새 이력으로 쌓입니다</span>
       </p>
-      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,150px)_minmax(0,150px)_auto] items-center gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,132px)_minmax(0,150px)_minmax(0,150px)_auto] items-center gap-2">
         <input
           list="detail-certs"
           value={certName}
@@ -360,6 +368,18 @@ function CertForm({
             <option key={o} value={o} />
           ))}
         </datalist>
+        <select
+          value={certType}
+          onChange={(e) => setCertType(e.target.value)}
+          aria-label="구분"
+          className={`${inputCls} min-w-0 px-2`}
+        >
+          {CERT_TYPES.map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
         <input
           type="date"
           value={acquiredDate}

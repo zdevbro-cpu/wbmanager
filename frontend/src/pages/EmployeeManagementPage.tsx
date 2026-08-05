@@ -22,6 +22,7 @@ import type { Employee } from '../types';
 
 interface CertRow {
   certName: string;
+  certType: string;
   acquiredDate: string;
   expiryDate: string;
 }
@@ -41,7 +42,8 @@ function addMonths(date: string, months: number) {
   return d.toISOString().slice(0, 10);
 }
 
-const emptyCert: CertRow = { certName: '', acquiredDate: '', expiryDate: '' };
+const CERT_TYPES = ['국가기술자격', '면허', '교육이수증', '기타'];
+const emptyCert: CertRow = { certName: '', certType: CERT_TYPES[0], acquiredDate: '', expiryDate: '' };
 const emptyTraining: TrainingRow = {
   trainingName: '',
   trainingType: '의무',
@@ -72,22 +74,28 @@ function DDay({ due }: { due?: string | null }) {
   return <Badge tone="slate">D-{left}</Badge>;
 }
 
-// 갱신될 때마다 행이 쌓이므로 목록에는 최신 1건만 보여 주고 나머지는 건수 배지로 알린다.
-function latestCert(emp: Employee) {
-  return [...(emp.certifications ?? [])].sort(
-    (a, b) => new Date(b.expiryDate ?? b.acquiredDate ?? 0).getTime() - new Date(a.expiryDate ?? a.acquiredDate ?? 0).getTime(),
-  )[0];
+// 자격·교육은 여러 건을 동시에 보유·이수한다. 예전처럼 1건만 대표로 보이면
+// 만료가 임박한 다른 건이 가려져 D-day를 놓친다. 임박한 순으로 정렬해 모두 보여 준다.
+const LIST_LIMIT = 3;
+
+function byUrgency<T>(rows: T[], due: (r: T) => string | null | undefined) {
+  return [...rows].sort((a, b) => {
+    // 기한이 없는 건은 급할 게 없으므로 뒤로 보낸다.
+    const da = due(a) ? new Date(due(a) as string).getTime() : Number.POSITIVE_INFINITY;
+    const db = due(b) ? new Date(due(b) as string).getTime() : Number.POSITIVE_INFINITY;
+    return da - db;
+  });
 }
 
-function latestTraining(emp: Employee) {
-  return [...(emp.trainings ?? [])].sort(
-    (a, b) => new Date(b.nextDueDate ?? b.trainingDate ?? 0).getTime() - new Date(a.nextDueDate ?? a.trainingDate ?? 0).getTime(),
-  )[0];
-}
+const sortedCerts = (emp: Employee) =>
+  byUrgency(emp.certifications ?? [], (c) => c.expiryDate ?? c.acquiredDate);
 
-function MoreBadge({ total }: { total: number }) {
-  if (total <= 1) return null;
-  return <Badge tone="slate">+{total - 1}</Badge>;
+const sortedTrainings = (emp: Employee) =>
+  byUrgency(emp.trainings ?? [], (t) => t.nextDueDate ?? t.trainingDate);
+
+function MoreBadge({ total, shown }: { total: number; shown: number }) {
+  if (total <= shown) return null;
+  return <Badge tone="slate">+{total - shown}</Badge>;
 }
 
 export function EmployeeManagementPage({ embedded = false }: { embedded?: boolean }) {
@@ -147,30 +155,41 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                 <td className={`${tdCls} tabular`}>{emp.hireDate ? emp.hireDate.slice(0, 10) : '-'}</td>
                 <td className={`${tdCls} whitespace-nowrap`}>
                   {(() => {
-                    const c = latestCert(emp);
-                    if (!c) return '-';
+                    const all = sortedCerts(emp);
+                    if (all.length === 0) return '-';
                     return (
-                      <span className="inline-flex items-center gap-1.5">
-                        {c.certName}
-                        {c.expiryDate && <span className="text-text-faint">~{c.expiryDate.slice(0, 10)}</span>}
-                        <DDay due={c.expiryDate} />
-                        <MoreBadge total={emp.certifications?.length ?? 0} />
-                      </span>
+                      <div className="space-y-1">
+                        {all.slice(0, LIST_LIMIT).map((c) => (
+                          <div key={c.id} className="flex items-center gap-1.5">
+                            {c.certType && <Badge tone="slate">{c.certType}</Badge>}
+                            {c.certName}
+                            {c.expiryDate && <span className="text-text-faint">~{c.expiryDate.slice(0, 10)}</span>}
+                            <DDay due={c.expiryDate} />
+                          </div>
+                        ))}
+                        <MoreBadge total={all.length} shown={LIST_LIMIT} />
+                      </div>
                     );
                   })()}
                 </td>
                 <td className={`${tdCls} whitespace-nowrap`}>
                   {(() => {
-                    const t = latestTraining(emp);
-                    if (!t) return '-';
+                    const all = sortedTrainings(emp);
+                    if (all.length === 0) return '-';
                     return (
-                      <span className="inline-flex items-center gap-1.5">
-                        {t.trainingType && <Badge tone={t.trainingType === '의무' ? 'amber' : 'blue'}>{t.trainingType}</Badge>}
-                        {t.trainingName}
-                        {t.nextDueDate && <span className="text-text-faint">{t.nextDueDate.slice(0, 10)}</span>}
-                        <DDay due={t.nextDueDate} />
-                        <MoreBadge total={emp.trainings?.length ?? 0} />
-                      </span>
+                      <div className="space-y-1">
+                        {all.slice(0, LIST_LIMIT).map((t) => (
+                          <div key={t.id} className="flex items-center gap-1.5">
+                            {t.trainingType && (
+                              <Badge tone={t.trainingType === '의무' ? 'amber' : 'blue'}>{t.trainingType}</Badge>
+                            )}
+                            {t.trainingName}
+                            {t.nextDueDate && <span className="text-text-faint">{t.nextDueDate.slice(0, 10)}</span>}
+                            <DDay due={t.nextDueDate} />
+                          </div>
+                        ))}
+                        <MoreBadge total={all.length} shown={LIST_LIMIT} />
+                      </div>
                     );
                   })()}
                 </td>
@@ -270,6 +289,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
           .filter((c) => c.certName.trim())
           .map((c) => ({
             certName: c.certName,
+            certType: c.certType || undefined,
             acquiredDate: c.acquiredDate || undefined,
             expiryDate: c.expiryDate || undefined,
           })),
@@ -345,7 +365,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-[13px] font-semibold text-text-mid">
-                자격사항 <span className="font-normal text-text-faint">— 자격증명 / 취득일 / 만료일</span>
+                자격사항 <span className="font-normal text-text-faint">— 자격증명 / 구분 / 취득일 / 만료일</span>
               </label>
               <button type="button" onClick={() => setCerts([...certs, { ...emptyCert }])} className="text-[12px] font-bold text-primary">
                 <Plus size={12} className="inline" /> 행 추가
@@ -358,7 +378,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
             </datalist>
             <div className="space-y-2">
               {certs.map((c, i) => (
-                <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,140px)_minmax(0,140px)_24px] items-center gap-2">
+                <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,124px)_minmax(0,140px)_minmax(0,140px)_24px] items-center gap-2">
                   <input
                     list="emp-certs"
                     value={c.certName}
@@ -366,6 +386,18 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
                     placeholder="자격증명"
                     className={`${inputCls} min-w-0`}
                   />
+                  <select
+                    value={c.certType}
+                    onChange={(e) => setCerts(certs.map((r, ri) => (ri === i ? { ...r, certType: e.target.value } : r)))}
+                    aria-label="구분"
+                    className={`${inputCls} min-w-0 px-2`}
+                  >
+                    {CERT_TYPES.map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     type="date"
                     value={c.acquiredDate}

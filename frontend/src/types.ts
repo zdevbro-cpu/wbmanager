@@ -278,6 +278,7 @@ export interface EmployeeCertification {
   id: string;
   employeeId: string;
   certName: string;
+  certType?: string | null; // 국가기술자격 / 면허 / 교육이수증 / 기타
   acquiredDate?: string | null;
   expiryDate?: string | null;
 }

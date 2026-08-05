@@ -437,6 +437,7 @@ model EmployeeCertification {
   employeeId   String    @map("employee_id")
   employee     Employee  @relation(fields: [employeeId], references: [id])
   certName     String    @map("cert_name")
+  certType     String?   @map("cert_type")   // 국가기술자격 / 면허 / 교육이수증 / 기타
   acquiredDate DateTime? @map("acquired_date")
   expiryDate   DateTime? @map("expiry_date")
   createdAt    DateTime  @default(now()) @map("created_at")

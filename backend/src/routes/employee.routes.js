@@ -66,6 +66,7 @@ router.post('/', async (req, res) => {
               certifications: {
                 create: certRows.map((c) => ({
                   certName: c.certName,
+                  certType: c.certType || null,
                   acquiredDate: toISO(c.acquiredDate),
                   expiryDate: toISO(c.expiryDate),
                 })),
