@@ -385,6 +385,18 @@ export interface Aggregation {
   totals: Omit<AggregationGroup, 'key' | 'label' | 'count'>;
 }
 
+export interface SavedReport {
+  id: string;
+  reportType: 'daily' | 'pnl';
+  projectId?: string | null;
+  project?: Project;
+  reportDate: string;
+  title: string;
+  content: string;
+  summary?: Record<string, number> | null;
+  createdAt: string;
+}
+
 export interface DailyReport {
   date: string;
   rows: LedgerRow[];
@@ -437,9 +449,21 @@ export interface LedgerEntry {
   detail?: LedgerEntryDetail | null;
 }
 
+export interface PnlSalesItem {
+  itemCode: string;
+  itemName: string;
+  category?: string | null;
+  weight: number;
+  amount: number;
+  avgPrice: number;
+  amountShare: number;
+}
+
 export interface ProjectPnl {
   projectId: string;
   roundName: string;
+  roundNo?: string | null;
+  contractWeight?: number | null;
   purchaseCost: number;
   salesRevenue: number;
   wasteCost: number;
@@ -449,5 +473,13 @@ export interface ProjectPnl {
   realizedPnl: number;
   inventoryValuation: number;
   expectedFinalPnl: number;
+  inboundWeight: number;
+  soldWeight: number;
+  wasteOutWeight: number;
+  remainingWeight: number;
+  recoveryRate: number;
+  avgSalePrice: number;
+  purchaseRecoveryGap: number;
+  salesByItem: PnlSalesItem[];
   inventoryDetail: InventoryValuationRow[];
 }

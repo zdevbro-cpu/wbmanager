@@ -1,20 +1,33 @@
 import { useEffect, useState } from 'react';
-import { TrendingUp, TrendingDown, FileDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, FileDown, FilePlus } from 'lucide-react';
 import { api, API_BASE_URL } from '../api/client';
 import { useProjects } from '../hooks/useMasters';
-import { pageTitleCls, sectionTitleCls, outlineBtnCls, inputCls, tableWrapCls, thCls, tdCls, trCls } from '../components/ui/classes';
+import {
+  pageTitleCls,
+  sectionTitleCls,
+  cardPadCls,
+  primaryBtnCls,
+  outlineBtnCls,
+  inputCls,
+  tableWrapCls,
+  thCls,
+  tdCls,
+  trCls,
+} from '../components/ui/classes';
 import type { ProjectPnl } from '../types';
 
 export function PnlPage() {
   const { projects } = useProjects();
   const [projectId, setProjectId] = useState('');
   const [pnl, setPnl] = useState<ProjectPnl | null>(null);
+  const [published, setPublished] = useState('');
 
   useEffect(() => {
     if (!projectId) {
       setPnl(null);
       return;
     }
+    setPublished('');
     api.get<ProjectPnl>(`/api/projects/${projectId}/pnl`).then(setPnl);
   }, [projectId]);
 
@@ -35,11 +48,28 @@ export function PnlPage() {
           ))}
         </select>
         {projectId && (
-          <a href={`${API_BASE_URL}/api/projects/${projectId}/pnl/export`} target="_blank" rel="noreferrer">
-            <button type="button" className={outlineBtnCls}>
-              <FileDown size={15} /> 대표이사 보고서 초안 출력
+          <>
+            <button
+              type="button"
+              onClick={async () => {
+                await api.post('/api/reports/publish', {
+                  reportType: 'pnl',
+                  projectId,
+                  date: new Date().toISOString().slice(0, 10),
+                });
+                setPublished('보고서 보관함에 발행했습니다.');
+              }}
+              className={primaryBtnCls}
+            >
+              <FilePlus size={15} /> 손익 보고서 발행
             </button>
-          </a>
+            <a href={`${API_BASE_URL}/api/projects/${projectId}/pnl/export`} target="_blank" rel="noreferrer">
+              <button type="button" className={outlineBtnCls}>
+                <FileDown size={15} /> 초안 텍스트 내려받기
+              </button>
+            </a>
+            {published && <span className="text-[12.5px] text-success">{published}</span>}
+          </>
         )}
       </div>
 
@@ -59,6 +89,67 @@ export function PnlPage() {
             <StatCard label="① 실현손익 (매각수입 − 총지출)" value={pnl.realizedPnl} big />
             <StatCard label="② 재고평가 (미실현)" value={pnl.inventoryValuation} big />
             <StatCard label="③ 예상 최종손익 (①+②)" value={pnl.expectedFinalPnl} big highlight />
+          </div>
+
+          <div className="mb-8 grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-4">
+            <div className={cardPadCls}>
+              <h2 className={`${sectionTitleCls} mb-3 text-[15px]`}>자재 회수 현황</h2>
+              <div className="mb-2 flex items-end justify-between">
+                <span className="text-[12.5px] text-text-sub">회수율 (매각중량 ÷ 반입중량)</span>
+                <span className="tabular text-[22px] font-extrabold text-text-strong">
+                  {(pnl.recoveryRate ?? 0).toFixed(1)}%
+                </span>
+              </div>
+              <div className="mb-3 h-3 w-full overflow-hidden rounded-full bg-input">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${Math.min(100, pnl.recoveryRate ?? 0)}%` }}
+                />
+              </div>
+              <dl className="grid grid-cols-2 gap-2">
+                {[
+                  { label: '반입 총중량', value: `${Math.round(pnl.inboundWeight ?? 0).toLocaleString()} kg` },
+                  { label: '매각 중량', value: `${Math.round(pnl.soldWeight ?? 0).toLocaleString()} kg` },
+                  { label: '폐기물 반출', value: `${Math.round(pnl.wasteOutWeight ?? 0).toLocaleString()} kg` },
+                  { label: '잔여(야적)', value: `${Math.round(pnl.remainingWeight ?? 0).toLocaleString()} kg` },
+                  { label: '매각 평균단가', value: `${Math.round(pnl.avgSalePrice ?? 0).toLocaleString()} 원/kg` },
+                  {
+                    label: '매입원가 회수 잔여',
+                    value: `${Math.round(pnl.purchaseRecoveryGap ?? 0).toLocaleString()} 원`,
+                  },
+                ].map((f) => (
+                  <div key={f.label} className="rounded-[8px] border border-border px-3 py-2">
+                    <dt className="text-[12px] text-text-sub">{f.label}</dt>
+                    <dd className="tabular text-[14px] font-bold text-text-strong">{f.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+
+            <div className={cardPadCls}>
+              <h2 className={`${sectionTitleCls} mb-3 text-[15px]`}>품목별 매각 구성</h2>
+              {(pnl.salesByItem ?? []).length === 0 ? (
+                <p className="py-8 text-center text-[13px] text-text-faint">매각 실적이 없습니다.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {(pnl.salesByItem ?? []).map((i) => (
+                    <div key={i.itemCode}>
+                      <div className="mb-1 flex items-center justify-between gap-2 text-[12.5px]">
+                        <span className="truncate text-text">{i.itemName}</span>
+                        <span className="tabular shrink-0 text-text-sub">
+                          {Math.round(i.weight).toLocaleString()}kg · {Math.round(i.amount).toLocaleString()}원 · 평균{' '}
+                          {Math.round(i.avgPrice).toLocaleString()}원
+                          <span className="ml-1.5 font-semibold text-text-strong">{i.amountShare.toFixed(1)}%</span>
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-input">
+                        <div className="h-full rounded-full bg-[#22c55e]" style={{ width: `${i.amountShare}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <h2 className={`${sectionTitleCls} mb-2`}>재고평가 상세</h2>

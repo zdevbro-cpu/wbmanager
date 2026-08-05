@@ -16,6 +16,7 @@ import { EcountExportPage } from './pages/EcountExportPage';
 import { LedgerPage } from './pages/LedgerPage';
 import { AggregationPage } from './pages/AggregationPage';
 import { DailyReportPage } from './pages/DailyReportPage';
+import { ReportArchivePage } from './pages/ReportArchivePage';
 import { InventoryPage } from './pages/InventoryPage';
 import { PnlPage } from './pages/PnlPage';
 import { WasteManagementPage } from './pages/WasteManagementPage';
@@ -42,6 +43,7 @@ function Gate() {
         <Route path="/ledger" element={<LedgerPage />} />
         <Route path="/aggregation" element={<AggregationPage />} />
         <Route path="/daily-report" element={<DailyReportPage />} />
+        <Route path="/reports" element={<ReportArchivePage />} />
         <Route path="/ecount-export" element={<EcountExportPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/pnl" element={<PnlPage />} />
