@@ -221,6 +221,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
       {detail && (
         <EmployeeDetailModal
           employeeId={detail.id}
+          initial={detail}
           onClose={() => setDetail(null)}
           onChanged={reload}
           onDelete={() => remove(detail)}

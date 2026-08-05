@@ -40,22 +40,32 @@ const day = (v?: string | null) => (v ? v.slice(0, 10) : '-');
 // 자격 갱신·보수교육 재이수는 기존 행을 고치지 않고 새 행을 쌓아 이력을 남긴다.
 export function EmployeeDetailModal({
   employeeId,
+  initial,
   onClose,
   onChanged,
   onDelete,
 }: {
   employeeId: string;
+  /** 목록에서 이미 받아 둔 값 — 상세 조회가 늦거나 실패해도 화면이 비지 않게 한다. */
+  initial?: Employee;
   onClose: () => void;
   onChanged: () => void;
   onDelete: () => void;
 }) {
-  const [emp, setEmp] = useState<Employee | null>(null);
+  const [emp, setEmp] = useState<Employee | null>(initial ?? null);
+  const [loadError, setLoadError] = useState('');
   const [adding, setAdding] = useState<'cert' | 'training' | null>(null);
   const { labels: certOptions } = useCommonCodes('자격증 종류');
   const { labels: trainingOptions } = useCommonCodes('교육 과정');
 
   const load = useCallback(() => {
-    api.get<Employee>(`/api/employees/${employeeId}`).then(setEmp);
+    api
+      .get<Employee>(`/api/employees/${employeeId}`)
+      .then((row) => {
+        setEmp(row);
+        setLoadError('');
+      })
+      .catch((err: unknown) => setLoadError(err instanceof Error ? err.message : '상세를 불러오지 못했습니다.'));
   }, [employeeId]);
 
   useEffect(() => {
@@ -91,9 +101,12 @@ export function EmployeeDetailModal({
   return (
     <FormModal title={`${emp?.name ?? ''} 상세`} icon={Users} onClose={onClose}>
       {!emp ? (
-        <p className="text-[13px] text-text-sub">불러오는 중...</p>
+        <p className={loadError ? 'text-[13px] text-danger' : 'text-[13px] text-text-sub'}>
+          {loadError || '불러오는 중...'}
+        </p>
       ) : (
         <div className="space-y-5">
+          {loadError && <p className="text-[12.5px] text-danger">최신 정보를 불러오지 못했습니다: {loadError}</p>}
           <div className="flex items-center gap-2">
             <Badge tone="blue">{emp.empCode ?? '-'}</Badge>
             <span className="text-[13px] text-text-sub">
