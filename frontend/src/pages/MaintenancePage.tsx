@@ -64,16 +64,18 @@ export function MaintenancePage() {
         </button>
       </div>
 
-      <div className={`${cardCls} mb-4 flex flex-nowrap items-center gap-2 p-3`}>
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} w-[132px] shrink-0 px-2`} />
-        <span className="shrink-0 text-text-faint">~</span>
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputCls} w-[132px] shrink-0 px-2`} />
-        <select value={assetType} onChange={(e) => setAssetType(e.target.value)} className={`${inputCls} min-w-0 flex-1 px-2`}>
+      <div
+        className={`${cardCls} mb-4 grid items-center gap-2 p-3 [grid-template-columns:126px_10px_126px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]`}
+      >
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} px-2`} />
+        <span className="text-center text-text-faint">~</span>
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputCls} px-2`} />
+        <select value={assetType} onChange={(e) => setAssetType(e.target.value)} className={`${inputCls} px-2`}>
           <option value="">전체 유형</option>
           <option value="VEHICLE">차량</option>
           <option value="EQUIPMENT">장비</option>
         </select>
-        <select value={maintType} onChange={(e) => setMaintType(e.target.value)} className={`${inputCls} min-w-0 flex-1 px-2`}>
+        <select value={maintType} onChange={(e) => setMaintType(e.target.value)} className={`${inputCls} px-2`}>
           <option value="">전체 정비구분</option>
           {maintTypes.map((t) => (
             <option key={t} value={t}>
@@ -81,7 +83,7 @@ export function MaintenancePage() {
             </option>
           ))}
         </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputCls} min-w-0 flex-1 px-2`}>
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputCls} px-2`}>
           <option value="">전체 상태</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
@@ -98,7 +100,7 @@ export function MaintenancePage() {
             setMaintType('');
             setStatus('');
           }}
-          className={`${outlineBtnCls} shrink-0 whitespace-nowrap px-3`}
+          className={`${outlineBtnCls} whitespace-nowrap px-3`}
         >
           <RotateCcw size={15} /> 초기화
         </button>

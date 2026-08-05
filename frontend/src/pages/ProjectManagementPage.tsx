@@ -419,7 +419,7 @@ function ProjectForm({
           <label className={labelCls}>계약기간</label>
           <div className="flex items-center gap-2">
             <input type="date" value={f.startDate} onChange={(e) => set({ startDate: e.target.value })} className={inputCls} />
-            <span className="shrink-0 text-text-faint">~</span>
+            <span className="text-center text-text-faint">~</span>
             <input type="date" value={f.endDate} onChange={(e) => set({ endDate: e.target.value })} className={inputCls} />
           </div>
         </div>
@@ -568,11 +568,13 @@ function ProjectFilterBar({
   const { employees } = useEmployees();
 
   return (
-    <div className={`${cardCls} mb-4 flex flex-nowrap items-center gap-2 p-3`}>
-      <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="계약 시작" className={`${inputCls} w-[132px] shrink-0 px-2`} />
-      <span className="shrink-0 text-text-faint">~</span>
-      <input type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label="계약 종료" className={`${inputCls} w-[132px] shrink-0 px-2`} />
-      <select value={ordererId} onChange={(e) => setOrdererId(e.target.value)} className={`${inputCls} min-w-0 flex-1 px-2`}>
+    <div
+      className={`${cardCls} mb-4 grid items-center gap-2 p-3 [grid-template-columns:132px_10px_132px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)_auto]`}
+    >
+      <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="계약 시작" className={`${inputCls} px-2`} />
+      <span className="text-center text-text-faint">~</span>
+      <input type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label="계약 종료" className={`${inputCls} px-2`} />
+      <select value={ordererId} onChange={(e) => setOrdererId(e.target.value)} className={`${inputCls} px-2`}>
         <option value="">전체 발주처</option>
         {vendors.map((v) => (
           <option key={v.id} value={v.id}>
@@ -580,7 +582,7 @@ function ProjectFilterBar({
           </option>
         ))}
       </select>
-      <select value={managerEmpId} onChange={(e) => setManagerEmpId(e.target.value)} className={`${inputCls} min-w-0 flex-1 px-2`}>
+      <select value={managerEmpId} onChange={(e) => setManagerEmpId(e.target.value)} className={`${inputCls} px-2`}>
         <option value="">전체 담당자</option>
         {employees.map((e) => (
           <option key={e.id} value={e.id}>
@@ -588,7 +590,7 @@ function ProjectFilterBar({
           </option>
         ))}
       </select>
-      <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputCls} min-w-0 flex-1 px-2`}>
+      <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputCls} px-2`}>
         <option value="">전체 상태</option>
         {STATUSES.map((s) => (
           <option key={s} value={s}>
@@ -600,9 +602,9 @@ function ProjectFilterBar({
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="코드 / 사업명 / 차수 / 현장 / 거래처"
-        className={`${inputCls} min-w-0 flex-[2]`}
+        className={inputCls}
       />
-      <button type="button" onClick={onReset} className={`${outlineBtnCls} shrink-0 whitespace-nowrap px-3`}>
+      <button type="button" onClick={onReset} className={`${outlineBtnCls} whitespace-nowrap px-3`}>
         <RotateCcw size={15} /> 초기화
       </button>
     </div>
