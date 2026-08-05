@@ -4,15 +4,13 @@ import { Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { MasterManagementPage } from './MasterManagementPage';
 import { CommonCodePage } from './CommonCodePage';
-import { EmployeeManagementPage } from './EmployeeManagementPage';
 import { UserApprovalPage } from './UserApprovalPage';
 import { pageTitleCls } from '../components/ui/classes';
 
-type Tab = 'codes' | 'masters' | 'employees' | 'users';
+type Tab = 'codes' | 'masters' | 'users';
 
 function initialTab(param: string | null, isAdmin: boolean): Tab {
   if (param === 'codes') return 'codes';
-  if (param === 'employees') return 'employees';
   if (param === 'users' && isAdmin) return 'users';
   return 'masters';
 }
@@ -25,6 +23,7 @@ export function SystemAdminPage() {
 
   // 차량/장비 관리는 사이드바 메뉴로 옮겼다. 기존 링크는 그쪽으로 넘긴다.
   if (searchParams.get('tab') === 'vehicles') return <Navigate to="/vehicles" replace />;
+  if (searchParams.get('tab') === 'employees') return <Navigate to="/employees" replace />;
 
   return (
     <div>
@@ -40,9 +39,6 @@ export function SystemAdminPage() {
         <TabButton active={tab === 'masters'} onClick={() => setTab('masters')}>
           마스터 관리
         </TabButton>
-        <TabButton active={tab === 'employees'} onClick={() => setTab('employees')}>
-          임직원 관리
-        </TabButton>
         {isAdmin && (
           <TabButton active={tab === 'users'} onClick={() => setTab('users')}>
             사용자 승인 관리
@@ -52,8 +48,6 @@ export function SystemAdminPage() {
 
       {tab === 'codes' ? (
         <CommonCodePage embedded />
-      ) : tab === 'employees' ? (
-        <EmployeeManagementPage embedded />
       ) : tab === 'users' && isAdmin ? (
         <UserApprovalPage embedded />
       ) : (

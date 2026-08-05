@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { Users, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { useCommonCodes } from '../hooks/useMasters';
+import { FormModal } from '../components/FormModal';
 import { Badge } from '../components/ui/Badge';
 import {
   pageTitleCls,
   sectionTitleCls,
-  cardPadCls,
   primaryBtnCls,
   outlineBtnCls,
   inputCls,
@@ -71,6 +71,100 @@ function DDay({ due }: { due?: string | null }) {
 
 export function EmployeeManagementPage({ embedded = false }: { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [open, setOpen] = useState(false);
+
+  const reload = useCallback(() => {
+    api.get<Employee[]>('/api/employees').then(setEmployees);
+  }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  return (
+    <div>
+      <div className="mb-5 flex items-center gap-2">
+        {!embedded && <Users size={20} className="text-primary" />}
+        {!embedded && <h1 className={pageTitleCls}>임직원 관리</h1>}
+        <span className={embedded ? sectionTitleCls : 'ml-1 text-[13px] text-text-sub'}>
+          {embedded ? '임직원 목록' : `${employees.length}명`}
+        </span>
+        <button type="button" onClick={() => setOpen(true)} className={`${primaryBtnCls} ml-auto`}>
+          <Plus size={15} /> 임직원 등록
+        </button>
+      </div>
+
+      <div className={`${tableWrapCls} overflow-x-auto`}>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b border-border">
+              <th className={thCls}>성명</th>
+              <th className={thCls}>연락처</th>
+              <th className={thCls}>부서/직급</th>
+              <th className={thCls}>입사일</th>
+              <th className={thCls}>자격사항(만료일)</th>
+              <th className={thCls}>교육(구분 · 다음 예정)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {employees.map((emp) => (
+              <tr key={emp.id} className={trCls}>
+                <td className={tdCls}>{emp.name}</td>
+                <td className={`${tdCls} tabular`}>{emp.phone ?? '-'}</td>
+                <td className={tdCls}>{[emp.department, emp.position].filter(Boolean).join(' / ') || '-'}</td>
+                <td className={`${tdCls} tabular`}>{emp.hireDate ? emp.hireDate.slice(0, 10) : '-'}</td>
+                <td className={tdCls}>
+                  {emp.certifications?.length
+                    ? emp.certifications
+                        .map((c) => `${c.certName}${c.expiryDate ? ` (~${c.expiryDate.slice(0, 10)})` : ''}`)
+                        .join(', ')
+                    : '-'}
+                </td>
+                <td className={tdCls}>
+                  {emp.trainings?.length ? (
+                    <div className="space-y-1">
+                      {emp.trainings.map((t) => (
+                        <div key={t.id} className="flex items-center gap-1.5">
+                          {t.trainingType && <Badge tone={t.trainingType === '의무' ? 'amber' : 'blue'}>{t.trainingType}</Badge>}
+                          <span>{t.trainingName}</span>
+                          {t.nextDueDate && <span className="text-text-faint">{t.nextDueDate.slice(0, 10)}</span>}
+                          <DDay due={t.nextDueDate} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    '-'
+                  )}
+                </td>
+              </tr>
+            ))}
+            {employees.length === 0 && (
+              <tr>
+                <td className={`${tdCls} text-text-faint`} colSpan={6}>
+                  등록된 임직원이 없습니다.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {open && (
+        <FormModal title="임직원 등록" icon={Users} onClose={() => setOpen(false)}>
+          <EmployeeForm
+            onCreated={() => {
+              reload();
+              setOpen(false);
+            }}
+          />
+        </FormModal>
+      )}
+    </div>
+  );
+}
+
+// 기본정보 + 자격사항 + 교육이력을 한 번에 등록한다.
+function EmployeeForm({ onCreated }: { onCreated: () => void }) {
   const { labels: certOptions } = useCommonCodes('자격증 종류');
   const { labels: trainingOptions } = useCommonCodes('교육 과정');
   const { labels: departmentOptions } = useCommonCodes('부서');
@@ -85,14 +179,6 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
   const [trainings, setTrainings] = useState<TrainingRow[]>([{ ...emptyTraining }]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  const reload = useCallback(() => {
-    api.get<Employee[]>('/api/employees').then(setEmployees);
-  }, []);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
 
   const reset = () => {
     setName('');
@@ -135,7 +221,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
           })),
       });
       reset();
-      reload();
+      onCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : '등록 실패');
     } finally {
@@ -144,22 +230,10 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
   };
 
   return (
-    <div>
-      {!embedded && (
-        <div className="mb-5 flex items-center gap-2">
-          <Users size={20} className="text-primary" />
-          <h1 className={pageTitleCls}>임직원 관리</h1>
-        </div>
-      )}
-
-      <p className="mb-4 text-[13px] text-text-sub">
-        임직원 기본정보와 자격사항·교육이력을 한 번에 등록합니다. 자격증 종류·교육 과정·부서·직급 목록은 공통코드 관리에서
-        관리합니다.
+    <form onSubmit={handleSubmit} className="space-y-3.5">
+      <p className="text-[13px] text-text-sub">
+        자격증 종류·교육 과정·부서·직급 목록은 시스템 관리 &gt; 공통코드 관리에서 관리합니다.
       </p>
-
-      <div className="flex flex-wrap gap-6">
-        <form onSubmit={handleSubmit} className={`${cardPadCls} min-w-[320px] flex-1 space-y-3.5`}>
-          <h2 className={sectionTitleCls}>임직원 등록</h2>
 
           <div className="flex gap-3">
             <div className="flex-1">
@@ -343,74 +417,16 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
             </div>
           </div>
 
-          {error && <p className="text-[13px] text-danger">{error}</p>}
+      {error && <p className="text-[13px] text-danger">{error}</p>}
 
-          <div className="flex justify-end gap-2 border-t border-border pt-3">
-            <button type="button" onClick={reset} className={outlineBtnCls}>
-              초기화
-            </button>
-            <button type="submit" disabled={submitting} className={primaryBtnCls}>
-              {submitting ? '등록 중...' : '등록'}
-            </button>
-          </div>
-        </form>
-
-        <div className="min-w-[320px] flex-1">
-          <h2 className={`${sectionTitleCls} mb-2`}>임직원 목록</h2>
-          <div className={tableWrapCls}>
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className={thCls}>성명</th>
-                  <th className={thCls}>연락처</th>
-                  <th className={thCls}>부서/직급</th>
-                  <th className={thCls}>자격사항(만료일)</th>
-                  <th className={thCls}>교육(구분 · 다음 예정)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map((emp) => (
-                  <tr key={emp.id} className={trCls}>
-                    <td className={tdCls}>{emp.name}</td>
-                    <td className={`${tdCls} tabular`}>{emp.phone ?? '-'}</td>
-                    <td className={tdCls}>{[emp.department, emp.position].filter(Boolean).join(' / ') || '-'}</td>
-                    <td className={tdCls}>
-                      {emp.certifications?.length
-                        ? emp.certifications
-                            .map((c) => `${c.certName}${c.expiryDate ? ` (~${c.expiryDate.slice(0, 10)})` : ''}`)
-                            .join(', ')
-                        : '-'}
-                    </td>
-                    <td className={tdCls}>
-                      {emp.trainings?.length ? (
-                        <div className="space-y-1">
-                          {emp.trainings.map((t) => (
-                            <div key={t.id} className="flex items-center gap-1.5">
-                              {t.trainingType && <Badge tone={t.trainingType === '의무' ? 'amber' : 'blue'}>{t.trainingType}</Badge>}
-                              <span>{t.trainingName}</span>
-                              {t.nextDueDate && <span className="text-text-faint">{t.nextDueDate.slice(0, 10)}</span>}
-                              <DDay due={t.nextDueDate} />
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {employees.length === 0 && (
-                  <tr>
-                    <td className={`${tdCls} text-text-faint`} colSpan={5}>
-                      등록된 임직원이 없습니다.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <div className="flex justify-end gap-2 border-t border-border pt-3">
+        <button type="button" onClick={reset} className={outlineBtnCls}>
+          초기화
+        </button>
+        <button type="submit" disabled={submitting} className={primaryBtnCls}>
+          {submitting ? '등록 중...' : '등록'}
+        </button>
       </div>
-    </div>
+    </form>
   );
 }
