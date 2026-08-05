@@ -10,7 +10,12 @@ import { uploadStagedFiles } from '../lib/uploadStaged';
 import { pageTitleCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { WasteOutbound } from '../types';
 
-export function WasteOutboundFormPage() {
+interface Props {
+  embedded?: boolean;
+  onCreated?: () => void;
+}
+
+export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {}) {
   const { projects } = useProjects();
   const { vendors, quickCreate: quickCreateVendor } = useVendors();
   const { items, quickCreate: quickCreateItem } = useItemMasters();
@@ -148,6 +153,7 @@ export function WasteOutboundFormPage() {
       setCreated(wasteOutbound);
       setCertFiles([]);
       setRefFiles([]);
+      onCreated?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : '등록 실패');
     } finally {
@@ -156,11 +162,13 @@ export function WasteOutboundFormPage() {
   };
 
   return (
-    <div className="max-w-[520px]">
-      <div className="mb-5 flex items-center gap-2">
-        <Trash2 size={20} className="text-primary" />
-        <h1 className={pageTitleCls}>폐기물 반출 등록</h1>
-      </div>
+    <div className={embedded ? '' : 'max-w-[520px]'}>
+      {!embedded && (
+        <div className="mb-5 flex items-center gap-2">
+          <Trash2 size={20} className="text-primary" />
+          <h1 className={pageTitleCls}>폐기물 반출 등록</h1>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className={`${cardPadCls} space-y-3.5`}>
         <div>

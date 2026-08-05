@@ -36,7 +36,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/inbound', label: '입고 현황', icon: Truck },
       { to: '/waste-inbound', label: '폐기물 입고 현황', icon: Recycle },
       { to: '/outbound', label: '출고 현황', icon: PackageMinus },
-      { to: '/waste-outbound', label: '폐기물 반출 등록', icon: Trash2 },
+      { to: '/waste-outbound', label: '폐기물 반출 현황', icon: Trash2 },
     ],
   },
   {

@@ -6,7 +6,7 @@ import { PendingApprovalPage } from './pages/PendingApprovalPage';
 import { InboundListPage } from './pages/InboundListPage';
 import { OutboundListPage } from './pages/OutboundListPage';
 import { WasteInboundListPage } from './pages/WasteInboundListPage';
-import { WasteOutboundFormPage } from './pages/WasteOutboundFormPage';
+import { WasteOutboundListPage } from './pages/WasteOutboundListPage';
 import { SystemAdminPage } from './pages/SystemAdminPage';
 import { EcountExportPage } from './pages/EcountExportPage';
 import { LedgerPage } from './pages/LedgerPage';
@@ -34,7 +34,7 @@ function Gate() {
         <Route path="/inbound" element={<InboundListPage />} />
         <Route path="/outbound" element={<OutboundListPage />} />
         <Route path="/waste-inbound" element={<WasteInboundListPage />} />
-        <Route path="/waste-outbound" element={<WasteOutboundFormPage />} />
+        <Route path="/waste-outbound" element={<WasteOutboundListPage />} />
         <Route path="/ledger" element={<LedgerPage />} />
         <Route path="/aggregation" element={<AggregationPage />} />
         <Route path="/daily-report" element={<DailyReportPage />} />

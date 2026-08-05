@@ -6,14 +6,24 @@ import { toISO } from '../lib/date.js';
 const router = Router();
 
 router.get('/', async (req, res) => {
-  const { projectId, unreported } = req.query;
+  const { projectId, unreported, from, to, vehicleType, vehicleNo, driverName, itemCode } = req.query;
+  const range = {};
+  if (from) range.gte = new Date(from);
+  if (to) range.lte = new Date(to);
+
   const wasteOutbounds = await prisma.wasteOutbound.findMany({
     where: {
+      deletedAt: null,
       ...(projectId ? { projectId } : {}),
+      ...(Object.keys(range).length ? { outboundDate: range } : {}),
+      ...(vehicleType ? { vehicleType } : {}),
+      ...(vehicleNo ? { vehicleNo } : {}),
+      ...(driverName ? { driverName } : {}),
+      ...(itemCode ? { itemCode } : {}),
       // 미신고/미기재 폐기물 건만 필터 (S-FPMCPT)
       ...(unreported === 'true' ? { OR: [{ olbaroReported: false }, { handoverDate: null }] } : {}),
     },
-    include: { project: true, buyer: true },
+    include: { project: true, buyer: true, item: true, attachments: true },
     orderBy: { outboundDate: 'desc' },
   });
   res.json(wasteOutbounds);
@@ -96,6 +106,15 @@ router.post('/', async (req, res) => {
   });
 
   res.status(201).json(wasteOutbound);
+});
+
+// 소프트 삭제. 재고원장은 파생 데이터라 참조 행을 지워 재고가 줄어든 채 남지 않게 한다.
+router.delete('/:id', async (req, res) => {
+  const deleted = await prisma.$transaction(async (tx) => {
+    await tx.inventoryLedger.deleteMany({ where: { refType: 'waste_outbound', refId: req.params.id } });
+    return tx.wasteOutbound.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });
+  });
+  res.json(deleted);
 });
 
 // 올바로 신고 상태/인계일/메모 수정 (F-FZOGXB)

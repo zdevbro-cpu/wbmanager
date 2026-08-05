@@ -290,6 +290,7 @@ model WasteOutbound {
   handoverDate   DateTime? @map("handover_date") // 인계일
   olbaroMemo     String?  @map("olbaro_memo") // 기준업체량 등 메모
   createdAt    DateTime @default(now()) @map("created_at")
+  deletedAt    DateTime? @map("deleted_at")   // 소프트 삭제
 
   attachments Attachment[]
 

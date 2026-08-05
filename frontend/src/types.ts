@@ -131,6 +131,7 @@ export interface WasteOutbound {
   olbaroMemo?: string | null;
   project?: Project;
   buyer?: Vendor;
+  item?: ItemMaster;
   attachments?: Attachment[];
 }
 
