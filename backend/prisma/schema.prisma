@@ -18,6 +18,7 @@ model AppUser {
   firebaseUid String   @unique @map("firebase_uid")
   email       String   @unique
   name        String?
+  phone       String?  @map("phone")   // 가입 신청 시 입력 — 승인 전 본인 확인 연락용
   role        String   @default("worker") @map("role") // worker(업무 담당자) | admin(관리자)
   status      String   @default("pending") @map("status") // pending | approved | rejected
   createdAt   DateTime @default(now()) @map("created_at")

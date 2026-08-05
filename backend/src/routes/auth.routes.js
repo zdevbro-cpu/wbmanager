@@ -29,6 +29,7 @@ router.post('/register', async (req, res) => {
       firebaseUid: decoded.uid,
       email: decoded.email ?? '',
       name: req.body?.name,
+      phone: req.body?.phone || null,
       role: isFirstUser ? 'admin' : 'worker',
       status: isFirstUser ? 'approved' : 'pending',
       approvedAt: isFirstUser ? new Date() : null,
