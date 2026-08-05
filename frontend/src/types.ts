@@ -19,6 +19,9 @@ export interface Project {
   id: string;
   roundName: string;
   buyerId?: string | null;
+  purchasePrice?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   status: string;
 }
 

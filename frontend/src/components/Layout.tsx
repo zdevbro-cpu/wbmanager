@@ -9,6 +9,7 @@ import {
   FileText,
   FileSpreadsheet,
   Boxes,
+  Layers,
   Wrench,
   TrendingUp,
   ShieldAlert,
@@ -60,6 +61,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: '관리',
     items: [
+      { to: '/projects', label: '프로젝트 관리', icon: Layers },
       { to: '/waste', label: '폐기물 / 올바로 관리', icon: ShieldAlert },
       { to: '/assets', label: '자산 관리 (차량·장비)', icon: Boxes },
       { to: '/maintenances', label: '정비 현황', icon: Wrench },
