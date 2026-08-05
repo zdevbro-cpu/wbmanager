@@ -42,9 +42,12 @@ export function ProjectManagementPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [detail, setDetail] = useState<Project | null>(null);
+  const [detailEdit, setDetailEdit] = useState(false);
 
-  const reload = useCallback(() => {
-    api.get<Project[]>('/api/projects').then(setProjects);
+  const reload = useCallback(async () => {
+    const list = await api.get<Project[]>('/api/projects');
+    setProjects(list);
+    return list;
   }, []);
 
   useEffect(() => {
@@ -54,6 +57,17 @@ export function ProjectManagementPage() {
   const changeStatus = async (p: Project, next: string) => {
     await api.patch(`/api/projects/${p.id}`, { status: next });
     reload();
+  };
+
+  // 상세 모달에서 바꾼 상태·수정 결과를 목록과 열려 있는 상세에 함께 반영한다.
+  const syncDetail = async (id: string) => {
+    const list = await reload();
+    setDetail(list.find((x) => x.id === id) ?? null);
+  };
+
+  const changeDetailStatus = async (p: Project, next: string) => {
+    await api.patch(`/api/projects/${p.id}`, { status: next });
+    await syncDetail(p.id);
   };
 
   // 건수가 많지 않아 화면에서 거른다. 계약기간은 구간이 겹치는 건을 남긴다.
@@ -216,8 +230,30 @@ export function ProjectManagementPage() {
       </p>
 
       {detail && (
-        <FormModal title={`${detail.roundName} 상세`} icon={Layers} onClose={() => setDetail(null)}>
-          <ProjectDetail project={detail} />
+        <FormModal
+          title={`${detail.roundName} ${detailEdit ? '수정' : '상세'}`}
+          icon={Layers}
+          onClose={() => {
+            setDetail(null);
+            setDetailEdit(false);
+          }}
+        >
+          {detailEdit ? (
+            <ProjectForm
+              project={detail}
+              onDone={async () => {
+                await syncDetail(detail.id);
+                setDetailEdit(false);
+              }}
+              onCancel={() => setDetailEdit(false)}
+            />
+          ) : (
+            <ProjectDetail
+              project={detail}
+              onEdit={() => setDetailEdit(true)}
+              onStatusChange={(next) => changeDetailStatus(detail, next)}
+            />
+          )}
         </FormModal>
       )}
 
@@ -248,7 +284,26 @@ export function ProjectManagementPage() {
   );
 }
 
-function ProjectDetail({ project: p }: { project: Project }) {
+function ProjectDetail({
+  project: p,
+  onEdit,
+  onStatusChange,
+}: {
+  project: Project;
+  onEdit: () => void;
+  onStatusChange: (next: string) => Promise<void>;
+}) {
+  const [saving, setSaving] = useState(false);
+
+  const changeStatus = async (next: string) => {
+    setSaving(true);
+    try {
+      await onStatusChange(next);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const fields: { label: string; value: string }[] = [
     { label: '프로젝트 코드', value: show(p.projectCode) },
     { label: '사업명', value: p.roundName },
@@ -267,7 +322,6 @@ function ProjectDetail({ project: p }: { project: Project }) {
     { label: '선급금', value: money(p.advancePayment) },
     { label: '정산주기', value: show(p.settlementCycle) },
     { label: '담당자', value: show(p.manager?.name) },
-    { label: '상태', value: p.status },
   ];
 
   return (
@@ -279,6 +333,24 @@ function ProjectDetail({ project: p }: { project: Project }) {
             <dd className="text-[13px] font-semibold text-text-strong">{f.value}</dd>
           </div>
         ))}
+        <div className="flex items-center justify-between gap-3 border-b border-border pb-1.5">
+          <dt className="text-[12.5px] text-text-sub">상태</dt>
+          <dd>
+            <select
+              value={p.status}
+              disabled={saving}
+              onChange={(e) => changeStatus(e.target.value)}
+              aria-label="상태 변경"
+              className={`${inputCls} h-8 w-[86px] px-2 text-[12.5px]`}
+            >
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </dd>
+        </div>
       </dl>
       {p.memo && (
         <div>
@@ -286,6 +358,11 @@ function ProjectDetail({ project: p }: { project: Project }) {
           <p className="text-[13px] text-text">{p.memo}</p>
         </div>
       )}
+      <div className="flex justify-end gap-2 border-t border-border pt-3">
+        <button type="button" onClick={onEdit} className={primaryBtnCls}>
+          수정
+        </button>
+      </div>
     </div>
   );
 }
