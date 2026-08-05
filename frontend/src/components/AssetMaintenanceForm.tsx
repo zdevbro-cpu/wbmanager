@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api/client';
 import { useCommonCodes, useVendors } from '../hooks/useMasters';
+import { NumberInput } from './ui/NumberInput';
 import { primaryBtnCls, outlineBtnCls, inputCls } from './ui/classes';
 
 const DEFAULT_TYPES = ['정기점검', '수리', '소모품교체', '사고수리', '법정검사', '교정'];
@@ -108,7 +109,7 @@ export function AssetMaintenanceForm({
         </div>
         <div>
           <label className={labelCls}>계기판(km)</label>
-          <input type="number" value={mileageAt} onChange={(e) => setMileageAt(e.target.value)} className={inputCls} />
+          <NumberInput value={mileageAt} onChange={setMileageAt} />
         </div>
 
         <div>
@@ -126,7 +127,7 @@ export function AssetMaintenanceForm({
 
         <div>
           <label className={labelCls}>비용(원)</label>
-          <input type="number" value={cost} onChange={(e) => setCost(e.target.value)} className={inputCls} />
+          <NumberInput value={cost} onChange={setCost} />
         </div>
         <div className="col-span-2">
           <label className={labelCls}>

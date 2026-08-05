@@ -6,6 +6,8 @@ import { MasterSelect } from '../components/MasterSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
 import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
+import { NumberInput } from '../components/ui/NumberInput';
+import { formatNumber } from '../lib/number';
 import { uploadStagedFiles } from '../lib/uploadStaged';
 import { pageTitleCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { WasteOutbound } from '../types';
@@ -278,71 +280,66 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
 
           <div>
             <label className={labelCls}>총중량(kg)</label>
-            <input type="number" step="0.001" value={grossWeight} onChange={(e) => setGrossWeight(e.target.value)} className={inputCls} />
+            <NumberInput value={grossWeight} onChange={setGrossWeight} decimals={3} />
           </div>
 
           <div>
             <label className={labelCls}>공차중량(kg)</label>
-            <input type="number" step="0.001" value={tareWeight} onChange={(e) => setTareWeight(e.target.value)} className={inputCls} />
+            <NumberInput value={tareWeight} onChange={setTareWeight} decimals={3} />
           </div>
 
           <div>
             <label className={labelCls}>실중량(kg) · 자동</label>
             <div className={`${inputCls} tabular flex items-center justify-end font-bold text-text-strong`}>
-              {actualWeightNum === null ? '-' : actualWeightNum.toFixed(3)}
+              {formatNumber(actualWeightNum)}
             </div>
           </div>
 
           <div>
             <label className={labelCls}>거래처 감량 전 실중량(kg)</label>
-            <input type="number" step="0.001" value={preLossWeight} onChange={(e) => setPreLossWeight(e.target.value)} className={inputCls} />
+            <NumberInput value={preLossWeight} onChange={setPreLossWeight} decimals={3} />
           </div>
 
           <div>
             <label className={labelCls}>감량(계근차, kg)</label>
-            <input type="number" step="0.001" value={lossWeight} onChange={(e) => setLossWeight(e.target.value)} className={inputCls} />
+            <NumberInput value={lossWeight} onChange={setLossWeight} decimals={3} />
           </div>
 
           <div>
             <label className={labelCls}>정산중량(kg)</label>
-            <input
-              type="number"
-              step="0.001"
+            <NumberInput
               value={settledWeight}
-              onChange={(e) => setSettledWeight(e.target.value)}
-              placeholder={derivedSettledNum === null ? '' : derivedSettledNum.toFixed(3)}
-              className={inputCls}
+              onChange={setSettledWeight}
+              decimals={3}
+              placeholder={derivedSettledNum === null ? '' : formatNumber(derivedSettledNum)}
             />
           </div>
 
           <div>
             <label className={labelCls}>루베 적용(㎥)</label>
-            <input type="number" step="0.01" value={cubicMeter} onChange={(e) => setCubicMeter(e.target.value)} className={inputCls} />
+            <NumberInput value={cubicMeter} onChange={setCubicMeter} decimals={2} />
           </div>
 
           <div>
             <label className={labelCls}>단가(원)</label>
-            <input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className={inputCls} />
+            <NumberInput value={unitPrice} onChange={setUnitPrice} />
           </div>
 
           <div>
             <label className={labelCls}>지출금액(원)</label>
-            <input
-              type="number"
-              step="0.01"
+            <NumberInput
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder={amountNum === null ? '' : String(Math.round(amountNum))}
-              className={inputCls}
+              onChange={setAmount}
+              placeholder={amountNum === null ? '' : formatNumber(Math.round(amountNum))}
             />
           </div>
 
           <p className="col-span-3 text-[12.5px] text-text-faint">
             실중량 = 총중량 − 공차중량 · 정산중량 = 거래처 감량 전 실중량(없으면 실중량 − 감량)
-            <span className="tabular ml-1 font-bold text-text-strong">{settledNum === null ? '-' : settledNum.toFixed(3)}</span> kg
+            <span className="tabular ml-1 font-bold text-text-strong">{formatNumber(settledNum)}</span> kg
             · 지출금액 = 정산중량 × 단가
             <span className="tabular ml-1 font-bold text-text-strong">
-              {amountNum === null ? '-' : Math.round(amountNum).toLocaleString()}
+              {amountNum === null ? '-' : formatNumber(Math.round(amountNum))}
             </span>
             원
           </p>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, FileDown, FilePlus } from 'lucide-react';
 import { api } from '../api/client';
+import { formatNumber } from '../lib/number';
 import { downloadFile } from '../lib/download';
 import { useProjects } from '../hooks/useMasters';
 import {
@@ -170,7 +171,7 @@ export function PnlPage() {
                 {pnl.inventoryDetail.map((r) => (
                   <tr key={r.itemCode} className={trCls}>
                     <td className={tdCls}>{r.itemName}</td>
-                    <td className={`${tdCls} tabular`}>{r.remaining}</td>
+                    <td className={`${tdCls} tabular text-right`}>{formatNumber(r.remaining)}</td>
                     <td className={`${tdCls} tabular`}>{r.unitPrice.toLocaleString()}</td>
                     <td className={`${tdCls} tabular`}>{r.valuationAmount.toLocaleString()}</td>
                   </tr>

@@ -3,6 +3,8 @@ import { Truck, Wrench, ClipboardCheck, FileText } from 'lucide-react';
 import { api } from '../api/client';
 import { useVehicles } from '../hooks/useMasters';
 import { FileUpload } from '../components/FileUpload';
+import { NumberInput } from '../components/ui/NumberInput';
+import { formatNumber } from '../lib/number';
 import { Badge } from '../components/ui/Badge';
 import {
   pageTitleCls,
@@ -284,7 +286,7 @@ function MaintenanceSection({ vehicle }: { vehicle: Vehicle }) {
         </div>
         <div className="min-w-[130px]">
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">비용(원)</label>
-          <input type="number" step="1" value={cost} onChange={(e) => setCost(e.target.value)} className={inputCls} />
+          <NumberInput value={cost} onChange={setCost} />
         </div>
         <button type="submit" className={`${outlineBtnCls} shrink-0`}>
           등록
@@ -318,7 +320,7 @@ function MaintenanceSection({ vehicle }: { vehicle: Vehicle }) {
               <tr key={m.id} className={trCls}>
                 <td className={`${tdCls} tabular`}>{m.maintenanceDate.slice(0, 10)}</td>
                 <td className={tdCls}>{m.description ?? '-'}</td>
-                <td className={`${tdCls} tabular`}>{m.cost ? Number(m.cost).toLocaleString() : '-'}</td>
+                <td className={`${tdCls} tabular text-right`}>{formatNumber(m.cost)}</td>
                 <td className={tdCls}>
                   <AttachmentLinks attachments={m.attachments} />
                 </td>

@@ -6,6 +6,8 @@ import { MasterSelect } from '../components/MasterSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
 import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
+import { NumberInput } from '../components/ui/NumberInput';
+import { formatNumber } from '../lib/number';
 import { uploadStagedFiles } from '../lib/uploadStaged';
 import { pageTitleCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { WasteInbound } from '../types';
@@ -70,7 +72,7 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
     grossWeight && tareWeight
       ? Number(grossWeight) - Number(tareWeight) - Number(lossWeight || 0)
       : null;
-  const netWeight = netWeightNum === null ? '-' : netWeightNum.toFixed(3);
+  const netWeight = formatNumber(netWeightNum);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,17 +216,17 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
 
           <div>
             <label className={labelCls}>총중량(kg)</label>
-            <input type="number" step="0.001" value={grossWeight} onChange={(e) => setGrossWeight(e.target.value)} required className={inputCls} />
+            <NumberInput value={grossWeight} onChange={setGrossWeight} decimals={3} required />
           </div>
 
           <div>
             <label className={labelCls}>공차중량(kg)</label>
-            <input type="number" step="0.001" value={tareWeight} onChange={(e) => setTareWeight(e.target.value)} required className={inputCls} />
+            <NumberInput value={tareWeight} onChange={setTareWeight} decimals={3} required />
           </div>
 
           <div>
             <label className={labelCls}>감량(kg)</label>
-            <input type="number" step="0.001" value={lossWeight} onChange={(e) => setLossWeight(e.target.value)} className={inputCls} />
+            <NumberInput value={lossWeight} onChange={setLossWeight} decimals={3} />
           </div>
 
           <p className="col-span-3 text-[13px] text-text-sub">

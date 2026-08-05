@@ -5,6 +5,7 @@ import { useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FilterField, DateRangeField } from '../components/FilterField';
 import { AssetMaintenanceForm } from '../components/AssetMaintenanceForm';
+import { formatNumber } from '../lib/number';
 import { Badge } from '../components/ui/Badge';
 import {
   pageTitleCls,
@@ -144,8 +145,8 @@ export function MaintenancePage() {
                 <td className={`${tdCls} tabular`}>{date(m.completedAt)}</td>
                 <td className={tdCls}>{show(m.vendor?.name)}</td>
                 <td className={tdCls}>{show(m.action ?? m.symptom)}</td>
-                <td className={`${tdCls} tabular`}>{show(m.mileageAt)}</td>
-                <td className={`${tdCls} tabular`}>{m.cost ? Number(m.cost).toLocaleString() : '-'}</td>
+                <td className={`${tdCls} tabular text-right`}>{formatNumber(m.mileageAt)}</td>
+                <td className={`${tdCls} tabular text-right`}>{formatNumber(m.cost)}</td>
                 <td className={`${tdCls} tabular`}>{date(m.nextDueDate)}</td>
                 <td className={tdCls}>
                   <Badge tone={m.status === '완료' ? 'green' : 'amber'}>{m.status}</Badge>
@@ -166,7 +167,7 @@ export function MaintenancePage() {
                 <td className={`${tdCls} font-bold text-text-strong`} colSpan={9}>
                   합계
                 </td>
-                <td className={`${tdCls} tabular text-right font-bold text-text-strong`}>{totalCost.toLocaleString()}</td>
+                <td className={`${tdCls} tabular text-right font-bold text-text-strong`}>{formatNumber(totalCost)}</td>
                 <td className={tdCls} colSpan={2} />
               </tr>
             </tfoot>
