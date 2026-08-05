@@ -113,8 +113,10 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
     }
   };
 
+  const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
+
   return (
-    <div className={embedded ? '' : 'max-w-[520px]'}>
+    <div className={embedded ? '' : 'max-w-[760px]'}>
       {!embedded && (
         <div className="mb-5 flex items-center gap-2">
           <Recycle size={20} className="text-primary" />
@@ -122,48 +124,38 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className={`${cardPadCls} space-y-3.5`}>
-        <div>
-          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">프로젝트(차수)</label>
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required className={inputCls}>
-            <option value="">선택</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.roundName}
-              </option>
-            ))}
-          </select>
-        </div>
+      <form onSubmit={handleSubmit} className={cardPadCls}>
+        {/* 3열 그리드 — 모달 폭은 그대로 두고 한 행에 세 항목씩 배치한다. */}
+        <div className="grid grid-cols-3 gap-x-3 gap-y-3.5">
+          <div>
+            <label className={labelCls}>프로젝트(차수)</label>
+            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required className={inputCls}>
+              <option value="">선택</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.roundName}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">인수일</label>
+          <div>
+            <label className={labelCls}>인수일</label>
             <input type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} required className={inputCls} />
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">인계일</label>
+
+          <div>
+            <label className={labelCls}>인계일</label>
             <input type="date" value={handoverDate} onChange={(e) => setHandoverDate(e.target.value)} className={inputCls} />
           </div>
-        </div>
 
-        <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
-          <input
-            type="checkbox"
-            checked={olbaroReported}
-            onChange={(e) => setOlbaroReported(e.target.checked)}
-            className="h-4 w-4 accent-primary"
-          />
-          올바로 신고 완료(O)
-        </label>
-
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">배출자</label>
+          <div>
+            <label className={labelCls}>배출자</label>
             <input
               list="wi-dischargers"
               value={dischargerName}
               onChange={(e) => setDischargerName(e.target.value)}
-              placeholder="케이엠티엘에스 / 크로스특수 / 원방 등"
+              placeholder="케이엠티엘에스 / 크로스특수 등"
               className={inputCls}
             />
             <datalist id="wi-dischargers">
@@ -172,8 +164,9 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
               ))}
             </datalist>
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">하차지</label>
+
+          <div>
+            <label className={labelCls}>하차지</label>
             <input
               list="wi-unloading-points"
               value={unloadingPoint}
@@ -187,9 +180,17 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
               ))}
             </datalist>
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-x-3 gap-y-3.5">
+          <label className="flex items-end gap-2 pb-2 text-[13px] font-semibold text-text-mid">
+            <input
+              type="checkbox"
+              checked={olbaroReported}
+              onChange={(e) => setOlbaroReported(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            올바로 신고 완료(O)
+          </label>
+
           <VehicleDriverFields
             vehicleType={vehicleType}
             setVehicleType={setVehicleType}
@@ -200,49 +201,49 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
             driverPhone={driverPhone}
             setDriverPhone={setDriverPhone}
           />
-        </div>
 
-        <MasterSelect
-          label="제품명(품목)"
-          options={items.map((i) => ({ value: i.itemCode, label: `${i.itemName} (${i.itemCode})`, isTemporary: i.isTemporary }))}
-          value={itemCode}
-          onChange={setItemCode}
-          onQuickCreate={quickCreateItem}
-        />
+          <div className="col-span-2">
+            <MasterSelect
+              label="제품명(품목)"
+              options={items.map((i) => ({ value: i.itemCode, label: `${i.itemName} (${i.itemCode})`, isTemporary: i.isTemporary }))}
+              value={itemCode}
+              onChange={setItemCode}
+              onQuickCreate={quickCreateItem}
+            />
+          </div>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">총중량(kg)</label>
+          <div>
+            <label className={labelCls}>총중량(kg)</label>
             <input type="number" step="0.001" value={grossWeight} onChange={(e) => setGrossWeight(e.target.value)} required className={inputCls} />
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">공차중량(kg)</label>
+
+          <div>
+            <label className={labelCls}>공차중량(kg)</label>
             <input type="number" step="0.001" value={tareWeight} onChange={(e) => setTareWeight(e.target.value)} required className={inputCls} />
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">감량(kg)</label>
+
+          <div>
+            <label className={labelCls}>감량(kg)</label>
             <input type="number" step="0.001" value={lossWeight} onChange={(e) => setLossWeight(e.target.value)} className={inputCls} />
           </div>
-        </div>
 
-        <p className="text-[13px] text-text-sub">
-          입고량(자동계산): <span className="tabular font-bold text-text-strong">{netWeight}</span> kg
-          <span className="ml-1 text-text-faint">= 총중량 − 공차중량 − 감량</span>
-        </p>
+          <p className="col-span-3 text-[13px] text-text-sub">
+            입고량(자동계산): <span className="tabular font-bold text-text-strong">{netWeight}</span> kg
+            <span className="ml-1 text-text-faint">= 총중량 − 공차중량 − 감량</span>
+          </p>
 
-        <div>
-          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">비고</label>
-          <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
-        </div>
+          <div className="col-span-3">
+            <label className={labelCls}>비고</label>
+            <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
+          </div>
 
-        <div className="grid grid-cols-2 gap-x-3">
           <StagedFileUpload label="계량증명서" files={certFiles} setFiles={setCertFiles} />
           <StagedFileUpload label="참고 서류" files={refFiles} setFiles={setRefFiles} />
         </div>
 
-        {error && <p className="text-[13px] text-danger">{error}</p>}
+        {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
-        <div className="flex justify-end gap-2 border-t border-border pt-3">
+        <div className="mt-4 flex justify-end gap-2 border-t border-border pt-3">
           <button type="button" onClick={reset} className={outlineBtnCls}>
             초기화
           </button>

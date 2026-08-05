@@ -151,7 +151,8 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
       )}
 
       <form onSubmit={handleSubmit} className={`${cardPadCls} space-y-4`}>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+        {/* 3열 그리드 — 모달 폭은 그대로 두고 한 행에 세 항목씩 배치한다. */}
+        <div className="grid grid-cols-3 gap-x-3 gap-y-3.5">
           <div>
             <label className={labelCls}>프로젝트(차수)</label>
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required className={inputCls}>
@@ -169,7 +170,7 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
             <input type="date" value={outboundDate} onChange={(e) => setOutboundDate(e.target.value)} required className={inputCls} />
           </div>
 
-          <div className="col-span-2">
+          <div>
             <label className={labelCls}>상차지</label>
             <input
               value={loadingPoint}
@@ -200,7 +201,7 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
             />
           </div>
 
-          <div className="col-span-2">
+          <div className="col-span-3">
             <MasterSelect
               label="제품명(품목)"
               options={items.map((i) => ({ value: i.itemCode, label: `${i.itemName} (${i.itemCode})`, isTemporary: i.isTemporary }))}
@@ -219,10 +220,10 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
             <input type="number" step="0.001" value={grossWeight} onChange={(e) => setGrossWeight(e.target.value)} className={inputCls} />
           </div>
 
-          <p className="col-span-2 text-[13px] text-text-sub">
-            실중량(자동계산): <span className="tabular font-bold text-text-strong">{actualWeight}</span> kg
-            <span className="ml-1 text-text-faint">= 총중량 − 공차중량</span>
-          </p>
+          <div>
+            <label className={labelCls}>실중량(kg) · 자동</label>
+            <div className={`${inputCls} tabular flex items-center justify-end font-bold text-text-strong`}>{actualWeight}</div>
+          </div>
 
           <div>
             <label className={labelCls}>거래처 감량 전 실중량(kg)</label>
@@ -233,12 +234,16 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
             <input type="number" step="0.001" value={lossWeight} onChange={(e) => setLossWeight(e.target.value)} className={inputCls} />
           </div>
 
-          <p className="col-span-2 text-[13px] text-text-sub">
-            정산중량(자동계산): <span className="tabular font-bold text-text-strong">{settledWeight}</span> kg
-            <span className="ml-1 text-text-faint">= 총중량 − 공차중량 − 감량</span>
+          <div>
+            <label className={labelCls}>정산중량(kg) · 자동</label>
+            <div className={`${inputCls} tabular flex items-center justify-end font-bold text-text-strong`}>{settledWeight}</div>
+          </div>
+
+          <p className="col-span-3 text-[12.5px] text-text-faint">
+            실중량 = 총중량 − 공차중량 · 정산중량 = 총중량 − 공차중량 − 감량
           </p>
 
-          <div className="col-span-2">
+          <div>
             <label className={labelCls}>재고반영중량(kg)</label>
             <input
               type="number"
@@ -254,12 +259,12 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
             )}
           </div>
 
-          <div className="col-span-2">
+          <div>
             <label className={labelCls}>단가(원)</label>
             <input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className={inputCls} />
           </div>
 
-          <p className="col-span-2 text-[13px] text-text-sub">
+          <p className="col-span-3 text-[13px] text-text-sub">
             공급가액: <span className="tabular font-bold text-text-strong">{amountNum === null ? '-' : amountNum.toLocaleString()}</span> 원
             <span className="mx-2 text-text-faint">/</span>
             부가세: <span className="tabular font-bold text-text-strong">{vatNum === null ? '-' : vatNum.toLocaleString()}</span> 원
@@ -281,7 +286,7 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
             <input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className={inputCls} />
           </div>
 
-          <label className="col-span-2 flex items-center gap-2 text-[13px] font-semibold text-text-mid">
+          <label className="flex items-end gap-2 pb-2 text-[13px] font-semibold text-text-mid">
             <input
               type="checkbox"
               checked={isSubsidiary}
@@ -291,7 +296,7 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
             자회사 출고
           </label>
 
-          <div className="col-span-2">
+          <div className="col-span-3">
             <label className={labelCls}>비고(특이사항)</label>
             <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
           </div>

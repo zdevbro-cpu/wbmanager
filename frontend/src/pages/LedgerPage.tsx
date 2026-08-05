@@ -73,11 +73,12 @@ export function LedgerPage() {
         <h1 className={pageTitleCls}>통합 원장 조회</h1>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-[14px] border border-border bg-card p-3">
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} w-auto`} />
-        <span className="text-text-faint">~</span>
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputCls} w-auto`} />
-        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-auto`}>
+      {/* 검색 필터 — 줄바꿈 없이 한 줄에 배치한다. */}
+      <div className="mb-4 flex flex-nowrap items-center gap-2 overflow-x-auto rounded-[14px] border border-border bg-card p-3">
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} w-auto shrink-0`} />
+        <span className="shrink-0 text-text-faint">~</span>
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputCls} w-auto shrink-0`} />
+        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-auto min-w-0 flex-1`}>
           <option value="">전체 프로젝트</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
@@ -85,7 +86,7 @@ export function LedgerPage() {
             </option>
           ))}
         </select>
-        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className={`${inputCls} w-auto`}>
+        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className={`${inputCls} w-auto min-w-0 flex-1`}>
           <option value="">전체 거래처</option>
           {vendors.map((v) => (
             <option key={v.id} value={v.id}>
@@ -93,7 +94,7 @@ export function LedgerPage() {
             </option>
           ))}
         </select>
-        <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} w-auto`}>
+        <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} w-auto min-w-0 flex-1`}>
           <option value="">전체 품목</option>
           {items.map((i) => (
             <option key={i.itemCode} value={i.itemCode}>
@@ -101,7 +102,7 @@ export function LedgerPage() {
             </option>
           ))}
         </select>
-        <select value={type} onChange={(e) => setType(e.target.value)} className={`${inputCls} w-auto`}>
+        <select value={type} onChange={(e) => setType(e.target.value)} className={`${inputCls} w-auto min-w-0 flex-1`}>
           <option value="">전체 유형</option>
           {Object.entries(TYPE_LABEL).map(([k, v]) => (
             <option key={k} value={k}>
@@ -109,16 +110,16 @@ export function LedgerPage() {
             </option>
           ))}
         </select>
-        <button type="button" onClick={search} className={outlineBtnCls}>
+        <button type="button" onClick={search} className={`${outlineBtnCls} shrink-0 whitespace-nowrap`}>
           조회
         </button>
-        <a href={`${API_BASE_URL}/api/ledger/export?${buildQuery()}`} target="_blank" rel="noreferrer" className="ml-auto">
-          <button type="button" className={outlineBtnCls}>
+        <a href={`${API_BASE_URL}/api/ledger/export?${buildQuery()}`} target="_blank" rel="noreferrer" className="shrink-0">
+          <button type="button" className={`${outlineBtnCls} whitespace-nowrap`}>
             <Download size={15} /> 엑셀(CSV)
           </button>
         </a>
-        <a href={`${API_BASE_URL}/api/ledger/export?${buildQuery()}&template=ecount`} target="_blank" rel="noreferrer">
-          <button type="button" className={outlineBtnCls}>
+        <a href={`${API_BASE_URL}/api/ledger/export?${buildQuery()}&template=ecount`} target="_blank" rel="noreferrer" className="shrink-0">
+          <button type="button" className={`${outlineBtnCls} whitespace-nowrap`}>
             <Download size={15} /> ecount용
           </button>
         </a>

@@ -113,7 +113,7 @@ function GroupCard({
           placeholder="새 항목 입력"
           className={inputCls}
         />
-        <button type="submit" className={primaryBtnCls}>
+        <button type="submit" className={`${primaryBtnCls} shrink-0 justify-center whitespace-nowrap px-5`}>
           추가
         </button>
       </form>
