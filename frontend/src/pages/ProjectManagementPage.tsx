@@ -478,7 +478,11 @@ function ProjectForm({
         </div>
         <div>
           <label className={labelCls}>상태</label>
-          <select value={f.status} onChange={(e) => set({ status: e.target.value })} className={inputCls}>
+          <select
+            value={f.status}
+            onChange={(e) => set({ status: e.target.value })}
+            className={`${inputCls}${project ? ' status-alert' : ''}`}
+          >
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {s}
