@@ -289,6 +289,7 @@ export interface EmployeeTraining {
   trainingName: string;
   trainingType?: string | null; // 의무 / 보수
   trainingDate?: string | null; // 이수일
+  cycleMonths?: number | null; // 교육 주기(개월) — 이수일 + 주기 = 다음 예정일
   nextDueDate?: string | null; // 다음 교육 예정일
 }
 

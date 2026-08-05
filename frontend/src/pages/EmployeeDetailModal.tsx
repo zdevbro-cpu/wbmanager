@@ -7,7 +7,7 @@ import { FormModal } from '../components/FormModal';
 import { QrCode } from '../components/QrCode';
 import { Badge } from '../components/ui/Badge';
 import { primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
-import type { Employee } from '../types';
+import type { Employee, EmployeeCertification, EmployeeTraining } from '../types';
 
 const TRAINING_TYPES = ['의무', '보수'];
 const CERT_TYPES = ['국가기술자격', '면허', '교육이수증', '기타'];
@@ -58,6 +58,8 @@ export function EmployeeDetailModal({
   const [loadError, setLoadError] = useState('');
   const [adding, setAdding] = useState<'cert' | 'training' | null>(null);
   const [editing, setEditing] = useState(false);
+  const [editCert, setEditCert] = useState<EmployeeCertification | null>(null);
+  const [editTraining, setEditTraining] = useState<EmployeeTraining | null>(null);
   const { labels: certOptions } = useCommonCodes('자격증 종류');
   const { labels: trainingOptions } = useCommonCodes('교육 과정');
 
@@ -166,26 +168,38 @@ export function EmployeeDetailModal({
             )}
           </div>
 
-          {adding === 'cert' && (
+          {(adding === 'cert' || editCert) && (
             <CertForm
+              key={editCert?.id ?? 'new-cert'}
               employeeId={employeeId}
               options={certOptions}
+              edit={editCert ?? undefined}
               onDone={() => {
                 setAdding(null);
+                setEditCert(null);
                 refresh();
               }}
-              onCancel={() => setAdding(null)}
+              onCancel={() => {
+                setAdding(null);
+                setEditCert(null);
+              }}
             />
           )}
-          {adding === 'training' && (
+          {(adding === 'training' || editTraining) && (
             <TrainingForm
+              key={editTraining?.id ?? 'new-training'}
               employeeId={employeeId}
               options={trainingOptions}
+              edit={editTraining ?? undefined}
               onDone={() => {
                 setAdding(null);
+                setEditTraining(null);
                 refresh();
               }}
-              onCancel={() => setAdding(null)}
+              onCancel={() => {
+                setAdding(null);
+                setEditTraining(null);
+              }}
             />
           )}
 
@@ -193,6 +207,7 @@ export function EmployeeDetailModal({
             title="자격사항"
             total={certs.length}
             emptyText="등록된 자격사항이 없습니다."
+            onEditLatest={certs[0] ? () => setEditCert(certs[0]) : undefined}
             onRemoveLatest={certs[0] ? () => removeCert(certs[0].id) : undefined}
             latest={
               certs[0] ? (
@@ -212,6 +227,7 @@ export function EmployeeDetailModal({
               id: c.id,
               badge: <Badge tone="slate">{c.certType ?? '자격'}</Badge>,
               summary: `${c.certName} · ${day(c.acquiredDate)} ~ ${day(c.expiryDate)}`,
+              onEdit: () => setEditCert(c),
               onRemove: () => removeCert(c.id),
             }))}
           />
@@ -220,6 +236,7 @@ export function EmployeeDetailModal({
             title="교육이력"
             total={trainings.length}
             emptyText="등록된 교육이력이 없습니다."
+            onEditLatest={trainings[0] ? () => setEditTraining(trainings[0]) : undefined}
             onRemoveLatest={trainings[0] ? () => removeTraining(trainings[0].id) : undefined}
             latest={
               trainings[0] ? (
@@ -239,6 +256,7 @@ export function EmployeeDetailModal({
               id: t.id,
               badge: <Badge tone={t.trainingType === '의무' ? 'amber' : 'blue'}>{t.trainingType ?? '교육'}</Badge>,
               summary: `${t.trainingName} · 이수 ${day(t.trainingDate)} · 다음 ${day(t.nextDueDate)}`,
+              onEdit: () => setEditTraining(t),
               onRemove: () => removeTraining(t.id),
             }))}
           />
@@ -372,13 +390,15 @@ function HistorySection({
   latest,
   rows,
   total,
+  onEditLatest,
   onRemoveLatest,
   emptyText,
 }: {
   title: string;
   latest: React.ReactNode;
-  rows: { id: string; badge: React.ReactNode; summary: string; onRemove: () => void }[];
+  rows: { id: string; badge: React.ReactNode; summary: string; onEdit: () => void; onRemove: () => void }[];
   total: number;
+  onEditLatest?: () => void;
   onRemoveLatest?: () => void;
   emptyText: string;
 }) {
@@ -388,14 +408,24 @@ function HistorySection({
     <div>
       {/* 삭제 버튼을 카드 위에 겹쳐 놓으면 우측 정렬된 첫 줄 값(취득일·구분)을 가린다.
           제목 줄에 두어 값과 부딪히지 않게 한다. */}
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2 flex items-center gap-3">
         <h3 className="text-[14px] font-extrabold text-text-strong">최근 {title}</h3>
+        {onEditLatest && (
+          <button
+            type="button"
+            onClick={onEditLatest}
+            title="수정"
+            className="ml-auto flex items-center gap-1 text-[12px] text-text-faint hover:text-primary"
+          >
+            <Pencil size={13} /> 수정
+          </button>
+        )}
         {onRemoveLatest && (
           <button
             type="button"
             onClick={onRemoveLatest}
             title="삭제"
-            className="ml-auto flex items-center gap-1 text-[12px] text-text-faint hover:text-danger"
+            className={`flex items-center gap-1 text-[12px] text-text-faint hover:text-danger ${onEditLatest ? '' : 'ml-auto'}`}
           >
             <Trash2 size={13} /> 삭제
           </button>
@@ -425,10 +455,13 @@ function HistorySection({
                   <span className="text-[13px] text-text">{r.summary}</span>
                   <button
                     type="button"
-                    onClick={r.onRemove}
-                    title="삭제"
-                    className="ml-auto text-text-faint hover:text-danger"
+                    onClick={r.onEdit}
+                    title="수정"
+                    className="ml-auto text-text-faint hover:text-primary"
                   >
+                    <Pencil size={14} />
+                  </button>
+                  <button type="button" onClick={r.onRemove} title="삭제" className="text-text-faint hover:text-danger">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -441,38 +474,49 @@ function HistorySection({
   );
 }
 
+// 추가·수정 겸용. edit이 있으면 그 행을 고치고, 없으면 새 이력을 쌓는다.
 function CertForm({
   employeeId,
   options,
+  edit,
   onDone,
   onCancel,
 }: {
   employeeId: string;
   options: string[];
+  edit?: EmployeeCertification;
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [certName, setCertName] = useState('');
-  const [certType, setCertType] = useState(CERT_TYPES[0]);
-  const [acquiredDate, setAcquiredDate] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
+  const [certName, setCertName] = useState(edit?.certName ?? '');
+  const [certType, setCertType] = useState(edit?.certType ?? CERT_TYPES[0]);
+  const [acquiredDate, setAcquiredDate] = useState(edit?.acquiredDate?.slice(0, 10) ?? '');
+  const [expiryDate, setExpiryDate] = useState(edit?.expiryDate?.slice(0, 10) ?? '');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!certName.trim()) return;
-    await api.post(`/api/employees/${employeeId}/certifications`, {
-      certName,
-      certType: certType || undefined,
-      acquiredDate: acquiredDate || undefined,
-      expiryDate: expiryDate || undefined,
-    });
+    const body = { certName, certType, acquiredDate, expiryDate };
+    if (edit) {
+      await api.patch(`/api/employees/${employeeId}/certifications/${edit.id}`, body);
+    } else {
+      await api.post(`/api/employees/${employeeId}/certifications`, body);
+    }
     onDone();
   };
 
   return (
     <form onSubmit={submit} className="rounded-[10px] border border-primary/40 bg-input p-3.5">
       <p className="mb-2 text-[13px] font-bold text-text-strong">
-        자격 이력 추가 <span className="font-normal text-text-faint">— 갱신 시에도 새 이력으로 쌓입니다</span>
+        {edit ? (
+          <>
+            자격 이력 수정 <span className="font-normal text-text-faint">— 잘못 적은 값을 고칩니다</span>
+          </>
+        ) : (
+          <>
+            자격 이력 추가 <span className="font-normal text-text-faint">— 갱신 시에도 새 이력으로 쌓입니다</span>
+          </>
+        )}
       </p>
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,132px)_minmax(0,150px)_minmax(0,150px)_auto] items-center gap-2">
         <input
@@ -515,7 +559,7 @@ function CertForm({
         />
         <div className="flex gap-2">
           <button type="submit" className={`${primaryBtnCls} h-9 whitespace-nowrap px-4`}>
-            추가
+            {edit ? '저장' : '추가'}
           </button>
           <button type="button" onClick={onCancel} className={`${outlineBtnCls} h-9 px-3`}>
             취소
@@ -529,38 +573,53 @@ function CertForm({
 function TrainingForm({
   employeeId,
   options,
+  edit,
   onDone,
   onCancel,
 }: {
   employeeId: string;
   options: string[];
+  edit?: EmployeeTraining;
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [trainingName, setTrainingName] = useState('');
-  const [trainingType, setTrainingType] = useState('의무');
-  const [trainingDate, setTrainingDate] = useState('');
-  const [cycleMonths, setCycleMonths] = useState('12');
-  const [nextDueDate, setNextDueDate] = useState('');
+  const [trainingName, setTrainingName] = useState(edit?.trainingName ?? '');
+  const [trainingType, setTrainingType] = useState(edit?.trainingType ?? '의무');
+  const [trainingDate, setTrainingDate] = useState(edit?.trainingDate?.slice(0, 10) ?? '');
+  const [cycleMonths, setCycleMonths] = useState(edit?.cycleMonths ? String(edit.cycleMonths) : '12');
+  const [nextDueDate, setNextDueDate] = useState(edit?.nextDueDate?.slice(0, 10) ?? '');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!trainingName.trim()) return;
-    await api.post(`/api/employees/${employeeId}/trainings`, {
+    const body = {
       trainingName,
-      trainingType: trainingType || undefined,
-      trainingDate: trainingDate || undefined,
-      cycleMonths: cycleMonths ? Number(cycleMonths) : undefined,
+      trainingType,
+      trainingDate,
+      cycleMonths,
       // 비우면 이수일 + 주기로 서버가 산출한다.
-      nextDueDate: nextDueDate || undefined,
-    });
+      nextDueDate,
+    };
+    if (edit) {
+      await api.patch(`/api/employees/${employeeId}/trainings/${edit.id}`, body);
+    } else {
+      await api.post(`/api/employees/${employeeId}/trainings`, body);
+    }
     onDone();
   };
 
   return (
     <form onSubmit={submit} className="rounded-[10px] border border-primary/40 bg-input p-3.5">
       <p className="mb-2 text-[13px] font-bold text-text-strong">
-        교육 이력 추가 <span className="font-normal text-text-faint">— 재이수 시에도 새 이력으로 쌓입니다</span>
+        {edit ? (
+          <>
+            교육 이력 수정 <span className="font-normal text-text-faint">— 잘못 적은 값을 고칩니다</span>
+          </>
+        ) : (
+          <>
+            교육 이력 추가 <span className="font-normal text-text-faint">— 재이수 시에도 새 이력으로 쌓입니다</span>
+          </>
+        )}
       </p>
       <div className="grid grid-cols-[minmax(0,1fr)_84px_minmax(0,132px)_72px_minmax(0,132px)_auto] items-center gap-2">
         <input
@@ -613,7 +672,7 @@ function TrainingForm({
         />
         <div className="flex gap-2">
           <button type="submit" className={`${primaryBtnCls} h-9 whitespace-nowrap px-4`}>
-            추가
+            {edit ? '저장' : '추가'}
           </button>
           <button type="button" onClick={onCancel} className={`${outlineBtnCls} h-9 px-3`}>
             취소

@@ -129,6 +129,54 @@ router.delete('/:id', async (req, res) => {
   res.json(deleted);
 });
 
+// 이력 행 오타 정정. 갱신은 새 행으로 쌓는 것이 원칙이고, 이 경로는 잘못 적은 값을 고치는 용도다.
+router.patch('/:id/certifications/:certId', async (req, res) => {
+  const { certName, certType, acquiredDate, expiryDate } = req.body;
+  if (certName !== undefined && !String(certName).trim()) {
+    return res.status(400).json({ error: '자격증명은 비울 수 없습니다.' });
+  }
+
+  const cert = await prisma.employeeCertification.update({
+    where: { id: req.params.certId },
+    data: {
+      ...(certName !== undefined ? { certName } : {}),
+      ...(certType !== undefined ? { certType: certType || null } : {}),
+      ...(acquiredDate !== undefined ? { acquiredDate: toISO(acquiredDate) } : {}),
+      ...(expiryDate !== undefined ? { expiryDate: toISO(expiryDate) } : {}),
+    },
+  });
+  res.json(cert);
+});
+
+router.patch('/:id/trainings/:trainingId', async (req, res) => {
+  const { trainingName, trainingType, trainingDate, cycleMonths, nextDueDate } = req.body;
+  if (trainingName !== undefined && !String(trainingName).trim()) {
+    return res.status(400).json({ error: '교육명은 비울 수 없습니다.' });
+  }
+
+  const current = await prisma.employeeTraining.findUnique({ where: { id: req.params.trainingId } });
+  if (!current) return res.status(404).json({ error: '교육 이력을 찾을 수 없습니다.' });
+
+  // 이수일이나 주기를 고쳤는데 예정일을 직접 주지 않았다면 다시 계산한다.
+  const resolvedDue = resolveNextDue({
+    nextDueDate,
+    trainingDate: trainingDate ?? current.trainingDate,
+    cycleMonths: cycleMonths ?? current.cycleMonths,
+  });
+
+  const training = await prisma.employeeTraining.update({
+    where: { id: req.params.trainingId },
+    data: {
+      ...(trainingName !== undefined ? { trainingName } : {}),
+      ...(trainingType !== undefined ? { trainingType: trainingType || null } : {}),
+      ...(trainingDate !== undefined ? { trainingDate: toISO(trainingDate) } : {}),
+      ...(cycleMonths !== undefined ? { cycleMonths: cycleMonths ? Number(cycleMonths) : null } : {}),
+      ...(resolvedDue !== undefined ? { nextDueDate: resolvedDue } : {}),
+    },
+  });
+  res.json(training);
+});
+
 router.delete('/:id/certifications/:certId', async (req, res) => {
   const deleted = await prisma.employeeCertification.delete({ where: { id: req.params.certId } });
   res.json(deleted);
