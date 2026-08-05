@@ -161,8 +161,11 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
     }
   };
 
+  // 3열 그리드 — 모달 폭(760px)은 그대로 두고 한 행에 세 항목씩 배치한다.
+  const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
+
   return (
-    <div className={embedded ? '' : 'max-w-[520px]'}>
+    <div className={embedded ? '' : 'max-w-[760px]'}>
       {!embedded && (
         <div className="mb-5 flex items-center gap-2">
           <Trash2 size={20} className="text-primary" />
@@ -170,48 +173,37 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className={`${cardPadCls} space-y-3.5`}>
-        <div>
-          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">프로젝트(차수)</label>
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required className={inputCls}>
-            <option value="">선택</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.roundName}
-              </option>
-            ))}
-          </select>
-        </div>
+      <form onSubmit={handleSubmit} className={cardPadCls}>
+        <div className="grid grid-cols-3 gap-x-3 gap-y-3.5">
+          <div>
+            <label className={labelCls}>프로젝트(차수)</label>
+            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required className={inputCls}>
+              <option value="">선택</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.roundName}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">상차일(반출일)</label>
+          <div>
+            <label className={labelCls}>상차일(반출일)</label>
             <input type="date" value={outboundDate} onChange={(e) => setOutboundDate(e.target.value)} required className={inputCls} />
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">인계일</label>
+
+          <div>
+            <label className={labelCls}>인계일</label>
             <input type="date" value={handoverDate} onChange={(e) => setHandoverDate(e.target.value)} className={inputCls} />
           </div>
-        </div>
 
-        <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
-          <input
-            type="checkbox"
-            checked={olbaroReported}
-            onChange={(e) => setOlbaroReported(e.target.checked)}
-            className="h-4 w-4 accent-primary"
-          />
-          올바로 신고 완료(O)
-        </label>
-
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">배출자</label>
+          <div>
+            <label className={labelCls}>배출자</label>
             <input
               list="wo-dischargers"
               value={dischargerName}
               onChange={(e) => setDischargerName(e.target.value)}
-              placeholder="케이엠티엘에스 / 크로스특수 / 원방 등"
+              placeholder="케이엠티엘에스 / 크로스특수 등"
               className={inputCls}
             />
             <datalist id="wo-dischargers">
@@ -220,8 +212,9 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
               ))}
             </datalist>
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">운반자</label>
+
+          <div>
+            <label className={labelCls}>운반자</label>
             <input
               list="wo-transporters"
               value={transporterName}
@@ -235,8 +228,9 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
               ))}
             </datalist>
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">상차지</label>
+
+          <div>
+            <label className={labelCls}>상차지</label>
             <input
               list="wo-loading-points"
               value={loadingPoint}
@@ -250,9 +244,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
               ))}
             </datalist>
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-x-3 gap-y-3.5">
           <VehicleDriverFields
             vehicleType={vehicleType}
             setVehicleType={setVehicleType}
@@ -263,54 +255,56 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
             driverPhone={driverPhone}
             setDriverPhone={setDriverPhone}
           />
-        </div>
 
-        <MasterSelect
-          label="처리자(거래처·폐기물업체)"
-          options={vendors.map((v) => ({ value: v.id, label: v.name, isTemporary: v.isTemporary }))}
-          value={buyerId}
-          onChange={setBuyerId}
-          onQuickCreate={quickCreateVendor}
-        />
+          <div className="col-span-2">
+            <MasterSelect
+              label="처리자(거래처·폐기물업체)"
+              options={vendors.map((v) => ({ value: v.id, label: v.name, isTemporary: v.isTemporary }))}
+              value={buyerId}
+              onChange={setBuyerId}
+              onQuickCreate={quickCreateVendor}
+            />
+          </div>
 
-        <MasterSelect
-          label="제품명(품목)"
-          options={items.map((i) => ({ value: i.itemCode, label: `${i.itemName} (${i.itemCode})`, isTemporary: i.isTemporary }))}
-          value={itemCode}
-          onChange={setItemCode}
-          onQuickCreate={quickCreateItem}
-        />
+          <div className="col-span-3">
+            <MasterSelect
+              label="제품명(품목)"
+              options={items.map((i) => ({ value: i.itemCode, label: `${i.itemName} (${i.itemCode})`, isTemporary: i.isTemporary }))}
+              value={itemCode}
+              onChange={setItemCode}
+              onQuickCreate={quickCreateItem}
+            />
+          </div>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">총중량(kg)</label>
+          <div>
+            <label className={labelCls}>총중량(kg)</label>
             <input type="number" step="0.001" value={grossWeight} onChange={(e) => setGrossWeight(e.target.value)} className={inputCls} />
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">공차중량(kg)</label>
+
+          <div>
+            <label className={labelCls}>공차중량(kg)</label>
             <input type="number" step="0.001" value={tareWeight} onChange={(e) => setTareWeight(e.target.value)} className={inputCls} />
           </div>
-        </div>
 
-        <p className="text-[13px] text-text-sub">
-          실중량(자동계산): <span className="tabular font-bold text-text-strong">{actualWeightNum === null ? '-' : actualWeightNum.toFixed(3)}</span> kg
-          <span className="ml-1 text-text-faint">= 총중량 − 공차중량</span>
-        </p>
+          <div>
+            <label className={labelCls}>실중량(kg) · 자동</label>
+            <div className={`${inputCls} tabular flex items-center justify-end font-bold text-text-strong`}>
+              {actualWeightNum === null ? '-' : actualWeightNum.toFixed(3)}
+            </div>
+          </div>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">거래처 감량 전 실중량(kg)</label>
+          <div>
+            <label className={labelCls}>거래처 감량 전 실중량(kg)</label>
             <input type="number" step="0.001" value={preLossWeight} onChange={(e) => setPreLossWeight(e.target.value)} className={inputCls} />
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">감량(계근차, kg)</label>
+
+          <div>
+            <label className={labelCls}>감량(계근차, kg)</label>
             <input type="number" step="0.001" value={lossWeight} onChange={(e) => setLossWeight(e.target.value)} className={inputCls} />
           </div>
-        </div>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">정산중량(kg)</label>
+          <div>
+            <label className={labelCls}>정산중량(kg)</label>
             <input
               type="number"
               step="0.001"
@@ -320,24 +314,19 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
               className={inputCls}
             />
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">루베 적용(㎥)</label>
+
+          <div>
+            <label className={labelCls}>루베 적용(㎥)</label>
             <input type="number" step="0.01" value={cubicMeter} onChange={(e) => setCubicMeter(e.target.value)} className={inputCls} />
           </div>
-        </div>
 
-        <p className="text-[13px] text-text-sub">
-          정산중량(적용값): <span className="tabular font-bold text-text-strong">{settledNum === null ? '-' : settledNum.toFixed(3)}</span> kg
-          <span className="ml-1 text-text-faint">= 거래처 감량 전 실중량 (없으면 실중량 − 감량)</span>
-        </p>
-
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">단가(원)</label>
+          <div>
+            <label className={labelCls}>단가(원)</label>
             <input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className={inputCls} />
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">지출금액(원)</label>
+
+          <div>
+            <label className={labelCls}>지출금액(원)</label>
             <input
               type="number"
               step="0.01"
@@ -347,16 +336,19 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
               className={inputCls}
             />
           </div>
-        </div>
 
-        <p className="text-[13px] text-text-sub">
-          지출금액(적용값): <span className="tabular font-bold text-text-strong">{amountNum === null ? '-' : Math.round(amountNum).toLocaleString()}</span> 원
-          <span className="ml-1 text-text-faint">= 정산중량 × 단가</span>
-        </p>
+          <p className="col-span-3 text-[12.5px] text-text-faint">
+            실중량 = 총중량 − 공차중량 · 정산중량 = 거래처 감량 전 실중량(없으면 실중량 − 감량)
+            <span className="tabular ml-1 font-bold text-text-strong">{settledNum === null ? '-' : settledNum.toFixed(3)}</span> kg
+            · 지출금액 = 정산중량 × 단가
+            <span className="tabular ml-1 font-bold text-text-strong">
+              {amountNum === null ? '-' : Math.round(amountNum).toLocaleString()}
+            </span>
+            원
+          </p>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">구분</label>
+          <div>
+            <label className={labelCls}>구분</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
               {categories.map((c) => (
                 <option key={c} value={c}>
@@ -366,40 +358,50 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
               {category && !categories.includes(category) && <option value={category}>{category}</option>}
             </select>
           </div>
-          <div className="flex-1">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">이체일</label>
+
+          <div>
+            <label className={labelCls}>이체일</label>
             <input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} className={inputCls} />
           </div>
-        </div>
 
-        <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
-          <input
-            type="checkbox"
-            checked={isSubsidiary}
-            onChange={(e) => setIsSubsidiary(e.target.checked)}
-            className="h-4 w-4 accent-primary"
-          />
-          자회사 출고
-        </label>
+          <div className="flex items-end gap-4 pb-2">
+            <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
+              <input
+                type="checkbox"
+                checked={olbaroReported}
+                onChange={(e) => setOlbaroReported(e.target.checked)}
+                className="h-4 w-4 accent-primary"
+              />
+              올바로 신고(O)
+            </label>
+            <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
+              <input
+                type="checkbox"
+                checked={isSubsidiary}
+                onChange={(e) => setIsSubsidiary(e.target.checked)}
+                className="h-4 w-4 accent-primary"
+              />
+              자회사 출고
+            </label>
+          </div>
 
-        <div>
-          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">비고</label>
-          <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
-        </div>
+          <div>
+            <label className={labelCls}>비고</label>
+            <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
+          </div>
 
-        <div>
-          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">올바로 메모(기준업체량 등)</label>
-          <input value={olbaroMemo} onChange={(e) => setOlbaroMemo(e.target.value)} className={inputCls} />
-        </div>
+          <div className="col-span-2">
+            <label className={labelCls}>올바로 메모(기준업체량 등)</label>
+            <input value={olbaroMemo} onChange={(e) => setOlbaroMemo(e.target.value)} className={inputCls} />
+          </div>
 
-        <div className="grid grid-cols-2 gap-x-3">
           <StagedFileUpload label="계량증명서" files={certFiles} setFiles={setCertFiles} />
           <StagedFileUpload label="참고 서류" files={refFiles} setFiles={setRefFiles} />
         </div>
 
-        {error && <p className="text-[13px] text-danger">{error}</p>}
+        {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
-        <div className="flex justify-end gap-2 border-t border-border pt-3">
+        <div className="mt-4 flex justify-end gap-2 border-t border-border pt-3">
           <button type="button" onClick={reset} className={outlineBtnCls}>
             초기화
           </button>
