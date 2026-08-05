@@ -15,6 +15,8 @@ import {
   cardPadCls,
   tableWrapCls,
   thCls,
+  thNumCls,
+  tdNumCls,
   tdCls,
   trCls,
 } from '../components/ui/classes';
@@ -311,7 +313,7 @@ function MaintenanceSection({ vehicle }: { vehicle: Vehicle }) {
             <tr className="border-y border-border">
               <th className={thCls}>정비일</th>
               <th className={thCls}>내용</th>
-              <th className={thCls}>비용</th>
+              <th className={thNumCls}>비용</th>
               <th className={thCls}>명세서</th>
             </tr>
           </thead>
@@ -320,7 +322,7 @@ function MaintenanceSection({ vehicle }: { vehicle: Vehicle }) {
               <tr key={m.id} className={trCls}>
                 <td className={`${tdCls} tabular`}>{m.maintenanceDate.slice(0, 10)}</td>
                 <td className={tdCls}>{m.description ?? '-'}</td>
-                <td className={`${tdCls} tabular text-right`}>{formatNumber(m.cost)}</td>
+                <td className={tdNumCls}>{formatNumber(m.cost)}</td>
                 <td className={tdCls}>
                   <AttachmentLinks attachments={m.attachments} />
                 </td>

@@ -13,6 +13,8 @@ import {
   inputCls,
   tableWrapCls,
   thCls,
+  thNumCls,
+  tdNumCls,
   tdCls,
   trCls,
 } from '../components/ui/classes';
@@ -162,18 +164,18 @@ export function PnlPage() {
               <thead>
                 <tr className="border-y border-border">
                   <th className={thCls}>품목</th>
-                  <th className={thCls}>잔량</th>
-                  <th className={thCls}>단가</th>
-                  <th className={thCls}>평가금액</th>
+                  <th className={thNumCls}>잔량</th>
+                  <th className={thNumCls}>단가</th>
+                  <th className={thNumCls}>평가금액</th>
                 </tr>
               </thead>
               <tbody>
                 {pnl.inventoryDetail.map((r) => (
                   <tr key={r.itemCode} className={trCls}>
                     <td className={tdCls}>{r.itemName}</td>
-                    <td className={`${tdCls} tabular text-right`}>{formatNumber(r.remaining)}</td>
-                    <td className={`${tdCls} tabular`}>{r.unitPrice.toLocaleString()}</td>
-                    <td className={`${tdCls} tabular`}>{r.valuationAmount.toLocaleString()}</td>
+                    <td className={tdNumCls}>{formatNumber(r.remaining)}</td>
+                    <td className={tdNumCls}>{formatNumber(r.unitPrice)}</td>
+                    <td className={tdNumCls}>{formatNumber(r.valuationAmount)}</td>
                   </tr>
                 ))}
                 {pnl.inventoryDetail.length === 0 && (

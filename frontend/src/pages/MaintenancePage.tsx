@@ -15,7 +15,9 @@ import {
   inputCls,
   tableWrapCls,
   thCls,
+  thNumCls,
   tdCls,
+  tdNumCls,
   trCls,
 } from '../components/ui/classes';
 import type { Asset, AssetMaintenance } from '../types';
@@ -128,8 +130,8 @@ export function MaintenancePage() {
               <th className={thCls}>완료일</th>
               <th className={thCls}>업체</th>
               <th className={thCls}>증상/조치</th>
-              <th className={thCls}>계기판</th>
-              <th className={thCls}>비용</th>
+              <th className={thNumCls}>계기판</th>
+              <th className={thNumCls}>비용</th>
               <th className={thCls}>다음 예정</th>
               <th className={thCls}>상태</th>
             </tr>
@@ -145,8 +147,8 @@ export function MaintenancePage() {
                 <td className={`${tdCls} tabular`}>{date(m.completedAt)}</td>
                 <td className={tdCls}>{show(m.vendor?.name)}</td>
                 <td className={tdCls}>{show(m.action ?? m.symptom)}</td>
-                <td className={`${tdCls} tabular text-right`}>{formatNumber(m.mileageAt)}</td>
-                <td className={`${tdCls} tabular text-right`}>{formatNumber(m.cost)}</td>
+                <td className={tdNumCls}>{formatNumber(m.mileageAt)}</td>
+                <td className={tdNumCls}>{formatNumber(m.cost)}</td>
                 <td className={`${tdCls} tabular`}>{date(m.nextDueDate)}</td>
                 <td className={tdCls}>
                   <Badge tone={m.status === '완료' ? 'green' : 'amber'}>{m.status}</Badge>
@@ -167,7 +169,7 @@ export function MaintenancePage() {
                 <td className={`${tdCls} font-bold text-text-strong`} colSpan={9}>
                   합계
                 </td>
-                <td className={`${tdCls} tabular text-right font-bold text-text-strong`}>{formatNumber(totalCost)}</td>
+                <td className={`${tdNumCls} font-bold text-text-strong`}>{formatNumber(totalCost)}</td>
                 <td className={tdCls} colSpan={2} />
               </tr>
             </tfoot>

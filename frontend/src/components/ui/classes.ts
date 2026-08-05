@@ -18,4 +18,9 @@ export const selectCls = inputCls;
 export const tableWrapCls = `${cardCls} overflow-hidden`;
 export const thCls = 'px-3 py-1.5 text-left text-[12.5px] font-semibold text-text-sub';
 export const tdCls = 'px-3 py-1.5 text-[13px] text-text';
+
+// 숫자 칸 — 헤더와 값을 같은 기준(우측)으로 맞춘다.
+// thCls에 text-left가 들어 있어 뒤에 text-right를 덧붙여도 이기지 못하므로 별도 클래스를 쓴다.
+export const thNumCls = 'px-3 py-1.5 text-right text-[12.5px] font-semibold text-text-sub';
+export const tdNumCls = 'tabular px-3 py-1.5 text-right text-[13px] text-text';
 export const trCls = 'border-b border-border last:border-0 hover:bg-hover';
