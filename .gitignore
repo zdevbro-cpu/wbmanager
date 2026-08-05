@@ -3,3 +3,7 @@ backup/
 
 # Firebase CLI 로컬 캐시
 .firebase/
+
+# 작업 전 생성한 원본 백업본 (로컬 보관용)
+*.backup
+*.bak
