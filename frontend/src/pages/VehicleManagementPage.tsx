@@ -121,22 +121,36 @@ function VehicleRegister({ onRegistered }: { onRegistered: () => void }) {
   const [inspectionExpiry, setInspectionExpiry] = useState('');
   const [currentSite, setCurrentSite] = useState('');
   const [created, setCreated] = useState<Vehicle | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vehicleNo) return;
-    const vehicle = await api.post<Vehicle>('/api/vehicles', {
-      vehicleNo,
-      vehicleType: vehicleType || undefined,
-      inspectionExpiry: inspectionExpiry || undefined,
-      currentSite: currentSite || undefined,
-    });
-    setCreated(vehicle);
-    setVehicleNo('');
-    setVehicleType('');
-    setInspectionExpiry('');
-    setCurrentSite('');
-    onRegistered();
+    // 차량번호 없이 누르면 아무 반응이 없어 보였다. 사유를 화면에 남긴다.
+    if (!vehicleNo.trim()) {
+      setError('차량번호를 입력하세요.');
+      return;
+    }
+    setError('');
+    setSubmitting(true);
+    try {
+      const vehicle = await api.post<Vehicle>('/api/vehicles', {
+        vehicleNo,
+        vehicleType: vehicleType || undefined,
+        inspectionExpiry: inspectionExpiry || undefined,
+        currentSite: currentSite || undefined,
+      });
+      setCreated(vehicle);
+      setVehicleNo('');
+      setVehicleType('');
+      setInspectionExpiry('');
+      setCurrentSite('');
+      onRegistered();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '등록 실패');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -145,7 +159,7 @@ function VehicleRegister({ onRegistered }: { onRegistered: () => void }) {
       <form onSubmit={handleSubmit} className={`${cardPadCls} flex flex-wrap items-end gap-2`}>
         <div className="min-w-[140px] flex-1">
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">차량번호</label>
-          <input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} className={inputCls} />
+          <input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} required className={inputCls} />
         </div>
         <div className="min-w-[130px] flex-1">
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">구분</label>
@@ -166,9 +180,10 @@ function VehicleRegister({ onRegistered }: { onRegistered: () => void }) {
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">사용 현장</label>
           <input value={currentSite} onChange={(e) => setCurrentSite(e.target.value)} className={inputCls} />
         </div>
-        <button type="submit" className={`${primaryBtnCls} shrink-0`}>
-          등록
+        <button type="submit" disabled={submitting} className={`${primaryBtnCls} shrink-0`}>
+          {submitting ? '등록 중...' : '등록'}
         </button>
+        {error && <p className="w-full text-[13px] text-danger">{error}</p>}
       </form>
 
       {created && (

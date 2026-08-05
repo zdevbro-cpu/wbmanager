@@ -213,13 +213,13 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
             </datalist>
             <div className="space-y-2">
               {certs.map((c, i) => (
-                <div key={i} className="flex items-center gap-2">
+                <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,140px)_minmax(0,140px)_24px] items-center gap-2">
                   <input
                     list="emp-certs"
                     value={c.certName}
                     onChange={(e) => setCerts(certs.map((r, ri) => (ri === i ? { ...r, certName: e.target.value } : r)))}
                     placeholder="자격증명"
-                    className={inputCls}
+                    className={`${inputCls} min-w-0`}
                   />
                   <input
                     type="date"
@@ -227,7 +227,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     onChange={(e) => setCerts(certs.map((r, ri) => (ri === i ? { ...r, acquiredDate: e.target.value } : r)))}
                     title="취득일"
                     aria-label="취득일"
-                    className={inputCls}
+                    className={`${inputCls} min-w-0`}
                   />
                   <input
                     type="date"
@@ -235,7 +235,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     onChange={(e) => setCerts(certs.map((r, ri) => (ri === i ? { ...r, expiryDate: e.target.value } : r)))}
                     title="만료일"
                     aria-label="만료일"
-                    className={inputCls}
+                    className={`${inputCls} min-w-0`}
                   />
                   <button
                     type="button"
@@ -270,7 +270,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
             </datalist>
             <div className="space-y-2">
               {trainings.map((t, i) => (
-                <div key={i} className="flex items-center gap-2">
+                <div key={i} className="grid grid-cols-[minmax(0,1fr)_84px_minmax(0,132px)_72px_minmax(0,132px)_24px] items-center gap-2">
                   <input
                     list="emp-trainings"
                     value={t.trainingName}
@@ -278,7 +278,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                       setTrainings(trainings.map((r, ri) => (ri === i ? { ...r, trainingName: e.target.value } : r)))
                     }
                     placeholder="교육명"
-                    className={inputCls}
+                    className={`${inputCls} min-w-0`}
                   />
                   <select
                     value={t.trainingType}
@@ -287,7 +287,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     }
                     title="구분"
                     aria-label="교육 구분"
-                    className={`${inputCls} w-[84px] shrink-0 px-2`}
+                    className={`${inputCls} min-w-0 px-2`}
                   >
                     {TRAINING_TYPES.map((v) => (
                       <option key={v} value={v}>
@@ -303,7 +303,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     }
                     title="이수일"
                     aria-label="이수일"
-                    className={inputCls}
+                    className={`${inputCls} min-w-0`}
                   />
                   <input
                     type="number"
@@ -315,7 +315,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     title="교육 주기(개월)"
                     aria-label="교육 주기(개월)"
                     placeholder="주기"
-                    className={`${inputCls} w-[72px] shrink-0 px-2`}
+                    className={`${inputCls} min-w-0 px-2`}
                   />
                   <input
                     type="date"
@@ -326,7 +326,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     title="다음 교육 예정일 — 비우면 이수일 + 주기로 자동 산출"
                     aria-label="다음 교육 예정일"
                     placeholder={t.trainingDate && t.cycleMonths ? addMonths(t.trainingDate, Number(t.cycleMonths)) : ''}
-                    className={inputCls}
+                    className={`${inputCls} min-w-0`}
                   />
                   <button
                     type="button"
