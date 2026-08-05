@@ -3,14 +3,16 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { BaseInfoPage } from './BaseInfoPage';
+import { MasterManagementPage } from './MasterManagementPage';
 import { UserApprovalPage } from './UserApprovalPage';
 import { pageTitleCls } from '../components/ui/classes';
 
-type Tab = 'base' | 'users';
+type Tab = 'masters' | 'base' | 'users';
 
 function initialTab(param: string | null, isAdmin: boolean): Tab {
   if (param === 'users' && isAdmin) return 'users';
-  return 'base';
+  if (param === 'base') return 'base';
+  return 'masters';
 }
 
 export function SystemAdminPage() {
@@ -31,6 +33,9 @@ export function SystemAdminPage() {
       </div>
 
       <div className="mb-5 flex gap-1 border-b border-border">
+        <TabButton active={tab === 'masters'} onClick={() => setTab('masters')}>
+          마스터 관리
+        </TabButton>
         <TabButton active={tab === 'base'} onClick={() => setTab('base')}>
           기준정보 관리
         </TabButton>
@@ -41,7 +46,7 @@ export function SystemAdminPage() {
         )}
       </div>
 
-      {tab === 'users' && isAdmin ? <UserApprovalPage embedded /> : <BaseInfoPage />}
+      {tab === 'users' && isAdmin ? <UserApprovalPage embedded /> : tab === 'base' ? <BaseInfoPage /> : <MasterManagementPage embedded />}
     </div>
   );
 }
