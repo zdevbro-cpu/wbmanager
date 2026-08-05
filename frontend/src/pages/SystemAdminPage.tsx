@@ -2,17 +2,15 @@ import { useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { MasterManagementPage } from './MasterManagementPage';
-import { CommonCodePage } from './CommonCodePage';
+import { BaseInfoPage } from './BaseInfoPage';
 import { UserApprovalPage } from './UserApprovalPage';
 import { pageTitleCls } from '../components/ui/classes';
 
-type Tab = 'codes' | 'masters' | 'users';
+type Tab = 'base' | 'users';
 
 function initialTab(param: string | null, isAdmin: boolean): Tab {
-  if (param === 'codes') return 'codes';
   if (param === 'users' && isAdmin) return 'users';
-  return 'masters';
+  return 'base';
 }
 
 export function SystemAdminPage() {
@@ -33,11 +31,8 @@ export function SystemAdminPage() {
       </div>
 
       <div className="mb-5 flex gap-1 border-b border-border">
-        <TabButton active={tab === 'codes'} onClick={() => setTab('codes')}>
-          공통코드 관리
-        </TabButton>
-        <TabButton active={tab === 'masters'} onClick={() => setTab('masters')}>
-          마스터 관리
+        <TabButton active={tab === 'base'} onClick={() => setTab('base')}>
+          기준정보 관리
         </TabButton>
         {isAdmin && (
           <TabButton active={tab === 'users'} onClick={() => setTab('users')}>
@@ -46,13 +41,7 @@ export function SystemAdminPage() {
         )}
       </div>
 
-      {tab === 'codes' ? (
-        <CommonCodePage embedded />
-      ) : tab === 'users' && isAdmin ? (
-        <UserApprovalPage embedded />
-      ) : (
-        <MasterManagementPage embedded />
-      )}
+      {tab === 'users' && isAdmin ? <UserApprovalPage embedded /> : <BaseInfoPage />}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Users, Plus, Trash2, QrCode as QrIcon, CheckCircle2, Eye } from 'lucide-react';
+import { Users, Plus, Trash2, CheckCircle2, Eye } from 'lucide-react';
 import { api } from '../api/client';
 import { formatPhone } from '../lib/phone';
 import { useCommonCodes } from '../hooks/useMasters';
@@ -93,7 +93,6 @@ function MoreBadge({ total }: { total: number }) {
 export function EmployeeManagementPage({ embedded = false }: { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [open, setOpen] = useState(false);
-  const [qrTarget, setQrTarget] = useState<Employee | null>(null);
   const [detail, setDetail] = useState<Employee | null>(null);
 
   const remove = async (emp: Employee) => {
@@ -185,16 +184,6 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     >
                       <Eye size={15} />
                     </button>
-                    {emp.empCode && (
-                      <button
-                        type="button"
-                        title="근태 QR"
-                        onClick={() => setQrTarget(emp)}
-                        className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
-                      >
-                        <QrIcon size={15} />
-                      </button>
-                    )}
                     <button
                       type="button"
                       title="삭제"
@@ -226,22 +215,6 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
           onChanged={reload}
           onDelete={() => remove(detail)}
         />
-      )}
-
-      {qrTarget && (
-        <FormModal title={`${qrTarget.name} 근태 QR`} icon={QrIcon} onClose={() => setQrTarget(null)}>
-          <div className="flex flex-col items-center gap-3 py-2">
-            <QrCode
-              value={qrTarget.empCode ?? ''}
-              fileName={`${qrTarget.empCode}_${qrTarget.name}`}
-              size={200}
-              caption={`${qrTarget.name}${qrTarget.department ? ` · ${qrTarget.department}` : ''}`}
-            />
-            <p className="text-center text-[12.5px] text-text-faint">
-              근태 단말이나 휴대폰으로 스캔하면 사번이 읽힙니다. 출퇴근 기록에 이 QR을 사용하세요.
-            </p>
-          </div>
-        </FormModal>
       )}
 
       {open && (

@@ -44,10 +44,12 @@ export function CommonCodePage({ embedded = false }: { embedded?: boolean }) {
         </div>
       )}
 
-      <p className="mb-4 text-[13px] text-text-sub">
-        등록 화면에서 반복 입력되는 값(배출자·운반자·상차지·차종·구분 등)을 이곳에서 한 번에 관리합니다. 여기에 등록한 항목이
-        각 등록 폼의 선택 목록으로 표시됩니다.
-      </p>
+      {!embedded && (
+        <p className="mb-4 text-[13px] text-text-sub">
+          등록 화면에서 반복 입력되는 값(배출자·운반자·상차지·차종·구분 등)을 이곳에서 한 번에 관리합니다. 여기에 등록한
+          항목이 각 등록 폼의 선택 목록으로 표시됩니다.
+        </p>
+      )}
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
         {[...GROUPS, ...extraGroups].map(({ group, hint }) => (
