@@ -1,0 +1,51 @@
+name: Seed demo data
+
+# 운영 DB에 데모 데이터를 넣거나 지운다. 수동 실행 전용.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '데모 데이터 처리'
+        required: true
+        default: seed
+        type: choice
+        options:
+          - seed
+          - clear
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run seed script through Cloud SQL proxy
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROXY }}
+        run: |
+          curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.0/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
+          ./cloud-sql-proxy --port 5432 crosswb-a7083:asia-northeast3:wbmanager-db &
+          for i in $(seq 1 30); do (echo > /dev/tcp/127.0.0.1/5432) >/dev/null 2>&1 && break; sleep 1; done
+          npx prisma generate
+          if [ "${{ inputs.action }}" = "clear" ]; then
+            node prisma/seed.js --clear
+          else
+            node prisma/seed.js
+          fi
