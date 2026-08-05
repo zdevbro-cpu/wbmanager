@@ -1,5 +1,6 @@
 import { useVehicles, useEmployees, useCommonCodes } from '../hooks/useMasters';
 import { inputCls } from './ui/classes';
+import { formatPhone } from '../lib/phone';
 
 // 차종 목록 — 공통코드(그룹: 차종)에서 관리한다. 공통코드가 비어 있으면 원본 엑셀 사용값으로 대체한다.
 const DEFAULT_VEHICLE_TYPES = ['집게차', '카고', '암롤트럭', '방통차', '1톤트럭', '트레일러', '기타'];
@@ -87,7 +88,7 @@ export function VehicleDriverFields({
           ))}
         </select>
         {employees.length === 0 && (
-          <p className="mt-1 text-[12px] text-text-faint">시스템 관리 &gt; 임직원 관리에서 먼저 등록하세요.</p>
+          <p className="mt-1 text-[12px] text-text-faint">관리 &gt; 임직원 관리에서 먼저 등록하세요.</p>
         )}
       </div>
 
@@ -95,7 +96,7 @@ export function VehicleDriverFields({
         <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">연락처</label>
         <input
           value={driverPhone}
-          onChange={(e) => setDriverPhone(e.target.value)}
+          onChange={(e) => setDriverPhone(formatPhone(e.target.value))}
           placeholder="010-0000-0000"
           className={inputCls}
         />

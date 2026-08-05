@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Users, Plus, Trash2, QrCode as QrIcon, CheckCircle2 } from 'lucide-react';
+import { Users, Plus, Trash2, QrCode as QrIcon, CheckCircle2, Eye } from 'lucide-react';
 import { api } from '../api/client';
+import { formatPhone } from '../lib/phone';
 import { useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { QrCode } from '../components/QrCode';
@@ -74,6 +75,14 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [open, setOpen] = useState(false);
   const [qrTarget, setQrTarget] = useState<Employee | null>(null);
+  const [detail, setDetail] = useState<Employee | null>(null);
+
+  const remove = async (emp: Employee) => {
+    if (!window.confirm(`${emp.name} 임직원을 삭제하시겠습니까? 자격사항·교육이력도 함께 삭제됩니다.`)) return;
+    await api.del(`/api/employees/${emp.id}`);
+    setDetail(null);
+    reload();
+  };
 
   const reload = useCallback(() => {
     api.get<Employee[]>('/api/employees').then(setEmployees);
@@ -107,7 +116,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
               <th className={thCls}>입사일</th>
               <th className={thCls}>자격사항(만료일)</th>
               <th className={thCls}>교육(구분 · 다음 예정)</th>
-              <th className={thCls}>QR</th>
+              <th className={thCls}>관리</th>
             </tr>
           </thead>
           <tbody>
@@ -141,17 +150,35 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     '-'
                   )}
                 </td>
-                <td className={tdCls}>
-                  {emp.empCode && (
+                <td className={`${tdCls} whitespace-nowrap`}>
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      title="근태 QR 보기"
-                      onClick={() => setQrTarget(emp)}
+                      title="상세"
+                      onClick={() => setDetail(emp)}
                       className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
                     >
-                      <QrIcon size={15} />
+                      <Eye size={15} />
                     </button>
-                  )}
+                    {emp.empCode && (
+                      <button
+                        type="button"
+                        title="근태 QR"
+                        onClick={() => setQrTarget(emp)}
+                        className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
+                      >
+                        <QrIcon size={15} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      title="삭제"
+                      onClick={() => remove(emp)}
+                      className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-danger"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -165,6 +192,85 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
           </tbody>
         </table>
       </div>
+
+      {detail && (
+        <FormModal title={`${detail.name} 상세`} icon={Users} onClose={() => setDetail(null)}>
+          <div className="flex gap-5">
+            <div className="flex-1 space-y-4">
+              <dl className="grid grid-cols-2 gap-x-5 gap-y-2">
+                {[
+                  { label: '사번', value: detail.empCode ?? '-' },
+                  { label: '성명', value: detail.name },
+                  { label: '연락처', value: detail.phone ?? '-' },
+                  { label: '부서', value: detail.department ?? '-' },
+                  { label: '직급', value: detail.position ?? '-' },
+                  { label: '입사일', value: detail.hireDate ? detail.hireDate.slice(0, 10) : '-' },
+                ].map((f) => (
+                  <div key={f.label} className="flex justify-between gap-3 border-b border-border pb-1.5">
+                    <dt className="text-[12.5px] text-text-sub">{f.label}</dt>
+                    <dd className="text-[13px] font-semibold text-text-strong">{f.value}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              <div>
+                <h3 className="mb-1.5 text-[13px] font-semibold text-text-mid">자격사항</h3>
+                {detail.certifications?.length ? (
+                  <ul className="space-y-1">
+                    {detail.certifications.map((c) => (
+                      <li key={c.id} className="text-[13px] text-text">
+                        {c.certName}
+                        <span className="ml-2 text-text-faint">
+                          {c.acquiredDate ? c.acquiredDate.slice(0, 10) : '-'} ~ {c.expiryDate ? c.expiryDate.slice(0, 10) : '-'}
+                        </span>
+                        {c.expiryDate && <span className="ml-2"><DDay due={c.expiryDate} /></span>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[13px] text-text-faint">등록된 자격사항이 없습니다.</p>
+                )}
+              </div>
+
+              <div>
+                <h3 className="mb-1.5 text-[13px] font-semibold text-text-mid">교육이력</h3>
+                {detail.trainings?.length ? (
+                  <ul className="space-y-1">
+                    {detail.trainings.map((t) => (
+                      <li key={t.id} className="flex items-center gap-1.5 text-[13px] text-text">
+                        {t.trainingType && <Badge tone={t.trainingType === '의무' ? 'amber' : 'blue'}>{t.trainingType}</Badge>}
+                        {t.trainingName}
+                        <span className="text-text-faint">
+                          이수 {t.trainingDate ? t.trainingDate.slice(0, 10) : '-'} · 다음 {t.nextDueDate ? t.nextDueDate.slice(0, 10) : '-'}
+                        </span>
+                        <DDay due={t.nextDueDate} />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[13px] text-text-faint">등록된 교육이력이 없습니다.</p>
+                )}
+              </div>
+            </div>
+
+            {detail.empCode && (
+              <div className="shrink-0">
+                <QrCode value={detail.empCode} fileName={`${detail.empCode}_${detail.name}`} size={150} />
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 flex justify-end border-t border-border pt-3">
+            <button
+              type="button"
+              onClick={() => remove(detail)}
+              className={`${outlineBtnCls} text-danger`}
+            >
+              <Trash2 size={15} /> 삭제
+            </button>
+          </div>
+        </FormModal>
+      )}
 
       {qrTarget && (
         <FormModal title={`${qrTarget.name} 근태 QR`} icon={QrIcon} onClose={() => setQrTarget(null)}>
@@ -272,7 +378,13 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
             </div>
             <div className="flex-1">
               <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">연락처</label>
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="010-0000-0000" className={inputCls} />
+              <input
+                value={phone}
+                onChange={(e) => setPhone(formatPhone(e.target.value))}
+                inputMode="numeric"
+                placeholder="010-0000-0000"
+                className={inputCls}
+              />
             </div>
           </div>
 

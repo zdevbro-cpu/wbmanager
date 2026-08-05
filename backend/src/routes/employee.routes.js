@@ -80,6 +80,17 @@ router.post('/', async (req, res) => {
   res.status(201).json(employee);
 });
 
+// 임직원 삭제 — 자격/교육 이력을 함께 지우고, 자산 책임자 지정은 비운다.
+router.delete('/:id', async (req, res) => {
+  const deleted = await prisma.$transaction(async (tx) => {
+    await tx.employeeCertification.deleteMany({ where: { employeeId: req.params.id } });
+    await tx.employeeTraining.deleteMany({ where: { employeeId: req.params.id } });
+    await tx.asset.updateMany({ where: { managerEmpId: req.params.id }, data: { managerEmpId: null } });
+    return tx.employee.delete({ where: { id: req.params.id } });
+  });
+  res.json(deleted);
+});
+
 router.delete('/:id/certifications/:certId', async (req, res) => {
   const deleted = await prisma.employeeCertification.delete({ where: { id: req.params.certId } });
   res.json(deleted);

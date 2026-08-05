@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BellRing, Truck, Award, GraduationCap } from 'lucide-react';
 import { api } from '../api/client';
+import { formatPhone } from '../lib/phone';
 import { Badge } from '../components/ui/Badge';
 import {
   pageTitleCls,
@@ -151,7 +152,13 @@ function EmployeeRegister({ onRegistered }: { onRegistered: () => void }) {
       <form onSubmit={handleSubmit} className="flex w-[260px] flex-col gap-2">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="이름" className={inputCls} />
         {/* 입출고 등록에서 운전자를 고르면 이 연락처가 자동으로 채워진다. */}
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="연락처 (010-0000-0000)" className={inputCls} />
+        <input
+          value={phone}
+          onChange={(e) => setPhone(formatPhone(e.target.value))}
+          inputMode="numeric"
+          placeholder="연락처 (010-0000-0000)"
+          className={inputCls}
+        />
         <button type="submit" className={primaryBtnCls}>
           등록
         </button>
