@@ -4,7 +4,9 @@ import { api } from '../api/client';
 import { formatNumber } from '../lib/number';
 import { useProjects } from '../hooks/useMasters';
 import { Badge } from '../components/ui/Badge';
-import { pageTitleCls, inputCls, tableWrapCls, thCls, tdCls, trCls } from '../components/ui/classes';
+import { pageTitleCls, inputCls, tableWrapCls, thCls,
+  thNumCls,
+  tdNumCls, tdCls, trCls } from '../components/ui/classes';
 import type { WasteOutbound } from '../types';
 
 export function WasteManagementPage() {
@@ -59,7 +61,7 @@ export function WasteManagementPage() {
               <th className={thCls}>반출일</th>
               <th className={thCls}>프로젝트</th>
               <th className={thCls}>거래처</th>
-              <th className={thCls}>중량(kg)</th>
+              <th className={thNumCls}>중량(kg)</th>
               <th className={thCls}>올바로 신고</th>
               <th className={thCls}>인계일</th>
               <th className={thCls}>메모</th>
@@ -71,7 +73,7 @@ export function WasteManagementPage() {
                 <td className={`${tdCls} tabular`}>{new Date(r.outboundDate).toISOString().slice(0, 10)}</td>
                 <td className={tdCls}>{r.project?.roundName}</td>
                 <td className={tdCls}>{r.buyer?.name ?? '-'}</td>
-                <td className={`${tdCls} tabular text-right`}>{formatNumber(r.weight)}</td>
+                <td className={tdNumCls}>{formatNumber(r.weight)}</td>
                 <td className={tdCls}>
                   {r.olbaroReported ? (
                     <Badge tone="green">신고완료</Badge>
