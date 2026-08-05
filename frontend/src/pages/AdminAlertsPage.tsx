@@ -92,7 +92,8 @@ export function AdminAlertsPage() {
 
       <div className={`${cardCls} mb-4 flex flex-wrap items-center gap-x-5 gap-y-3 p-3.5`}>
         <div className="flex items-center gap-2">
-          <span className="text-[13px] font-semibold text-text-mid">임박 기준</span>
+          {/* 라벨이 좁아지면 글자가 세로로 쪼개지므로 줄바꿈과 축소를 막는다. */}
+          <span className="shrink-0 whitespace-nowrap text-[13px] font-semibold text-text-mid">임박 기준</span>
           <div className="flex gap-1">
             {PRESETS.map((d) => (
               <button
@@ -120,16 +121,16 @@ export function AdminAlertsPage() {
               aria-label="임박 기준 일수"
               className={`${inputCls} h-8 w-[76px] px-2 text-center`}
             />
-            <span className="text-[12.5px] text-text-faint">일</span>
+            <span className="shrink-0 whitespace-nowrap text-[12.5px] text-text-faint">일</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-[13px] font-semibold text-text-mid">구분</span>
+          <span className="shrink-0 whitespace-nowrap text-[13px] font-semibold text-text-mid">구분</span>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className={`${inputCls} h-8 w-[140px] px-2`}
+            className={`${inputCls} h-8 w-[140px] shrink-0 px-2`}
           >
             <option value="">전체</option>
             {Object.entries(TYPE_META).map(([k, v]) => (
