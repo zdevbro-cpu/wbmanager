@@ -5,17 +5,61 @@ import { toISO } from '../lib/date.js';
 const router = Router();
 
 router.get('/', async (req, res) => {
-  const employees = await prisma.employee.findMany({ orderBy: { name: 'asc' } });
+  const employees = await prisma.employee.findMany({
+    orderBy: { name: 'asc' },
+    include: { certifications: { orderBy: { expiryDate: 'asc' } }, trainings: { orderBy: { trainingDate: 'desc' } } },
+  });
   res.json(employees);
 });
 
+// 임직원 등록 시 자격사항·교육이력을 함께 받는다(certifications / trainings 배열).
 router.post('/', async (req, res) => {
-  const { name } = req.body;
+  const { name, certifications, trainings, ...rest } = req.body;
   if (!name) return res.status(400).json({ error: 'name은 필수입니다.' });
+
+  const certRows = (certifications ?? []).filter((c) => c?.certName);
+  const trainingRows = (trainings ?? []).filter((t) => t?.trainingName);
+
   const employee = await prisma.employee.create({
-    data: { ...req.body, hireDate: toISO(req.body.hireDate) },
+    data: {
+      ...rest,
+      name,
+      hireDate: toISO(rest.hireDate),
+      ...(certRows.length
+        ? {
+            certifications: {
+              create: certRows.map((c) => ({
+                certName: c.certName,
+                acquiredDate: toISO(c.acquiredDate),
+                expiryDate: toISO(c.expiryDate),
+              })),
+            },
+          }
+        : {}),
+      ...(trainingRows.length
+        ? {
+            trainings: {
+              create: trainingRows.map((t) => ({
+                trainingName: t.trainingName,
+                trainingDate: toISO(t.trainingDate),
+              })),
+            },
+          }
+        : {}),
+    },
+    include: { certifications: true, trainings: true },
   });
   res.status(201).json(employee);
+});
+
+router.delete('/:id/certifications/:certId', async (req, res) => {
+  const deleted = await prisma.employeeCertification.delete({ where: { id: req.params.certId } });
+  res.json(deleted);
+});
+
+router.delete('/:id/trainings/:trainingId', async (req, res) => {
+  const deleted = await prisma.employeeTraining.delete({ where: { id: req.params.trainingId } });
+  res.json(deleted);
 });
 
 router.post('/:id/certifications', async (req, res) => {

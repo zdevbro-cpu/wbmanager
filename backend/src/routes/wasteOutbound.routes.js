@@ -20,18 +20,63 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { projectId, itemCode, outboundDate, weight } = req.body;
+  const {
+    projectId,
+    itemCode,
+    outboundDate,
+    handoverDate,
+    transferDate,
+    grossWeight,
+    tareWeight,
+    preLossWeight,
+    lossWeight,
+    unitPrice,
+    weight,
+    amount,
+  } = req.body;
 
-  if (!projectId || !outboundDate || weight == null) {
-    return res.status(400).json({ error: 'projectId, outboundDate, weight는 필수입니다.' });
+  if (!projectId || !outboundDate) {
+    return res.status(400).json({ error: 'projectId, outboundDate는 필수입니다.' });
   }
-  if (Number(weight) <= 0) {
-    return res.status(400).json({ error: 'weight는 0보다 커야 합니다.' });
+  if (grossWeight != null && tareWeight != null && Number(grossWeight) < Number(tareWeight)) {
+    return res.status(400).json({ error: '총중량은 공차중량보다 작을 수 없습니다.' });
   }
+
+  // 실중량 = 총중량 - 공차중량 (원본 `폐기물출고량` 시트 기준)
+  const actualWeight =
+    grossWeight != null && tareWeight != null ? Number(grossWeight) - Number(tareWeight) : null;
+  // 정산중량 = 거래처 감량 전 실중량이 있으면 그 값, 없으면 실중량 - 감량
+  const settledWeight =
+    weight != null
+      ? Number(weight)
+      : preLossWeight != null
+        ? Number(preLossWeight)
+        : actualWeight != null
+          ? actualWeight - Number(lossWeight ?? 0)
+          : null;
+
+  if (settledWeight == null) {
+    return res.status(400).json({ error: '정산중량(또는 총중량·공차중량)은 필수입니다.' });
+  }
+  if (settledWeight <= 0) {
+    return res.status(400).json({ error: '정산중량은 0보다 커야 합니다.' });
+  }
+
+  // 금액(지출) = 정산중량 × 단가
+  const settledAmount =
+    amount != null ? Number(amount) : unitPrice != null ? settledWeight * Number(unitPrice) : null;
 
   const wasteOutbound = await prisma.$transaction(async (tx) => {
     const created = await tx.wasteOutbound.create({
-      data: { ...req.body, outboundDate: toISO(outboundDate) },
+      data: {
+        ...req.body,
+        outboundDate: toISO(outboundDate),
+        ...(handoverDate ? { handoverDate: toISO(handoverDate) } : {}),
+        ...(transferDate ? { transferDate: toISO(transferDate) } : {}),
+        ...(actualWeight != null ? { actualWeight } : {}),
+        weight: settledWeight,
+        ...(settledAmount != null ? { amount: settledAmount } : {}),
+      },
     });
     if (itemCode) {
       await postLedgerEntry(
@@ -39,7 +84,7 @@ router.post('/', async (req, res) => {
           projectId,
           itemCode,
           direction: 'OUT',
-          weight,
+          weight: settledWeight,
           ledgerDate: toISO(outboundDate),
           refType: 'waste_outbound',
           refId: created.id,

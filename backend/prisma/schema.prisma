@@ -254,18 +254,38 @@ model OutboundSale {
   @@map("outbound_sale")
 }
 
+// 폐기물 반출 — 원본 대조: 원방_거래처별 스크랩 출고 현황_Sample.xlsx `폐기물출고량` 시트(헤더 4행)
+// 및 거래처별 시트(주원(폐기물)/투플러스(폐판넬)/도솔환경(폐콘)/폐기물 기타업체)
 model WasteOutbound {
   id           String   @id @default(uuid())
   projectId    String   @map("project_id")
   project      Project  @relation(fields: [projectId], references: [id])
-  outboundDate DateTime @map("outbound_date")
-  buyerId      String?  @map("buyer_id")
+  outboundDate DateTime @map("outbound_date")            // 상차일
+  buyerId      String?  @map("buyer_id")                 // 처리자(거래처명)
   buyer        Vendor?  @relation(fields: [buyerId], references: [id])
   itemCode     String?  @map("item_code")
   item         ItemMaster? @relation(fields: [itemCode], references: [itemCode])
   itemName     String?  @map("item_name") // 품목마스터 미매칭 시 표시용
-  weight       Decimal  @map("weight") @db.Decimal(12, 3)
-  amount       Decimal? @map("amount") @db.Decimal(14, 2) // 지출
+  dischargerName  String?  @map("discharger_name")       // 배출자
+  transporterName String?  @map("transporter_name")      // 운반자
+  loadingPoint    String?  @map("loading_point")         // 상차지: 현장 / 원방 등
+  vehicleType     String?  @map("vehicle_type")          // 차종
+  vehicleNo       String?  @map("vehicle_no")
+  driverName      String?  @map("driver_name")           // 운전자
+  driverPhone     String?  @map("driver_phone")          // 연락처
+  grossWeight     Decimal? @map("gross_weight") @db.Decimal(12, 3)   // 총중량
+  tareWeight      Decimal? @map("tare_weight") @db.Decimal(12, 3)    // 공차중량
+  actualWeight    Decimal? @map("actual_weight") @db.Decimal(12, 3)  // 실중량 = 총중량 - 공차중량
+  preLossWeight   Decimal? @map("pre_loss_weight") @db.Decimal(12, 3) // 거래처 감량 전 실중량
+  lossWeight      Decimal? @map("loss_weight") @db.Decimal(12, 3)    // 감량(계근차)
+  weight       Decimal  @map("weight") @db.Decimal(12, 3)            // 정산 중량
+  unitPrice       Decimal? @map("unit_price") @db.Decimal(12, 2)     // 단가
+  cubicMeter      Decimal? @map("cubic_meter") @db.Decimal(10, 2)    // 루베 적용
+  amount       Decimal? @map("amount") @db.Decimal(14, 2) // 지출 = 정산중량 × 단가
+  category        String?  @map("category")               // 구분: 출고/이동
+  memo            String?  @map("memo")                   // 비고
+  isSubsidiary    Boolean  @default(false) @map("is_subsidiary") // 자회사 출고 여부
+  transferDate    DateTime? @map("transfer_date")         // 이체일
   olbaroReported Boolean  @default(false) @map("olbaro_reported") // 올바로 신고 상태(O/X)
   handoverDate   DateTime? @map("handover_date") // 인계일
   olbaroMemo     String?  @map("olbaro_memo") // 기준업체량 등 메모
@@ -404,6 +424,21 @@ model EmployeeTraining {
   createdAt    DateTime  @default(now()) @map("created_at")
 
   @@map("employee_training")
+}
+
+// ── 공통코드 ────────────────────────────────
+// 배출자·운반자·상차지·차종 등 자유 텍스트로 입력되던 반복 값을 한 곳에서 관리한다.
+// 값 하나짜리 목록만 담으며, 차량·임직원처럼 이력이 붙는 대상은 별도 마스터를 유지한다.
+model CommonCode {
+  id        String   @id @default(uuid())
+  group     String   @map("group")      // 배출자 / 운반자 / 상차지 / 차종 ...
+  label     String   @map("label")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([group, label])
+  @@map("common_code")
 }
 
 // ── 파일/증빙 (Google Drive 참조) ────────────

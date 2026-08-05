@@ -106,12 +106,32 @@ export interface WasteOutbound {
   buyerId?: string | null;
   itemCode?: string | null;
   itemName?: string | null;
+  dischargerName?: string | null;
+  transporterName?: string | null;
+  loadingPoint?: string | null;
+  vehicleType?: string | null;
+  vehicleNo?: string | null;
+  driverName?: string | null;
+  driverPhone?: string | null;
+  grossWeight?: string | null;
+  tareWeight?: string | null;
+  actualWeight?: string | null;
+  preLossWeight?: string | null;
+  lossWeight?: string | null;
   weight: string;
+  unitPrice?: string | null;
+  cubicMeter?: string | null;
+  amount?: string | null;
+  category?: string | null;
+  memo?: string | null;
+  isSubsidiary?: boolean;
+  transferDate?: string | null;
   olbaroReported: boolean;
   handoverDate?: string | null;
   olbaroMemo?: string | null;
   project?: Project;
   buyer?: Vendor;
+  attachments?: Attachment[];
 }
 
 export interface Vehicle {
@@ -122,12 +142,38 @@ export interface Vehicle {
   currentSite?: string | null;
 }
 
+export interface CommonCode {
+  id: string;
+  group: string;
+  label: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface EmployeeCertification {
+  id: string;
+  employeeId: string;
+  certName: string;
+  acquiredDate?: string | null;
+  expiryDate?: string | null;
+}
+
+export interface EmployeeTraining {
+  id: string;
+  employeeId: string;
+  trainingName: string;
+  trainingDate?: string | null;
+}
+
 export interface Employee {
   id: string;
   name: string;
   phone?: string | null;
   position?: string | null;
   department?: string | null;
+  hireDate?: string | null;
+  certifications?: EmployeeCertification[];
+  trainings?: EmployeeTraining[];
 }
 
 export interface VehicleMaintenance {

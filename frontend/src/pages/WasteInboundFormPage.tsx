@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Recycle, CheckCircle2 } from 'lucide-react';
 import { api } from '../api/client';
-import { useProjects, useItemMasters } from '../hooks/useMasters';
+import { useProjects, useItemMasters, useCommonCodes } from '../hooks/useMasters';
 import { MasterSelect } from '../components/MasterSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
 import { FileUpload } from '../components/FileUpload';
@@ -18,6 +18,9 @@ interface Props {
 export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}) {
   const { projects } = useProjects();
   const { items, quickCreate: quickCreateItem } = useItemMasters();
+  // 반복 입력값은 공통코드 관리에서 유지한다.
+  const { labels: dischargerOptions } = useCommonCodes('배출자');
+  const { labels: unloadingPointOptions } = useCommonCodes('하차지');
 
   const [projectId, setProjectId] = useState('');
   const [receiveDate, setReceiveDate] = useState('');
@@ -157,20 +160,32 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
           <div className="flex-1">
             <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">배출자</label>
             <input
+              list="wi-dischargers"
               value={dischargerName}
               onChange={(e) => setDischargerName(e.target.value)}
               placeholder="케이엠티엘에스 / 크로스특수 / 원방 등"
               className={inputCls}
             />
+            <datalist id="wi-dischargers">
+              {dischargerOptions.map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
           </div>
           <div className="flex-1">
             <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">하차지</label>
             <input
+              list="wi-unloading-points"
               value={unloadingPoint}
               onChange={(e) => setUnloadingPoint(e.target.value)}
               placeholder="투플러스 / 주원 / 도솔환경산업 등"
               className={inputCls}
             />
+            <datalist id="wi-unloading-points">
+              {unloadingPointOptions.map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
           </div>
         </div>
 

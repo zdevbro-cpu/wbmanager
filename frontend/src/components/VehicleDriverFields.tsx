@@ -1,8 +1,8 @@
-import { useVehicles, useEmployees } from '../hooks/useMasters';
+import { useVehicles, useEmployees, useCommonCodes } from '../hooks/useMasters';
 import { inputCls } from './ui/classes';
 
-// 차종 목록 — 원본 엑셀 입출고 시트 실제 사용값
-const VEHICLE_TYPES = ['집게차', '카고', '암롤트럭', '방통차', '1톤트럭', '트레일러', '기타'];
+// 차종 목록 — 공통코드(그룹: 차종)에서 관리한다. 공통코드가 비어 있으면 원본 엑셀 사용값으로 대체한다.
+const DEFAULT_VEHICLE_TYPES = ['집게차', '카고', '암롤트럭', '방통차', '1톤트럭', '트레일러', '기타'];
 
 interface Props {
   vehicleType: string;
@@ -29,6 +29,8 @@ export function VehicleDriverFields({
 }: Props) {
   const { vehicles } = useVehicles();
   const { employees } = useEmployees();
+  const { labels: codeVehicleTypes } = useCommonCodes('차종');
+  const vehicleTypes = codeVehicleTypes.length > 0 ? codeVehicleTypes : DEFAULT_VEHICLE_TYPES;
 
   const handleVehicleChange = (no: string) => {
     setVehicleNo(no);
@@ -65,12 +67,12 @@ export function VehicleDriverFields({
         <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">차종</label>
         <select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className={inputCls}>
           <option value="">선택</option>
-          {VEHICLE_TYPES.map((t) => (
+          {vehicleTypes.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
           ))}
-          {vehicleType && !VEHICLE_TYPES.includes(vehicleType) && <option value={vehicleType}>{vehicleType}</option>}
+          {vehicleType && !vehicleTypes.includes(vehicleType) && <option value={vehicleType}>{vehicleType}</option>}
         </select>
       </div>
 
