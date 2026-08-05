@@ -14,6 +14,7 @@ export interface AppUser {
   firebaseUid: string;
   email: string;
   name?: string | null;
+  phone?: string | null;
   role: 'admin' | 'worker';
   status: 'pending' | 'approved' | 'rejected';
 }
@@ -23,7 +24,7 @@ interface AuthContextValue {
   appUser: AppUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (email: string, password: string, name: string, phone: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshAppUser: () => Promise<void>;
 }
@@ -62,9 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadAppUser();
   };
 
-  const register = async (email: string, password: string, name: string) => {
+  const register = async (email: string, password: string, name: string, phone: string) => {
     await createUserWithEmailAndPassword(auth, email, password);
-    await api.post('/api/auth/register', { name });
+    await api.post('/api/auth/register', { name, phone });
     await loadAppUser();
   };
 

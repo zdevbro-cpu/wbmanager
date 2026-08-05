@@ -43,6 +43,7 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
           <thead>
             <tr className="border-y border-border">
               <th className={thCls}>이름</th>
+              <th className={thCls}>연락처</th>
               <th className={thCls}>이메일</th>
               <th className={thCls}>역할</th>
               <th className={thCls}>상태</th>
@@ -53,6 +54,7 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
             {users.map((u) => (
               <tr key={u.id} className={trCls}>
                 <td className={tdCls}>{u.name ?? '-'}</td>
+                <td className={`${tdCls} tabular whitespace-nowrap`}>{u.phone ?? '-'}</td>
                 <td className={tdCls}>{u.email}</td>
                 <td className={tdCls}>
                   <select
@@ -85,7 +87,7 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={6} className="py-10 text-center text-[13px] text-text-faint">
                   가입 신청자가 없습니다.
                 </td>
               </tr>
