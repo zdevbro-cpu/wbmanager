@@ -64,7 +64,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/assets', label: '자산 관리 (차량·장비)', icon: Boxes },
       { to: '/maintenances', label: '정비 현황', icon: Wrench },
       { to: '/employees', label: '임직원 관리', icon: Users },
-      { to: '/admin-alerts', label: '총무 만료 알림', icon: BellRing },
+      { to: '/admin-alerts', label: '알림 현황', icon: BellRing },
     ],
   },
   {
