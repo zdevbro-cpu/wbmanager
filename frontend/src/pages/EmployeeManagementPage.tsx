@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Users, Plus, Trash2 } from 'lucide-react';
+import { Users, Plus, Trash2, QrCode as QrIcon, CheckCircle2 } from 'lucide-react';
 import { api } from '../api/client';
 import { useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
+import { QrCode } from '../components/QrCode';
 import { Badge } from '../components/ui/Badge';
 import {
   pageTitleCls,
@@ -72,6 +73,7 @@ function DDay({ due }: { due?: string | null }) {
 export function EmployeeManagementPage({ embedded = false }: { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [open, setOpen] = useState(false);
+  const [qrTarget, setQrTarget] = useState<Employee | null>(null);
 
   const reload = useCallback(() => {
     api.get<Employee[]>('/api/employees').then(setEmployees);
@@ -98,17 +100,20 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-border">
+              <th className={thCls}>사번</th>
               <th className={thCls}>성명</th>
               <th className={thCls}>연락처</th>
               <th className={thCls}>부서/직급</th>
               <th className={thCls}>입사일</th>
               <th className={thCls}>자격사항(만료일)</th>
               <th className={thCls}>교육(구분 · 다음 예정)</th>
+              <th className={thCls}>QR</th>
             </tr>
           </thead>
           <tbody>
             {employees.map((emp) => (
               <tr key={emp.id} className={trCls}>
+                <td className={`${tdCls} tabular whitespace-nowrap`}>{emp.empCode ?? '-'}</td>
                 <td className={tdCls}>{emp.name}</td>
                 <td className={`${tdCls} tabular`}>{emp.phone ?? '-'}</td>
                 <td className={tdCls}>{[emp.department, emp.position].filter(Boolean).join(' / ') || '-'}</td>
@@ -136,11 +141,23 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     '-'
                   )}
                 </td>
+                <td className={tdCls}>
+                  {emp.empCode && (
+                    <button
+                      type="button"
+                      title="근태 QR 보기"
+                      onClick={() => setQrTarget(emp)}
+                      className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
+                    >
+                      <QrIcon size={15} />
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
             {employees.length === 0 && (
               <tr>
-                <td className={`${tdCls} text-text-faint`} colSpan={6}>
+                <td className={`${tdCls} text-text-faint`} colSpan={8}>
                   등록된 임직원이 없습니다.
                 </td>
               </tr>
@@ -149,14 +166,25 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
         </table>
       </div>
 
+      {qrTarget && (
+        <FormModal title={`${qrTarget.name} 근태 QR`} icon={QrIcon} onClose={() => setQrTarget(null)}>
+          <div className="flex flex-col items-center gap-3 py-2">
+            <QrCode
+              value={qrTarget.empCode ?? ''}
+              fileName={`${qrTarget.empCode}_${qrTarget.name}`}
+              size={200}
+              caption={`${qrTarget.name}${qrTarget.department ? ` · ${qrTarget.department}` : ''}`}
+            />
+            <p className="text-center text-[12.5px] text-text-faint">
+              근태 단말이나 휴대폰으로 스캔하면 사번이 읽힙니다. 출퇴근 기록에 이 QR을 사용하세요.
+            </p>
+          </div>
+        </FormModal>
+      )}
+
       {open && (
         <FormModal title="임직원 등록" icon={Users} onClose={() => setOpen(false)}>
-          <EmployeeForm
-            onCreated={() => {
-              reload();
-              setOpen(false);
-            }}
-          />
+          <EmployeeForm onCreated={reload} />
         </FormModal>
       )}
     </div>
@@ -165,6 +193,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
 
 // 기본정보 + 자격사항 + 교육이력을 한 번에 등록한다.
 function EmployeeForm({ onCreated }: { onCreated: () => void }) {
+  const [created, setCreated] = useState<Employee | null>(null);
   const { labels: certOptions } = useCommonCodes('자격증 종류');
   const { labels: trainingOptions } = useCommonCodes('교육 과정');
   const { labels: departmentOptions } = useCommonCodes('부서');
@@ -196,7 +225,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
     setError('');
     setSubmitting(true);
     try {
-      await api.post('/api/employees', {
+      const employee = await api.post<Employee>('/api/employees', {
         name,
         phone: phone || undefined,
         department: department || undefined,
@@ -220,6 +249,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
             nextDueDate: t.nextDueDate || undefined,
           })),
       });
+      setCreated(employee);
       reset();
       onCreated();
     } catch (err) {
@@ -416,6 +446,23 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
               ))}
             </div>
           </div>
+
+      {created && (
+        <div className="flex items-center gap-5 rounded-[10px] border border-border bg-input p-4">
+          <div>
+            <p className="mb-1 flex items-center gap-1.5 text-[13px] font-semibold text-success">
+              <CheckCircle2 size={15} /> {created.name} 등록 완료
+            </p>
+            <p className="text-[12.5px] text-text-sub">
+              사번이 <span className="tabular font-bold text-text-strong">{created.empCode}</span> 로 자동 채번되었습니다.
+              아래 QR을 저장해 근태(출퇴근) 확인에 사용하세요.
+            </p>
+          </div>
+          <div className="ml-auto">
+            <QrCode value={created.empCode ?? ''} fileName={`${created.empCode}_${created.name}`} size={140} />
+          </div>
+        </div>
+      )}
 
       {error && <p className="text-[13px] text-danger">{error}</p>}
 

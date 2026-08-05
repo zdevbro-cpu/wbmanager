@@ -391,6 +391,7 @@ model VehicleMaintenance {
 
 model Employee {
   id        String   @id @default(uuid())
+  empCode   String?  @unique @map("emp_code")   // 사번(자동 채번) — 근태 QR 식별자
   name      String   @map("name")
   phone     String?  @map("phone")        // 연락처 — 입출고 등록 시 운전자 선택하면 자동 채움
   position  String?  @map("position")

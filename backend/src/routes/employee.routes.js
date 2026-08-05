@@ -4,6 +4,19 @@ import { toISO } from '../lib/date.js';
 
 const router = Router();
 
+// 사번 자동 채번 — EMP-{연도}-{3자리 일련번호}. 근태 QR이 이 값을 담는다.
+async function nextEmpCode(tx, hireDate) {
+  const year = String(new Date(hireDate ?? Date.now()).getFullYear());
+  const prefix = `EMP-${year}-`;
+  const last = await tx.employee.findFirst({
+    where: { empCode: { startsWith: prefix } },
+    orderBy: { empCode: 'desc' },
+    select: { empCode: true },
+  });
+  const seq = last ? Number(last.empCode.slice(prefix.length)) + 1 : 1;
+  return `${prefix}${String(seq).padStart(3, '0')}`;
+}
+
 // 다음 교육 예정일 = 이수일 + 주기(개월). 직접 입력한 예정일이 있으면 그 값을 우선한다.
 function resolveNextDue({ nextDueDate, trainingDate, cycleMonths }) {
   if (nextDueDate) return toISO(nextDueDate);
@@ -29,38 +42,41 @@ router.post('/', async (req, res) => {
   const certRows = (certifications ?? []).filter((c) => c?.certName);
   const trainingRows = (trainings ?? []).filter((t) => t?.trainingName);
 
-  const employee = await prisma.employee.create({
-    data: {
-      ...rest,
-      name,
-      hireDate: toISO(rest.hireDate),
-      ...(certRows.length
-        ? {
-            certifications: {
-              create: certRows.map((c) => ({
-                certName: c.certName,
-                acquiredDate: toISO(c.acquiredDate),
-                expiryDate: toISO(c.expiryDate),
-              })),
-            },
-          }
-        : {}),
-      ...(trainingRows.length
-        ? {
-            trainings: {
-              create: trainingRows.map((t) => ({
-                trainingName: t.trainingName,
-                trainingType: t.trainingType,
-                trainingDate: toISO(t.trainingDate),
-                cycleMonths: t.cycleMonths ? Number(t.cycleMonths) : undefined,
-                nextDueDate: resolveNextDue(t),
-              })),
-            },
-          }
-        : {}),
-    },
-    include: { certifications: true, trainings: true },
-  });
+  const employee = await prisma.$transaction(async (tx) =>
+    tx.employee.create({
+      data: {
+        ...rest,
+        name,
+        empCode: rest.empCode || (await nextEmpCode(tx, rest.hireDate)),
+        hireDate: toISO(rest.hireDate),
+        ...(certRows.length
+          ? {
+              certifications: {
+                create: certRows.map((c) => ({
+                  certName: c.certName,
+                  acquiredDate: toISO(c.acquiredDate),
+                  expiryDate: toISO(c.expiryDate),
+                })),
+              },
+            }
+          : {}),
+        ...(trainingRows.length
+          ? {
+              trainings: {
+                create: trainingRows.map((t) => ({
+                  trainingName: t.trainingName,
+                  trainingType: t.trainingType,
+                  trainingDate: toISO(t.trainingDate),
+                  cycleMonths: t.cycleMonths ? Number(t.cycleMonths) : undefined,
+                  nextDueDate: resolveNextDue(t),
+                })),
+              },
+            }
+          : {}),
+      },
+      include: { certifications: true, trainings: true },
+    }),
+  );
   res.status(201).json(employee);
 });
 
