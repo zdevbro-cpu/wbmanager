@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ListTree, Download, Paperclip, X } from 'lucide-react';
 import { api, API_BASE_URL } from '../api/client';
 import { useProjects, useVendors, useItemMasters } from '../hooks/useMasters';
+import { useEscapeClose } from '../hooks/useEscapeClose';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { pageTitleCls, outlineBtnCls, inputCls, tableWrapCls, thCls, tdCls, trCls } from '../components/ui/classes';
 import type { LedgerRow, LedgerDetail, LedgerType } from '../types';
@@ -73,12 +74,12 @@ export function LedgerPage() {
         <h1 className={pageTitleCls}>통합 원장 조회</h1>
       </div>
 
-      {/* 검색 필터 — 줄바꿈 없이 한 줄에 배치한다. */}
-      <div className="mb-4 flex flex-nowrap items-center gap-2 overflow-x-auto rounded-[14px] border border-border bg-card p-3">
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} w-auto shrink-0`} />
+      {/* 검색 필터 — 가로 스크롤 없이 한 줄에 모두 들어가도록 남는 폭을 셀렉트가 나눠 갖는다. */}
+      <div className="mb-4 flex flex-nowrap items-center gap-2 rounded-[14px] border border-border bg-card p-3">
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} w-[132px] shrink-0 px-2`} />
         <span className="shrink-0 text-text-faint">~</span>
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputCls} w-auto shrink-0`} />
-        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-auto min-w-0 flex-1`}>
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputCls} w-[132px] shrink-0 px-2`} />
+        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} min-w-0 flex-1 px-2`}>
           <option value="">전체 프로젝트</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
@@ -86,7 +87,7 @@ export function LedgerPage() {
             </option>
           ))}
         </select>
-        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className={`${inputCls} w-auto min-w-0 flex-1`}>
+        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className={`${inputCls} min-w-0 flex-1 px-2`}>
           <option value="">전체 거래처</option>
           {vendors.map((v) => (
             <option key={v.id} value={v.id}>
@@ -94,7 +95,7 @@ export function LedgerPage() {
             </option>
           ))}
         </select>
-        <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} w-auto min-w-0 flex-1`}>
+        <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} min-w-0 flex-1 px-2`}>
           <option value="">전체 품목</option>
           {items.map((i) => (
             <option key={i.itemCode} value={i.itemCode}>
@@ -102,7 +103,7 @@ export function LedgerPage() {
             </option>
           ))}
         </select>
-        <select value={type} onChange={(e) => setType(e.target.value)} className={`${inputCls} w-auto min-w-0 flex-1`}>
+        <select value={type} onChange={(e) => setType(e.target.value)} className={`${inputCls} min-w-0 flex-1 px-2`}>
           <option value="">전체 유형</option>
           {Object.entries(TYPE_LABEL).map(([k, v]) => (
             <option key={k} value={k}>
@@ -110,16 +111,16 @@ export function LedgerPage() {
             </option>
           ))}
         </select>
-        <button type="button" onClick={search} className={`${outlineBtnCls} shrink-0 whitespace-nowrap`}>
+        <button type="button" onClick={search} className={`${outlineBtnCls} shrink-0 whitespace-nowrap px-3`}>
           조회
         </button>
         <a href={`${API_BASE_URL}/api/ledger/export?${buildQuery()}`} target="_blank" rel="noreferrer" className="shrink-0">
-          <button type="button" className={`${outlineBtnCls} whitespace-nowrap`}>
+          <button type="button" className={`${outlineBtnCls} whitespace-nowrap px-3`}>
             <Download size={15} /> 엑셀(CSV)
           </button>
         </a>
         <a href={`${API_BASE_URL}/api/ledger/export?${buildQuery()}&template=ecount`} target="_blank" rel="noreferrer" className="shrink-0">
-          <button type="button" className={`${outlineBtnCls} whitespace-nowrap`}>
+          <button type="button" className={`${outlineBtnCls} whitespace-nowrap px-3`}>
             <Download size={15} /> ecount용
           </button>
         </a>
@@ -174,7 +175,7 @@ export function LedgerPage() {
       </div>
 
       {selected && (
-        <div className="fixed top-0 right-0 h-screen w-[380px] overflow-y-auto border-l border-border bg-card p-5 shadow-[-8px_0_24px_rgba(0,0,0,0.35)]">
+        <EscPanel onClose={() => setSelected(null)}>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-[16px] font-extrabold text-text-strong">{TYPE_LABEL[selected.type]} 상세</h2>
             <button type="button" onClick={() => setSelected(null)} className="text-text-sub hover:text-text-strong">
@@ -210,8 +211,19 @@ export function LedgerPage() {
           ) : (
             <p className="text-[13px] text-text-sub">불러오는 중...</p>
           )}
-        </div>
+        </EscPanel>
       )}
+    </div>
+  );
+}
+
+// 상세 패널 — 열려 있는 동안만 마운트되므로 여기서 ESC 닫기/포커스 복귀를 건다.
+function EscPanel({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  useEscapeClose(onClose);
+
+  return (
+    <div className="fixed top-0 right-0 h-screen w-[380px] overflow-y-auto border-l border-border bg-card p-5 shadow-[-8px_0_24px_rgba(0,0,0,0.35)]">
+      {children}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Plus, Paperclip, Eye, Trash2, X, RotateCcw, type LucideIcon } from 'lucide-react';
 import { useProjects, useItemMasters, useVehicles, useEmployees } from '../hooks/useMasters';
+import { useEscapeClose } from '../hooks/useEscapeClose';
 import { pageTitleCls, primaryBtnCls, outlineBtnCls, inputCls, cardCls, tableWrapCls, thCls, trCls } from './ui/classes';
 import type { Attachment } from '../types';
 
@@ -292,7 +293,7 @@ export function TransactionListLayout<T>({
       </div>
 
       {detail && (
-        <div className="fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-black/50 p-6">
+        <EscOverlay onClose={() => setDetail(null)}>
           <div className="w-full max-w-[620px] rounded-[14px] border border-border bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-[16px] font-extrabold text-text-strong">
@@ -335,8 +336,17 @@ export function TransactionListLayout<T>({
               )}
             </div>
           </div>
-        </div>
+        </EscOverlay>
       )}
     </div>
+  );
+}
+
+// 상세 오버레이 — 열려 있는 동안만 마운트되므로 여기서 ESC 닫기/포커스 복귀를 건다.
+function EscOverlay({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  useEscapeClose(onClose);
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-black/50 p-6">{children}</div>
   );
 }
