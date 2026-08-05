@@ -5,6 +5,8 @@ import { useVendors, useEmployees, useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FilterField, DateRangeField } from '../components/FilterField';
 import { Badge } from '../components/ui/Badge';
+import { NumberInput } from '../components/ui/NumberInput';
+import { formatNumber } from '../lib/number';
 import {
   pageTitleCls,
   sectionTitleCls,
@@ -23,7 +25,7 @@ const STATUSES = ['진행', '완료', '보류'];
 const DEFAULT_CYCLES = ['월별', '차수완료', '수시'];
 
 const day = (v?: string | null) => (v ? v.slice(0, 10) : '-');
-const money = (v?: string | null) => (v ? Number(v).toLocaleString() : '-');
+const money = (v?: string | null) => formatNumber(v);
 const show = (v?: string | null) => (v == null || v === '' ? '-' : v);
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
 
@@ -260,7 +262,7 @@ function ProjectDetail({ project: p }: { project: Project }) {
     { label: '계약기간', value: `${day(p.startDate)} ~ ${day(p.endDate)}` },
     { label: '계약금액', value: `${money(p.contractAmount)}${p.vatIncluded ? ' (부가세 포함)' : ''}` },
     { label: '매입가', value: money(p.purchasePrice) },
-    { label: '계약중량(kg)', value: p.contractWeight ? Number(p.contractWeight).toLocaleString() : '-' },
+    { label: '계약중량(kg)', value: formatNumber(p.contractWeight) },
     { label: '계약보증금', value: money(p.deposit) },
     { label: '선급금', value: money(p.advancePayment) },
     { label: '정산주기', value: show(p.settlementCycle) },
@@ -437,21 +439,11 @@ function ProjectForm({
 
         <div>
           <label className={labelCls}>계약금액(원)</label>
-          <input
-            type="number"
-            value={f.contractAmount}
-            onChange={(e) => set({ contractAmount: e.target.value })}
-            className={inputCls}
-          />
+          <NumberInput value={f.contractAmount} onChange={(v) => set({ contractAmount: v })} />
         </div>
         <div>
           <label className={labelCls}>매입가(원)</label>
-          <input
-            type="number"
-            value={f.purchasePrice}
-            onChange={(e) => set({ purchasePrice: e.target.value })}
-            className={inputCls}
-          />
+          <NumberInput value={f.purchasePrice} onChange={(v) => set({ purchasePrice: v })} />
         </div>
         <div className="flex items-end pb-2">
           <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
@@ -467,26 +459,15 @@ function ProjectForm({
 
         <div>
           <label className={labelCls}>계약(예상)중량(kg)</label>
-          <input
-            type="number"
-            step="0.001"
-            value={f.contractWeight}
-            onChange={(e) => set({ contractWeight: e.target.value })}
-            className={inputCls}
-          />
+          <NumberInput value={f.contractWeight} onChange={(v) => set({ contractWeight: v })} decimals={3} />
         </div>
         <div>
           <label className={labelCls}>계약보증금(원)</label>
-          <input type="number" value={f.deposit} onChange={(e) => set({ deposit: e.target.value })} className={inputCls} />
+          <NumberInput value={f.deposit} onChange={(v) => set({ deposit: v })} />
         </div>
         <div>
           <label className={labelCls}>선급금(원)</label>
-          <input
-            type="number"
-            value={f.advancePayment}
-            onChange={(e) => set({ advancePayment: e.target.value })}
-            className={inputCls}
-          />
+          <NumberInput value={f.advancePayment} onChange={(v) => set({ advancePayment: v })} />
         </div>
 
         <div>

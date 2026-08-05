@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ShieldAlert } from 'lucide-react';
 import { api } from '../api/client';
+import { formatNumber } from '../lib/number';
 import { useProjects } from '../hooks/useMasters';
 import { Badge } from '../components/ui/Badge';
 import { pageTitleCls, inputCls, tableWrapCls, thCls, tdCls, trCls } from '../components/ui/classes';
@@ -70,7 +71,7 @@ export function WasteManagementPage() {
                 <td className={`${tdCls} tabular`}>{new Date(r.outboundDate).toISOString().slice(0, 10)}</td>
                 <td className={tdCls}>{r.project?.roundName}</td>
                 <td className={tdCls}>{r.buyer?.name ?? '-'}</td>
-                <td className={`${tdCls} tabular`}>{r.weight}</td>
+                <td className={`${tdCls} tabular text-right`}>{formatNumber(r.weight)}</td>
                 <td className={tdCls}>
                   {r.olbaroReported ? (
                     <Badge tone="green">신고완료</Badge>

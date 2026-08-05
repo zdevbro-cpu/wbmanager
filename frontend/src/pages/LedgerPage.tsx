@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ListTree, Download, Paperclip, X } from 'lucide-react';
 import { api } from '../api/client';
+import { formatNumber } from '../lib/number';
 import { downloadFile } from '../lib/download';
 import { useProjects, useVendors, useItemMasters } from '../hooks/useMasters';
 import { useEscapeClose } from '../hooks/useEscapeClose';
@@ -184,8 +185,8 @@ export function LedgerPage() {
                 <td className={tdCls}>{r.projectName}</td>
                 <td className={tdCls}>{r.vendorName ?? '-'}</td>
                 <td className={tdCls}>{r.itemName ?? '-'}</td>
-                <td className={`${tdCls} tabular`}>{r.weight}</td>
-                <td className={`${tdCls} tabular`}>{r.amount ?? '-'}</td>
+                <td className={`${tdCls} tabular text-right`}>{formatNumber(r.weight)}</td>
+                <td className={`${tdCls} tabular text-right`}>{formatNumber(r.amount)}</td>
                 <td className={tdCls}>
                   {r.attachmentCount > 0 ? (
                     <span className="inline-flex items-center gap-1 text-text-sub">
