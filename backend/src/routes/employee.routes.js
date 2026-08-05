@@ -34,6 +34,18 @@ router.get('/', async (req, res) => {
   res.json(employees);
 });
 
+router.get('/:id', async (req, res) => {
+  const employee = await prisma.employee.findUnique({
+    where: { id: req.params.id },
+    include: {
+      certifications: { orderBy: [{ expiryDate: 'desc' }, { acquiredDate: 'desc' }] },
+      trainings: { orderBy: [{ nextDueDate: 'desc' }, { trainingDate: 'desc' }] },
+    },
+  });
+  if (!employee) return res.status(404).json({ error: '임직원을 찾을 수 없습니다.' });
+  res.json(employee);
+});
+
 // 임직원 등록 시 자격사항·교육이력을 함께 받는다(certifications / trainings 배열).
 router.post('/', async (req, res) => {
   const { name, certifications, trainings, ...rest } = req.body;

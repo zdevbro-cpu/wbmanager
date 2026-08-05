@@ -41,6 +41,20 @@ router.get('/expiring', async (req, res) => {
     prisma.assetSchedule.findMany({ where: { status: { not: '완료' } }, include: { asset: true } }),
   ]);
 
+  // 같은 자격증·같은 교육이 갱신되며 여러 행으로 쌓이므로, 이름별 최신 1건만 알림 대상으로 둔다.
+  const latestBy = (rows, keyOf, dateOf) => {
+    const map = new Map();
+    for (const r of rows) {
+      const key = keyOf(r);
+      const prev = map.get(key);
+      if (!prev || new Date(dateOf(r)) > new Date(dateOf(prev))) map.set(key, r);
+    }
+    return [...map.values()];
+  };
+
+  const latestCerts = latestBy(certs, (c) => `${c.employeeId}|${c.certName}`, (c) => c.expiryDate);
+  const latestTrainings = latestBy(trainings, (t) => `${t.employeeId}|${t.trainingName}`, (t) => t.nextDueDate);
+
   const items = [
     ...vehicles.map((v) => ({
       type: 'vehicle_inspection',
@@ -49,14 +63,14 @@ router.get('/expiring', async (req, res) => {
       expiryDate: v.inspectionExpiry,
       daysLeft: daysUntil(v.inspectionExpiry),
     })),
-    ...certs.map((c) => ({
+    ...latestCerts.map((c) => ({
       type: 'certification',
       targetId: c.id,
       targetName: `${c.employee?.name ?? ''} - ${c.certName}`,
       expiryDate: c.expiryDate,
       daysLeft: daysUntil(c.expiryDate),
     })),
-    ...trainings.map((t) => ({
+    ...latestTrainings.map((t) => ({
       type: 'training',
       targetId: t.id,
       targetName: `${t.employee?.name ?? ''} - ${t.trainingName}${t.trainingType ? ` (${t.trainingType}교육)` : ''}`,

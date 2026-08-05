@@ -5,6 +5,7 @@ import { formatPhone } from '../lib/phone';
 import { useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { QrCode } from '../components/QrCode';
+import { EmployeeDetailModal } from './EmployeeDetailModal';
 import { Badge } from '../components/ui/Badge';
 import {
   pageTitleCls,
@@ -71,6 +72,24 @@ function DDay({ due }: { due?: string | null }) {
   return <Badge tone="slate">D-{left}</Badge>;
 }
 
+// 갱신될 때마다 행이 쌓이므로 목록에는 최신 1건만 보여 주고 나머지는 건수 배지로 알린다.
+function latestCert(emp: Employee) {
+  return [...(emp.certifications ?? [])].sort(
+    (a, b) => new Date(b.expiryDate ?? b.acquiredDate ?? 0).getTime() - new Date(a.expiryDate ?? a.acquiredDate ?? 0).getTime(),
+  )[0];
+}
+
+function latestTraining(emp: Employee) {
+  return [...(emp.trainings ?? [])].sort(
+    (a, b) => new Date(b.nextDueDate ?? b.trainingDate ?? 0).getTime() - new Date(a.nextDueDate ?? a.trainingDate ?? 0).getTime(),
+  )[0];
+}
+
+function MoreBadge({ total }: { total: number }) {
+  if (total <= 1) return null;
+  return <Badge tone="slate">+{total - 1}</Badge>;
+}
+
 export function EmployeeManagementPage({ embedded = false }: { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [open, setOpen] = useState(false);
@@ -127,28 +146,34 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                 <td className={`${tdCls} tabular`}>{emp.phone ?? '-'}</td>
                 <td className={tdCls}>{[emp.department, emp.position].filter(Boolean).join(' / ') || '-'}</td>
                 <td className={`${tdCls} tabular`}>{emp.hireDate ? emp.hireDate.slice(0, 10) : '-'}</td>
-                <td className={tdCls}>
-                  {emp.certifications?.length
-                    ? emp.certifications
-                        .map((c) => `${c.certName}${c.expiryDate ? ` (~${c.expiryDate.slice(0, 10)})` : ''}`)
-                        .join(', ')
-                    : '-'}
+                <td className={`${tdCls} whitespace-nowrap`}>
+                  {(() => {
+                    const c = latestCert(emp);
+                    if (!c) return '-';
+                    return (
+                      <span className="inline-flex items-center gap-1.5">
+                        {c.certName}
+                        {c.expiryDate && <span className="text-text-faint">~{c.expiryDate.slice(0, 10)}</span>}
+                        <DDay due={c.expiryDate} />
+                        <MoreBadge total={emp.certifications?.length ?? 0} />
+                      </span>
+                    );
+                  })()}
                 </td>
-                <td className={tdCls}>
-                  {emp.trainings?.length ? (
-                    <div className="space-y-1">
-                      {emp.trainings.map((t) => (
-                        <div key={t.id} className="flex items-center gap-1.5">
-                          {t.trainingType && <Badge tone={t.trainingType === '의무' ? 'amber' : 'blue'}>{t.trainingType}</Badge>}
-                          <span>{t.trainingName}</span>
-                          {t.nextDueDate && <span className="text-text-faint">{t.nextDueDate.slice(0, 10)}</span>}
-                          <DDay due={t.nextDueDate} />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    '-'
-                  )}
+                <td className={`${tdCls} whitespace-nowrap`}>
+                  {(() => {
+                    const t = latestTraining(emp);
+                    if (!t) return '-';
+                    return (
+                      <span className="inline-flex items-center gap-1.5">
+                        {t.trainingType && <Badge tone={t.trainingType === '의무' ? 'amber' : 'blue'}>{t.trainingType}</Badge>}
+                        {t.trainingName}
+                        {t.nextDueDate && <span className="text-text-faint">{t.nextDueDate.slice(0, 10)}</span>}
+                        <DDay due={t.nextDueDate} />
+                        <MoreBadge total={emp.trainings?.length ?? 0} />
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td className={`${tdCls} whitespace-nowrap`}>
                   <div className="flex items-center gap-1.5">
@@ -194,82 +219,12 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
       </div>
 
       {detail && (
-        <FormModal title={`${detail.name} 상세`} icon={Users} onClose={() => setDetail(null)}>
-          <div className="flex gap-5">
-            <div className="flex-1 space-y-4">
-              <dl className="grid grid-cols-2 gap-x-5 gap-y-2">
-                {[
-                  { label: '사번', value: detail.empCode ?? '-' },
-                  { label: '성명', value: detail.name },
-                  { label: '연락처', value: detail.phone ?? '-' },
-                  { label: '부서', value: detail.department ?? '-' },
-                  { label: '직급', value: detail.position ?? '-' },
-                  { label: '입사일', value: detail.hireDate ? detail.hireDate.slice(0, 10) : '-' },
-                ].map((f) => (
-                  <div key={f.label} className="flex justify-between gap-3 border-b border-border pb-1.5">
-                    <dt className="text-[12.5px] text-text-sub">{f.label}</dt>
-                    <dd className="text-[13px] font-semibold text-text-strong">{f.value}</dd>
-                  </div>
-                ))}
-              </dl>
-
-              <div>
-                <h3 className="mb-1.5 text-[13px] font-semibold text-text-mid">자격사항</h3>
-                {detail.certifications?.length ? (
-                  <ul className="space-y-1">
-                    {detail.certifications.map((c) => (
-                      <li key={c.id} className="text-[13px] text-text">
-                        {c.certName}
-                        <span className="ml-2 text-text-faint">
-                          {c.acquiredDate ? c.acquiredDate.slice(0, 10) : '-'} ~ {c.expiryDate ? c.expiryDate.slice(0, 10) : '-'}
-                        </span>
-                        {c.expiryDate && <span className="ml-2"><DDay due={c.expiryDate} /></span>}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-[13px] text-text-faint">등록된 자격사항이 없습니다.</p>
-                )}
-              </div>
-
-              <div>
-                <h3 className="mb-1.5 text-[13px] font-semibold text-text-mid">교육이력</h3>
-                {detail.trainings?.length ? (
-                  <ul className="space-y-1">
-                    {detail.trainings.map((t) => (
-                      <li key={t.id} className="flex items-center gap-1.5 text-[13px] text-text">
-                        {t.trainingType && <Badge tone={t.trainingType === '의무' ? 'amber' : 'blue'}>{t.trainingType}</Badge>}
-                        {t.trainingName}
-                        <span className="text-text-faint">
-                          이수 {t.trainingDate ? t.trainingDate.slice(0, 10) : '-'} · 다음 {t.nextDueDate ? t.nextDueDate.slice(0, 10) : '-'}
-                        </span>
-                        <DDay due={t.nextDueDate} />
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-[13px] text-text-faint">등록된 교육이력이 없습니다.</p>
-                )}
-              </div>
-            </div>
-
-            {detail.empCode && (
-              <div className="shrink-0">
-                <QrCode value={detail.empCode} fileName={`${detail.empCode}_${detail.name}`} size={150} />
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 flex justify-end border-t border-border pt-3">
-            <button
-              type="button"
-              onClick={() => remove(detail)}
-              className={`${outlineBtnCls} text-danger`}
-            >
-              <Trash2 size={15} /> 삭제
-            </button>
-          </div>
-        </FormModal>
+        <EmployeeDetailModal
+          employeeId={detail.id}
+          onClose={() => setDetail(null)}
+          onChanged={reload}
+          onDelete={() => remove(detail)}
+        />
       )}
 
       {qrTarget && (
