@@ -12,7 +12,6 @@ import {
   primaryBtnCls,
   outlineBtnCls,
   inputCls,
-  tableWrapCls,
   thCls,
   tdCls,
   trCls,
@@ -45,7 +44,8 @@ export function MasterManagementPage({ embedded = false }: { embedded?: boolean 
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-6">
+      {/* 두 목록이 화면 하단까지 같은 높이로 서고, 넘치는 행은 목록 안에서만 스크롤된다. */}
+      <div className="grid grid-cols-2 gap-6 h-[calc(100vh-240px)] min-h-[420px]">
         <VendorSection vendors={vendors} reload={reloadVendors} />
         <ItemSection items={items} reload={reloadItems} />
       </div>
@@ -129,7 +129,7 @@ function VendorSection({ vendors, reload }: { vendors: Vendor[]; reload: () => v
   };
 
   return (
-    <section>
+    <section className="flex h-full min-h-0 flex-col">
       <SectionHead
         icon={Building2}
         title="거래처 마스터"
@@ -137,9 +137,11 @@ function VendorSection({ vendors, reload }: { vendors: Vendor[]; reload: () => v
         total={vendors.length}
         onAdd={() => setOpen(true)}
       />
-      <p className="mb-3 text-[12.5px] text-text-faint">세금계산서 발행에 필요한 사업자 정보를 함께 등록합니다.</p>
+      <p className="mb-3 shrink-0 text-[12.5px] text-text-faint">세금계산서 발행에 필요한 사업자 정보를 함께 등록합니다.</p>
 
-      <div className={`${cardCls} mb-3 grid items-end gap-2 p-3 [grid-template-columns:minmax(0,1fr)_minmax(0,130px)_auto]`}>
+      <div
+        className={`${cardCls} mb-3 shrink-0 grid items-end gap-2 p-3 [grid-template-columns:minmax(0,1fr)_minmax(0,130px)_auto]`}
+      >
         <FilterField label="검색어">
           <input
             value={q}
@@ -170,11 +172,11 @@ function VendorSection({ vendors, reload }: { vendors: Vendor[]; reload: () => v
         </button>
       </div>
 
-      {error && <p className="mb-2 text-[13px] text-danger">{error}</p>}
+      {error && <p className="mb-2 shrink-0 text-[13px] text-danger">{error}</p>}
 
-      <div className={`${tableWrapCls} overflow-x-auto`}>
+      <div className={`${cardCls} min-h-0 flex-1 overflow-auto`}>
         <table className="w-full border-collapse">
-          <thead>
+          <thead className="sticky top-0 z-[1] bg-card">
             <tr className="border-y border-border">
               <th className={thCls}>거래처명</th>
               <th className={thCls}>구분</th>
@@ -519,14 +521,14 @@ function ItemSection({ items, reload }: { items: ItemMaster[]; reload: () => voi
   };
 
   return (
-    <section>
+    <section className="flex h-full min-h-0 flex-col">
       <SectionHead icon={Package} title="품목 마스터" count={rows.length} total={items.length} onAdd={() => setOpen(true)} />
-      <p className="mb-3 text-[12.5px] text-text-faint">
+      <p className="mb-3 shrink-0 text-[12.5px] text-text-faint">
         현장 호칭(별칭)이 없으면 계근표·일보 매칭이 되지 않으니 함께 등록해 주세요.
       </p>
 
       <div
-        className={`${cardCls} mb-3 grid items-end gap-2 p-3 [grid-template-columns:minmax(0,1fr)_minmax(0,120px)_minmax(0,110px)_auto]`}
+        className={`${cardCls} mb-3 shrink-0 grid items-end gap-2 p-3 [grid-template-columns:minmax(0,1fr)_minmax(0,120px)_minmax(0,110px)_auto]`}
       >
         <FilterField label="검색어">
           <input
@@ -569,11 +571,11 @@ function ItemSection({ items, reload }: { items: ItemMaster[]; reload: () => voi
         </button>
       </div>
 
-      {error && <p className="mb-2 text-[13px] text-danger">{error}</p>}
+      {error && <p className="mb-2 shrink-0 text-[13px] text-danger">{error}</p>}
 
-      <div className={`${tableWrapCls} overflow-x-auto`}>
+      <div className={`${cardCls} min-h-0 flex-1 overflow-auto`}>
         <table className="w-full border-collapse">
-          <thead>
+          <thead className="sticky top-0 z-[1] bg-card">
             <tr className="border-y border-border">
               <th className={thCls}>코드</th>
               <th className={thCls}>품목명</th>
