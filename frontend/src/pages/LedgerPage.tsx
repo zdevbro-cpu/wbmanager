@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ListTree, Download, Paperclip, X } from 'lucide-react';
-import { api, API_BASE_URL } from '../api/client';
+import { api } from '../api/client';
+import { downloadFile } from '../lib/download';
 import { useProjects, useVendors, useItemMasters } from '../hooks/useMasters';
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
@@ -143,16 +144,20 @@ export function LedgerPage() {
         <button type="button" onClick={search} className={`${outlineBtnCls} whitespace-nowrap px-3`}>
           조회
         </button>
-        <a href={`${API_BASE_URL}/api/ledger/export?${buildQuery()}`} target="_blank" rel="noreferrer">
-          <button type="button" className={`${outlineBtnCls} whitespace-nowrap px-3`}>
-            <Download size={15} /> 엑셀(CSV)
-          </button>
-        </a>
-        <a href={`${API_BASE_URL}/api/ledger/export?${buildQuery()}&template=ecount`} target="_blank" rel="noreferrer">
-          <button type="button" className={`${outlineBtnCls} whitespace-nowrap px-3`}>
-            <Download size={15} /> ecount용
-          </button>
-        </a>
+        <button
+          type="button"
+          onClick={() => downloadFile(`/api/ledger/export?${buildQuery()}`, 'ledger.csv')}
+          className={`${outlineBtnCls} whitespace-nowrap px-3`}
+        >
+          <Download size={15} /> 엑셀(CSV)
+        </button>
+        <button
+          type="button"
+          onClick={() => downloadFile(`/api/ledger/export?${buildQuery()}&template=ecount`, 'ledger_ecount.csv')}
+          className={`${outlineBtnCls} whitespace-nowrap px-3`}
+        >
+          <Download size={15} /> ecount용
+        </button>
       </div>
 
       <div className={`${tableWrapCls} overflow-x-auto`}>

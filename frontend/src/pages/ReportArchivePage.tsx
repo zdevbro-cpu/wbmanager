@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FileText, Eye, Download, Trash2, Plus, RotateCcw, Copy, FileType2 } from 'lucide-react';
-import { api, API_BASE_URL } from '../api/client';
+import { api } from '../api/client';
+import { downloadFile } from '../lib/download';
 import { useProjects } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FilterField, DateRangeField } from '../components/FilterField';
@@ -141,24 +142,22 @@ export function ReportArchivePage() {
                     >
                       <Eye size={15} />
                     </button>
-                    <a
-                      href={`${API_BASE_URL}/api/reports/published/${r.id}/docx`}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      type="button"
                       title="워드(docx) 내려받기"
+                      onClick={() => downloadFile(`/api/reports/published/${r.id}/docx`, `${r.title}.docx`)}
                       className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
                     >
                       <FileType2 size={15} />
-                    </a>
-                    <a
-                      href={`${API_BASE_URL}/api/reports/published/${r.id}/export`}
-                      target="_blank"
-                      rel="noreferrer"
+                    </button>
+                    <button
+                      type="button"
                       title="텍스트 저장"
+                      onClick={() => downloadFile(`/api/reports/published/${r.id}/export`, `${r.title}.txt`)}
                       className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
                     >
                       <Download size={15} />
-                    </a>
+                    </button>
                     <button
                       type="button"
                       title="삭제"
@@ -209,16 +208,20 @@ export function ReportArchivePage() {
               >
                 <Copy size={15} /> 본문 복사
               </button>
-              <a href={`${API_BASE_URL}/api/reports/published/${detail.id}/export`} target="_blank" rel="noreferrer">
-                <button type="button" className={outlineBtnCls}>
-                  <Download size={15} /> 텍스트 저장
-                </button>
-              </a>
-              <a href={`${API_BASE_URL}/api/reports/published/${detail.id}/docx`} target="_blank" rel="noreferrer">
-                <button type="button" className={primaryBtnCls}>
-                  <FileType2 size={15} /> 워드(docx)
-                </button>
-              </a>
+              <button
+                type="button"
+                onClick={() => downloadFile(`/api/reports/published/${detail.id}/export`, `${detail.title}.txt`)}
+                className={outlineBtnCls}
+              >
+                <Download size={15} /> 텍스트 저장
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadFile(`/api/reports/published/${detail.id}/docx`, `${detail.title}.docx`)}
+                className={primaryBtnCls}
+              >
+                <FileType2 size={15} /> 워드(docx)
+              </button>
             </div>
           </div>
         </FormModal>

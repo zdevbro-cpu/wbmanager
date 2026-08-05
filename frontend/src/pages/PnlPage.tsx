@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, FileDown, FilePlus } from 'lucide-react';
-import { api, API_BASE_URL } from '../api/client';
+import { api } from '../api/client';
+import { downloadFile } from '../lib/download';
 import { useProjects } from '../hooks/useMasters';
 import {
   pageTitleCls,
@@ -63,11 +64,13 @@ export function PnlPage() {
             >
               <FilePlus size={15} /> 손익 보고서 발행
             </button>
-            <a href={`${API_BASE_URL}/api/projects/${projectId}/pnl/export`} target="_blank" rel="noreferrer">
-              <button type="button" className={outlineBtnCls}>
-                <FileDown size={15} /> 초안 텍스트 내려받기
-              </button>
-            </a>
+            <button
+              type="button"
+              onClick={() => downloadFile(`/api/projects/${projectId}/pnl/export`, 'pnl_report.txt')}
+              className={outlineBtnCls}
+            >
+              <FileDown size={15} /> 초안 텍스트 내려받기
+            </button>
             {published && <span className="text-[12.5px] text-success">{published}</span>}
           </>
         )}

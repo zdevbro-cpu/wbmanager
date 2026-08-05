@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CalendarDays, FileText, FileType2, Download, Plus, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
-import { api, API_BASE_URL } from '../api/client';
+import { api } from '../api/client';
+import { downloadFile } from '../lib/download';
 import { useProjects } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FilterField } from '../components/FilterField';
@@ -149,16 +150,20 @@ export function DailyReportPage() {
               >
                 <MessageCircle size={15} /> 카톡 공유용 복사
               </button>
-              <a href={`${API_BASE_URL}/api/reports/published/${viewing.id}/export`} target="_blank" rel="noreferrer">
-                <button type="button" className={outlineBtnCls}>
-                  <Download size={15} /> 텍스트
-                </button>
-              </a>
-              <a href={`${API_BASE_URL}/api/reports/published/${viewing.id}/docx`} target="_blank" rel="noreferrer">
-                <button type="button" className={primaryBtnCls}>
-                  <FileType2 size={15} /> 워드(docx)
-                </button>
-              </a>
+              <button
+                type="button"
+                onClick={() => downloadFile(`/api/reports/published/${viewing.id}/export`, `${viewing.title}.txt`)}
+                className={outlineBtnCls}
+              >
+                <Download size={15} /> 텍스트
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadFile(`/api/reports/published/${viewing.id}/docx`, `${viewing.title}.docx`)}
+                className={primaryBtnCls}
+              >
+                <FileType2 size={15} /> 워드(docx)
+              </button>
             </div>
           </div>
         </FormModal>
@@ -251,15 +256,14 @@ function DiaryEntry({
                 >
                   {rep.title}
                 </button>
-                <a
-                  href={`${API_BASE_URL}/api/reports/published/${rep.id}/docx`}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
                   title="워드 내려받기"
+                  onClick={() => downloadFile(`/api/reports/published/${rep.id}/docx`, `${rep.title}.docx`)}
                   className="shrink-0 rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
                 >
                   <FileType2 size={14} />
-                </a>
+                </button>
               </div>
             ))}
             <button
