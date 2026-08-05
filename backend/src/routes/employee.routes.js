@@ -93,6 +93,31 @@ router.post('/', async (req, res) => {
   res.status(201).json(employee);
 });
 
+// 기본정보 수정. 사번(empCode)은 근태 QR 식별자로 쓰이므로 바꾸지 않는다.
+// 보낸 항목만 반영해, 일부만 고쳐도 나머지가 지워지지 않게 한다.
+router.patch('/:id', async (req, res) => {
+  const { name, phone, department, position, hireDate } = req.body;
+  if (name !== undefined && !String(name).trim()) {
+    return res.status(400).json({ error: '성명은 비울 수 없습니다.' });
+  }
+
+  const employee = await prisma.employee.update({
+    where: { id: req.params.id },
+    data: {
+      ...(name !== undefined ? { name } : {}),
+      ...(phone !== undefined ? { phone: phone || null } : {}),
+      ...(department !== undefined ? { department: department || null } : {}),
+      ...(position !== undefined ? { position: position || null } : {}),
+      ...(hireDate !== undefined ? { hireDate: toISO(hireDate) } : {}),
+    },
+    include: {
+      certifications: { orderBy: [{ expiryDate: 'desc' }, { acquiredDate: 'desc' }] },
+      trainings: { orderBy: [{ nextDueDate: 'desc' }, { trainingDate: 'desc' }] },
+    },
+  });
+  res.json(employee);
+});
+
 // 임직원 삭제 — 자격/교육 이력을 함께 지우고, 자산 책임자 지정은 비운다.
 router.delete('/:id', async (req, res) => {
   const deleted = await prisma.$transaction(async (tx) => {

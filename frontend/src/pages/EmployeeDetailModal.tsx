@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Users, Plus, Trash2, ChevronDown } from 'lucide-react';
+import { Users, Plus, Trash2, ChevronDown, Pencil } from 'lucide-react';
 import { api } from '../api/client';
+import { formatPhone } from '../lib/phone';
 import { useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { QrCode } from '../components/QrCode';
@@ -56,6 +57,7 @@ export function EmployeeDetailModal({
   const [emp, setEmp] = useState<Employee | null>(initial ?? null);
   const [loadError, setLoadError] = useState('');
   const [adding, setAdding] = useState<'cert' | 'training' | null>(null);
+  const [editing, setEditing] = useState(false);
   const { labels: certOptions } = useCommonCodes('자격증 종류');
   const { labels: trainingOptions } = useCommonCodes('교육 과정');
 
@@ -117,9 +119,12 @@ export function EmployeeDetailModal({
             </span>
             <button
               type="button"
-              onClick={() => setAdding('cert')}
+              onClick={() => setEditing(true)}
               className={`${outlineBtnCls} ml-auto h-8 px-3 text-[12.5px]`}
             >
+              <Pencil size={14} /> 정보 수정
+            </button>
+            <button type="button" onClick={() => setAdding('cert')} className={`${outlineBtnCls} h-8 px-3 text-[12.5px]`}>
               <Plus size={14} /> 자격 이력 추가
             </button>
             <button type="button" onClick={() => setAdding('training')} className={`${outlineBtnCls} h-8 px-3 text-[12.5px]`}>
@@ -128,21 +133,32 @@ export function EmployeeDetailModal({
           </div>
 
           <div className="flex gap-5">
-            <dl className="grid flex-1 grid-cols-2 gap-x-5 gap-y-2">
-              {[
-                { label: '사번', value: emp.empCode ?? '-' },
-                { label: '성명', value: emp.name },
-                { label: '연락처', value: emp.phone ?? '-' },
-                { label: '입사일', value: day(emp.hireDate) },
-                { label: '부서', value: emp.department ?? '-' },
-                { label: '직급', value: emp.position ?? '-' },
-              ].map((f) => (
-                <div key={f.label} className="flex justify-between gap-3 border-b border-border pb-1.5">
-                  <dt className="text-[12.5px] text-text-sub">{f.label}</dt>
-                  <dd className="text-[13px] font-semibold text-text-strong">{f.value}</dd>
-                </div>
-              ))}
-            </dl>
+            {editing ? (
+              <BasicInfoForm
+                emp={emp}
+                onDone={() => {
+                  setEditing(false);
+                  refresh();
+                }}
+                onCancel={() => setEditing(false)}
+              />
+            ) : (
+              <dl className="grid flex-1 grid-cols-2 gap-x-5 gap-y-2">
+                {[
+                  { label: '사번', value: emp.empCode ?? '-' },
+                  { label: '성명', value: emp.name },
+                  { label: '연락처', value: emp.phone ?? '-' },
+                  { label: '입사일', value: day(emp.hireDate) },
+                  { label: '부서', value: emp.department ?? '-' },
+                  { label: '직급', value: emp.position ?? '-' },
+                ].map((f) => (
+                  <div key={f.label} className="flex justify-between gap-3 border-b border-border pb-1.5">
+                    <dt className="text-[12.5px] text-text-sub">{f.label}</dt>
+                    <dd className="text-[13px] font-semibold text-text-strong">{f.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
             {emp.empCode && (
               <div className="shrink-0">
                 <QrCode value={emp.empCode} fileName={`${emp.empCode}_${emp.name}`} size={130} />
@@ -235,6 +251,109 @@ export function EmployeeDetailModal({
         </div>
       )}
     </FormModal>
+  );
+}
+
+// 기본정보 수정 — 사번은 근태 QR 식별자라 바꾸지 않는다.
+function BasicInfoForm({
+  emp,
+  onDone,
+  onCancel,
+}: {
+  emp: Employee;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const { labels: departmentOptions } = useCommonCodes('부서');
+  const { labels: positionOptions } = useCommonCodes('직급');
+
+  const [name, setName] = useState(emp.name);
+  const [phone, setPhone] = useState(emp.phone ?? '');
+  const [department, setDepartment] = useState(emp.department ?? '');
+  const [position, setPosition] = useState(emp.position ?? '');
+  const [hireDate, setHireDate] = useState(emp.hireDate ? emp.hireDate.slice(0, 10) : '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setError('');
+    setSaving(true);
+    try {
+      await api.patch(`/api/employees/${emp.id}`, { name, phone, department, position, hireDate });
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '저장하지 못했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const label = 'mb-1 block text-[12px] font-semibold text-text-sub';
+
+  return (
+    <form onSubmit={submit} className="flex-1 rounded-[10px] border border-primary/40 bg-input p-3.5">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+        <div>
+          <span className={label}>사번</span>
+          <div className="flex h-[38px] items-center text-[13px] font-semibold text-text-faint">
+            {emp.empCode ?? '-'} <span className="ml-2 text-[11.5px]">(변경 불가)</span>
+          </div>
+        </div>
+        <div>
+          <label className={label}>성명</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
+        </div>
+        <div>
+          <label className={label}>연락처</label>
+          <input
+            value={phone}
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
+            placeholder="010-0000-0000"
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className={label}>입사일</label>
+          <input type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} className={inputCls} />
+        </div>
+        <div>
+          <label className={label}>부서</label>
+          <input
+            list="edit-departments"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            className={inputCls}
+          />
+          <datalist id="edit-departments">
+            {departmentOptions.map((o) => (
+              <option key={o} value={o} />
+            ))}
+          </datalist>
+        </div>
+        <div>
+          <label className={label}>직급</label>
+          <input list="edit-positions" value={position} onChange={(e) => setPosition(e.target.value)} className={inputCls} />
+          <datalist id="edit-positions">
+            {positionOptions.map((o) => (
+              <option key={o} value={o} />
+            ))}
+          </datalist>
+        </div>
+      </div>
+
+      {error && <p className="mt-2 text-[12.5px] text-danger">{error}</p>}
+
+      <div className="mt-3 flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className={`${outlineBtnCls} h-9 px-3`}>
+          취소
+        </button>
+        <button type="submit" disabled={saving} className={`${primaryBtnCls} h-9 px-4`}>
+          {saving ? '저장 중...' : '저장'}
+        </button>
+      </div>
+    </form>
   );
 }
 
