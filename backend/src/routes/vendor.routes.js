@@ -60,6 +60,20 @@ router.post('/quick-create', async (req, res) => {
   res.status(201).json(vendor);
 });
 
+// 삭제 — 거래·프로젝트가 참조 중이면 FK 제약에 걸리므로 그대로 알려 준다.
+router.delete('/:id', async (req, res) => {
+  try {
+    await prisma.vendor.delete({ where: { id: req.params.id } });
+    res.status(204).end();
+  } catch (err) {
+    if (err.code === 'P2003') {
+      return res.status(409).json({ error: '거래·프로젝트에서 사용 중인 거래처는 삭제할 수 없습니다.' });
+    }
+    if (err.code === 'P2025') return res.status(404).json({ error: 'not found' });
+    throw err;
+  }
+});
+
 // 임시 등록건을 정식 마스터로 승격
 router.patch('/:id/promote', async (req, res) => {
   const vendor = await prisma.vendor.update({
