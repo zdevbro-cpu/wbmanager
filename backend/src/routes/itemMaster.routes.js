@@ -66,6 +66,20 @@ router.patch('/:itemCode', async (req, res) => {
   res.json(item);
 });
 
+// 삭제 — 입출고·재고가 참조 중이면 FK 제약에 걸리므로 그대로 알려 준다.
+router.delete('/:itemCode', async (req, res) => {
+  try {
+    await prisma.itemMaster.delete({ where: { itemCode: req.params.itemCode } });
+    res.status(204).end();
+  } catch (err) {
+    if (err.code === 'P2003') {
+      return res.status(409).json({ error: '입출고·재고에서 사용 중인 품목은 삭제할 수 없습니다.' });
+    }
+    if (err.code === 'P2025') return res.status(404).json({ error: 'not found' });
+    throw err;
+  }
+});
+
 // 마스터에 없는 품목을 임시 등록 (S-ELHMAG)
 router.post('/quick-create', async (req, res) => {
   const { itemCode, category, itemName } = req.body;

@@ -11,8 +11,8 @@ type Tab = 'masters' | 'base' | 'users';
 
 function initialTab(param: string | null, isAdmin: boolean): Tab {
   if (param === 'users' && isAdmin) return 'users';
-  if (param === 'base') return 'base';
-  return 'masters';
+  if (param === 'masters') return 'masters';
+  return 'base';
 }
 
 export function SystemAdminPage() {
@@ -33,11 +33,11 @@ export function SystemAdminPage() {
       </div>
 
       <div className="mb-5 flex gap-1 border-b border-border">
-        <TabButton active={tab === 'masters'} onClick={() => setTab('masters')}>
-          마스터 관리
-        </TabButton>
         <TabButton active={tab === 'base'} onClick={() => setTab('base')}>
           기준정보 관리
+        </TabButton>
+        <TabButton active={tab === 'masters'} onClick={() => setTab('masters')}>
+          마스터 관리
         </TabButton>
         {isAdmin && (
           <TabButton active={tab === 'users'} onClick={() => setTab('users')}>
