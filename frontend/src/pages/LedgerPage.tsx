@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ListTree, Download, Paperclip, X } from 'lucide-react';
 import { api, API_BASE_URL } from '../api/client';
 import { useProjects, useVendors, useItemMasters } from '../hooks/useMasters';
@@ -34,6 +34,7 @@ export function LedgerPage() {
   const [vendorId, setVendorId] = useState('');
   const [itemCode, setItemCode] = useState('');
   const [type, setType] = useState('');
+  const [q, setQ] = useState('');
 
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [selected, setSelected] = useState<{ type: LedgerType; id: string } | null>(null);
@@ -59,6 +60,15 @@ export function LedgerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 조회 결과 안에서 프로젝트·거래처·품목명을 훑는 검색. 서버 조건과 달리 즉시 반응한다.
+  const visibleRows = useMemo(() => {
+    const keyword = q.trim().toLowerCase();
+    if (!keyword) return rows;
+    return rows.filter((r) =>
+      [r.projectName, r.vendorName, r.itemName].filter(Boolean).join(' ').toLowerCase().includes(keyword),
+    );
+  }, [rows, q]);
+
   useEffect(() => {
     if (!selected) {
       setDetail(null);
@@ -72,6 +82,9 @@ export function LedgerPage() {
       <div className="mb-5 flex items-center gap-2">
         <ListTree size={20} className="text-primary" />
         <h1 className={pageTitleCls}>통합 원장 조회</h1>
+        <span className="ml-1 text-[13px] text-text-sub">
+          {visibleRows.length}건{visibleRows.length !== rows.length ? ` / ${rows.length}건` : ''}
+        </span>
       </div>
 
       {/* 검색 필터 — 가로 스크롤 없이 한 줄에 모두 들어가도록 남는 폭을 셀렉트가 나눠 갖는다. */}
@@ -111,6 +124,12 @@ export function LedgerPage() {
             </option>
           ))}
         </select>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="프로젝트 / 거래처 / 품목"
+          className={`${inputCls} min-w-0 flex-1`}
+        />
         <button type="button" onClick={search} className={`${outlineBtnCls} shrink-0 whitespace-nowrap px-3`}>
           조회
         </button>
@@ -126,7 +145,7 @@ export function LedgerPage() {
         </a>
       </div>
 
-      <div className={tableWrapCls}>
+      <div className={`${tableWrapCls} overflow-x-auto`}>
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-y border-border">
@@ -141,7 +160,7 @@ export function LedgerPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {visibleRows.map((r) => (
               <tr key={`${r.type}-${r.id}`} onClick={() => setSelected({ type: r.type, id: r.id })} className={`${trCls} cursor-pointer`}>
                 <td className={`${tdCls} tabular`}>{new Date(r.date).toISOString().slice(0, 10)}</td>
                 <td className={tdCls}>
@@ -163,10 +182,10 @@ export function LedgerPage() {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {visibleRows.length === 0 && (
               <tr>
                 <td colSpan={8} className="py-10 text-center text-[13px] text-text-faint">
-                  조회된 데이터가 없습니다.
+                  {rows.length === 0 ? '조회된 데이터가 없습니다.' : '검색어에 맞는 내역이 없습니다.'}
                 </td>
               </tr>
             )}

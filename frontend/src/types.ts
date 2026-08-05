@@ -17,9 +17,28 @@ export interface ItemMaster {
 
 export interface Project {
   id: string;
+  projectCode?: string | null;
   roundName: string;
+  roundNo?: string | null;
+  ordererId?: string | null;
+  orderer?: Vendor;
+  contractorId?: string | null;
+  contractor?: Vendor;
+  siteName?: string | null;
+  region?: string | null;
   buyerId?: string | null;
+  buyer?: Vendor;
+  contractAmount?: string | null;
   purchasePrice?: string | null;
+  contractWeight?: string | null;
+  vatIncluded?: boolean;
+  deposit?: string | null;
+  advancePayment?: string | null;
+  settlementCycle?: string | null;
+  managerEmpId?: string | null;
+  manager?: Employee;
+  dischargerName?: string | null;
+  memo?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   status: string;

@@ -36,7 +36,9 @@ model Vendor {
   isTemporary Boolean  @default(false) @map("is_temporary") // 마스터 미존재 시 임시 등록 여부(추후 승격/매핑)
   createdAt   DateTime @default(now()) @map("created_at")
 
-  projects       Project[]
+  projects           Project[] @relation("ProjectBuyer")
+  orderedProjects    Project[] @relation("ProjectOrderer")
+  contractedProjects Project[] @relation("ProjectContractor")
   outboundSales  OutboundSale[]
   wasteOutbounds WasteOutbound[]
   assetMaintenances AssetMaintenance[]
@@ -80,15 +82,35 @@ model ItemPriceHistory {
   @@map("item_price_history")
 }
 
+// 프로젝트(차수) — 원본 프로젝트명은 `발주처_시공사_현장`을 이어 붙인 형태였다(예: 포스코_KM_안산).
+// 발주처별·현장별 집계가 가능하도록 요소를 분리해 두고, 원본 문자열은 roundName에 그대로 보존한다.
 model Project {
   id            String    @id @default(uuid())
-  roundName     String    @map("round_name")      // 예: 26-1차
+  projectCode   String?   @unique @map("project_code")  // 자동 채번 P-2026-001
+  roundName     String    @map("round_name")            // 프로젝트(사업)명 — 원본 표기 그대로
+  roundNo       String?   @map("round_no")              // 차수: 26-1차
+  ordererId     String?   @map("orderer_id")            // 발주처(원청)
+  orderer       Vendor?   @relation("ProjectOrderer", fields: [ordererId], references: [id])
+  contractorId  String?   @map("contractor_id")         // 시공사·계약상대
+  contractor    Vendor?   @relation("ProjectContractor", fields: [contractorId], references: [id])
+  siteName      String?   @map("site_name")             // 현장명
+  region        String?   @map("region")                // 지역
   buyerId       String?   @map("buyer_id")         // 매입처(거래처 마스터)
-  buyer         Vendor?   @relation(fields: [buyerId], references: [id])
-  purchasePrice Decimal?  @map("purchase_price") @db.Decimal(14, 2)
-  startDate     DateTime? @map("start_date")
-  endDate       DateTime? @map("end_date")
-  status        String    @default("진행") @map("status") // 진행/완료
+  buyer         Vendor?   @relation("ProjectBuyer", fields: [buyerId], references: [id])
+  contractAmount Decimal? @map("contract_amount") @db.Decimal(14, 2) // 계약금액
+  purchasePrice Decimal?  @map("purchase_price") @db.Decimal(14, 2)  // 매입가 — 손익의 취득원가
+  contractWeight Decimal? @map("contract_weight") @db.Decimal(14, 3) // 계약(예상) 중량 — 회수율 산출 기준
+  vatIncluded   Boolean   @default(false) @map("vat_included")
+  deposit       Decimal?  @map("deposit") @db.Decimal(14, 2)          // 계약보증금
+  advancePayment Decimal? @map("advance_payment") @db.Decimal(14, 2)  // 선급금
+  settlementCycle String? @map("settlement_cycle")   // 월별/차수완료 등
+  managerEmpId  String?   @map("manager_emp_id")     // 담당자
+  manager       Employee? @relation(fields: [managerEmpId], references: [id])
+  dischargerName String?  @map("discharger_name")    // 현장 배출자 — 폐기물 등록 기본값
+  memo          String?   @map("memo")
+  startDate     DateTime? @map("start_date")   // 계약 시작일
+  endDate       DateTime? @map("end_date")     // 계약 종료일
+  status        String    @default("진행") @map("status") // 진행/완료/보류
   createdAt     DateTime  @default(now()) @map("created_at")
 
   inbounds          Inbound[]
@@ -403,6 +425,7 @@ model Employee {
   certifications EmployeeCertification[]
   trainings      EmployeeTraining[]
   managedAssets  Asset[]
+  managedProjects Project[]
 
   @@map("employee")
 }
