@@ -54,11 +54,6 @@ export function ProjectManagementPage() {
     reload();
   }, [reload]);
 
-  const changeStatus = async (p: Project, next: string) => {
-    await api.patch(`/api/projects/${p.id}`, { status: next });
-    reload();
-  };
-
   // 상세 모달에서 바꾼 상태·수정 결과를 목록과 열려 있는 상세에 함께 반영한다.
   const syncDetail = async (id: string) => {
     const list = await reload();
@@ -188,28 +183,6 @@ export function ProjectManagementPage() {
                     >
                       <Eye size={15} />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditing(p);
-                        setOpen(true);
-                      }}
-                      className="text-[12.5px] font-semibold text-primary hover:underline"
-                    >
-                      수정
-                    </button>
-                    <select
-                      value={p.status}
-                      onChange={(e) => changeStatus(p, e.target.value)}
-                      aria-label="상태 변경"
-                      className={`${inputCls} h-8 w-[86px] px-2 text-[12.5px]`}
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
                   </div>
                 </td>
               </tr>
