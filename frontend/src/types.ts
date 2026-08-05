@@ -376,8 +376,12 @@ export interface AggregationGroup {
 
 export interface Aggregation {
   byProject: AggregationGroup[];
+  bySite: AggregationGroup[];
   byVendor: AggregationGroup[];
   byItem: AggregationGroup[];
+  byType: AggregationGroup[];
+  byMonth: AggregationGroup[];
+  byDay: AggregationGroup[];
   totals: Omit<AggregationGroup, 'key' | 'label' | 'count'>;
 }
 

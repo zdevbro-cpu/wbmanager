@@ -46,7 +46,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: '보고 / 집계',
     items: [
       { to: '/ledger', label: '통합 원장 조회', icon: ListTree },
-      { to: '/aggregation', label: '갑지 자동 집계', icon: BarChart3 },
+      { to: '/aggregation', label: '자동집계 현황', icon: BarChart3 },
       { to: '/daily-report', label: '일일 출고보고', icon: FileText },
       { to: '/ecount-export', label: 'ecount 내보내기', icon: FileSpreadsheet },
     ],

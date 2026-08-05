@@ -3,6 +3,7 @@ import { Boxes, Plus, Eye, Car, Wrench, RotateCcw, ScanLine, Trash2 } from 'luci
 import { api } from '../api/client';
 import { useCommonCodes, useEmployees } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
+import { FilterField } from '../components/FilterField';
 import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
 import { AssetMaintenanceForm } from '../components/AssetMaintenanceForm';
@@ -106,35 +107,47 @@ export function AssetManagementPage() {
       </div>
 
       <div
-        className={`${cardCls} mb-4 grid items-center gap-2 p-3 [grid-template-columns:minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)_auto]`}
+        className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)_auto]`}
       >
-        <select value={assetType} onChange={(e) => setAssetType(e.target.value)} className={`${inputCls} px-2`}>
-          <option value="">전체 유형</option>
-          <option value="VEHICLE">차량</option>
-          <option value="EQUIPMENT">장비</option>
-        </select>
-        <select value={category} onChange={(e) => setCategory(e.target.value)} className={`${inputCls} px-2`}>
-          <option value="">전체 분류</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputCls} px-2`}>
-          <option value="">전체 상태</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="자산번호 / 자산명 / 모델 / 차대번호"
-          className={inputCls}
-        />
+        <FilterField label="자산유형">
+          <select value={assetType} onChange={(e) => setAssetType(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            <option value="VEHICLE">차량</option>
+            <option value="EQUIPMENT">장비</option>
+          </select>
+        </FilterField>
+
+        <FilterField label="분류">
+          <select value={category} onChange={(e) => setCategory(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+
+        <FilterField label="상태">
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+
+        <FilterField label="검색어">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="자산번호 / 자산명 / 모델 / 차대번호"
+            className={inputCls}
+          />
+        </FilterField>
+
         <button
           type="button"
           onClick={() => {

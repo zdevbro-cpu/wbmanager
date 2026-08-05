@@ -4,6 +4,7 @@ import { api, API_BASE_URL } from '../api/client';
 import { useProjects, useVendors, useItemMasters } from '../hooks/useMasters';
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
+import { FilterField, DateRangeField } from '../components/FilterField';
 import { pageTitleCls, outlineBtnCls, inputCls, tableWrapCls, thCls, tdCls, trCls } from '../components/ui/classes';
 import type { LedgerRow, LedgerDetail, LedgerType } from '../types';
 
@@ -87,49 +88,58 @@ export function LedgerPage() {
         </span>
       </div>
 
-      {/* 검색 필터 — 가로 스크롤 없이 한 줄에 모두 들어가도록 남는 폭을 셀렉트가 나눠 갖는다. */}
-      <div className="mb-4 grid items-center gap-2 rounded-[14px] border border-border bg-card p-3 [grid-template-columns:126px_10px_126px_repeat(4,minmax(0,1fr))_minmax(0,1.4fr)_auto_auto_auto]">
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} px-2`} />
-        <span className="text-center text-text-faint">~</span>
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputCls} px-2`} />
-        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} px-2`}>
-          <option value="">전체 프로젝트</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.roundName}
-            </option>
-          ))}
-        </select>
-        <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className={`${inputCls} px-2`}>
-          <option value="">전체 거래처</option>
-          {vendors.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.name}
-            </option>
-          ))}
-        </select>
-        <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} px-2`}>
-          <option value="">전체 품목</option>
-          {items.map((i) => (
-            <option key={i.itemCode} value={i.itemCode}>
-              {i.itemName}
-            </option>
-          ))}
-        </select>
-        <select value={type} onChange={(e) => setType(e.target.value)} className={`${inputCls} px-2`}>
-          <option value="">전체 유형</option>
-          {Object.entries(TYPE_LABEL).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v}
-            </option>
-          ))}
-        </select>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="프로젝트 / 거래처 / 품목"
-          className={inputCls}
-        />
+      {/* 검색 필터 — 가로 스크롤 없이 한 줄에 모두 들어가도록 트랙 폭을 고정한다. */}
+      <div className="mb-4 grid items-end gap-3 rounded-[14px] border border-border bg-card p-3 [grid-template-columns:270px_repeat(4,minmax(0,1fr))_minmax(0,1.2fr)_auto_auto_auto]">
+        <DateRangeField label="기간" from={from} to={to} setFrom={setFrom} setTo={setTo} />
+
+        <FilterField label="프로젝트">
+          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.roundName}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+
+        <FilterField label="거래처">
+          <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            {vendors.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+
+        <FilterField label="품목">
+          <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            {items.map((i) => (
+              <option key={i.itemCode} value={i.itemCode}>
+                {i.itemName}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+
+        <FilterField label="유형">
+          <select value={type} onChange={(e) => setType(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            {Object.entries(TYPE_LABEL).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+
+        <FilterField label="결과 내 검색">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="프로젝트 / 거래처 / 품목" className={inputCls} />
+        </FilterField>
+
         <button type="button" onClick={search} className={`${outlineBtnCls} whitespace-nowrap px-3`}>
           조회
         </button>

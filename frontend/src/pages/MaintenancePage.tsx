@@ -3,6 +3,7 @@ import { Wrench, Plus, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
 import { useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
+import { FilterField, DateRangeField } from '../components/FilterField';
 import { AssetMaintenanceForm } from '../components/AssetMaintenanceForm';
 import { Badge } from '../components/ui/Badge';
 import {
@@ -65,32 +66,40 @@ export function MaintenancePage() {
       </div>
 
       <div
-        className={`${cardCls} mb-4 grid items-center gap-2 p-3 [grid-template-columns:126px_10px_126px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]`}
+        className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:280px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]`}
       >
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} px-2`} />
-        <span className="text-center text-text-faint">~</span>
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputCls} px-2`} />
-        <select value={assetType} onChange={(e) => setAssetType(e.target.value)} className={`${inputCls} px-2`}>
-          <option value="">전체 유형</option>
-          <option value="VEHICLE">차량</option>
-          <option value="EQUIPMENT">장비</option>
-        </select>
-        <select value={maintType} onChange={(e) => setMaintType(e.target.value)} className={`${inputCls} px-2`}>
-          <option value="">전체 정비구분</option>
-          {maintTypes.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputCls} px-2`}>
-          <option value="">전체 상태</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        <DateRangeField label="정비기간" from={from} to={to} setFrom={setFrom} setTo={setTo} />
+
+        <FilterField label="자산유형">
+          <select value={assetType} onChange={(e) => setAssetType(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            <option value="VEHICLE">차량</option>
+            <option value="EQUIPMENT">장비</option>
+          </select>
+        </FilterField>
+
+        <FilterField label="정비구분">
+          <select value={maintType} onChange={(e) => setMaintType(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            {maintTypes.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+
+        <FilterField label="상태">
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+
         <button
           type="button"
           onClick={() => {
