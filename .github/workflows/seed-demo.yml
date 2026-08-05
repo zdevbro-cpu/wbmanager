@@ -12,6 +12,8 @@ on:
         options:
           - seed
           - clear
+          - masters
+          - clear-masters
 
 jobs:
   seed:
@@ -44,8 +46,9 @@ jobs:
           ./cloud-sql-proxy --port 5432 crosswb-a7083:asia-northeast3:wbmanager-db &
           for i in $(seq 1 30); do (echo > /dev/tcp/127.0.0.1/5432) >/dev/null 2>&1 && break; sleep 1; done
           npx prisma generate
-          if [ "${{ inputs.action }}" = "clear" ]; then
-            node prisma/seed.js --clear
-          else
-            node prisma/seed.js
-          fi
+          case "${{ inputs.action }}" in
+            clear)          node prisma/seed.js --clear ;;
+            masters)        node prisma/seed.js --masters ;;
+            clear-masters)  node prisma/seed.js --masters --clear ;;
+            *)              node prisma/seed.js ;;
+          esac
