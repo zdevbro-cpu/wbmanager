@@ -74,10 +74,8 @@ function DDay({ due }: { due?: string | null }) {
   return <Badge tone="slate">D-{left}</Badge>;
 }
 
-// 자격·교육은 여러 건을 동시에 보유·이수한다. 예전처럼 1건만 대표로 보이면
-// 만료가 임박한 다른 건이 가려져 D-day를 놓친다. 임박한 순으로 정렬해 모두 보여 준다.
-const LIST_LIMIT = 3;
-
+// 자격·교육은 여러 건을 동시에 보유·이수한다. 1건만 대표로 보이거나 몇 건을 접어 두면
+// 만료가 임박한 건이 가려져 D-day를 놓친다. 임박한 순으로 정렬해 보유한 만큼 전부 편다.
 function byUrgency<T>(rows: T[], due: (r: T) => string | null | undefined) {
   return [...rows].sort((a, b) => {
     // 기한이 없는 건은 급할 게 없으므로 뒤로 보낸다.
@@ -93,10 +91,6 @@ const sortedCerts = (emp: Employee) =>
 const sortedTrainings = (emp: Employee) =>
   byUrgency(emp.trainings ?? [], (t) => t.nextDueDate ?? t.trainingDate);
 
-function MoreBadge({ total, shown }: { total: number; shown: number }) {
-  if (total <= shown) return null;
-  return <Badge tone="slate">+{total - shown}</Badge>;
-}
 
 export function EmployeeManagementPage({ embedded = false }: { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -159,7 +153,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     if (all.length === 0) return '-';
                     return (
                       <div className="space-y-1">
-                        {all.slice(0, LIST_LIMIT).map((c) => (
+                        {all.map((c) => (
                           <div key={c.id} className="flex items-center gap-1.5">
                             {c.certType && <Badge tone="slate">{c.certType}</Badge>}
                             {c.certName}
@@ -167,7 +161,6 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                             <DDay due={c.expiryDate} />
                           </div>
                         ))}
-                        <MoreBadge total={all.length} shown={LIST_LIMIT} />
                       </div>
                     );
                   })()}
@@ -178,7 +171,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                     if (all.length === 0) return '-';
                     return (
                       <div className="space-y-1">
-                        {all.slice(0, LIST_LIMIT).map((t) => (
+                        {all.map((t) => (
                           <div key={t.id} className="flex items-center gap-1.5">
                             {t.trainingType && (
                               <Badge tone={t.trainingType === '의무' ? 'amber' : 'blue'}>{t.trainingType}</Badge>
@@ -188,7 +181,6 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                             <DDay due={t.nextDueDate} />
                           </div>
                         ))}
-                        <MoreBadge total={all.length} shown={LIST_LIMIT} />
                       </div>
                     );
                   })()}
