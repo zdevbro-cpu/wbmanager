@@ -26,8 +26,12 @@ import exportRoutes from './routes/export.routes.js';
 import ocrRoutes from './routes/ocr.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import { requireAuth } from './middleware/auth.js';
+import { auditMutations } from './middleware/audit.js';
+import auditRoutes from './routes/audit.routes.js';
 
 const app = express();
+// Cloud Run 프록시 뒤라 실제 접속 IP는 X-Forwarded-For에서 읽는다.
+app.set('trust proxy', true);
 app.use(cors());
 app.use(express.json());
 
@@ -37,6 +41,8 @@ app.get('/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api', requireAuth);
+// 등록·수정·삭제는 누가 했는지 남긴다.
+app.use('/api', auditMutations);
 
 app.use('/api/projects', projectRoutes);
 app.use('/api/inbounds', inboundRoutes);
@@ -59,6 +65,7 @@ app.use('/api/common-codes', commonCodeRoutes);
 app.use('/api/assets', assetRoutes);
 app.use('/api/asset-maintenances', assetMaintenanceRoutes);
 app.use('/api/alerts', alertRoutes);
+app.use('/api/audit-logs', auditRoutes);
 app.use('/api/exports', exportRoutes);
 app.use('/api/ocr', ocrRoutes);
 

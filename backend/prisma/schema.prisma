@@ -23,6 +23,11 @@ model AppUser {
   status      String   @default("pending") @map("status") // pending | approved | rejected
   createdAt   DateTime @default(now()) @map("created_at")
   approvedAt  DateTime? @map("approved_at")
+  lastLoginAt DateTime? @map("last_login_at")   // 마지막 접속 시각
+  lastLoginIp String?   @map("last_login_ip")   // 마지막 접속 IP
+  loginCount  Int       @default(0) @map("login_count")
+
+  auditLogs AuditLog[]
 
   @@map("app_user")
 }
@@ -653,6 +658,26 @@ model Report {
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("report")
+}
+
+// 접속·변경 이력 — 누가 언제 어디서 무엇을 바꿨는지 남긴다.
+// 조회(GET)는 양이 많아 로그인만 기록하고, 등록·수정·삭제는 전부 남긴다.
+model AuditLog {
+  id         String   @id @default(uuid())
+  appUserId  String?  @map("app_user_id")
+  appUser    AppUser? @relation(fields: [appUserId], references: [id])
+  email      String?  @map("email")
+  action     String   @map("action")        // login / create / update / delete
+  method     String?  @map("method")
+  path       String?  @map("path")
+  statusCode Int?     @map("status_code")
+  ip         String?  @map("ip")
+  userAgent  String?  @map("user_agent")
+  summary    String?  @map("summary")       // 대상 요약(차수명·자산번호 등)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("audit_log")
 }
 
 // ── 공통코드 ────────────────────────────────
