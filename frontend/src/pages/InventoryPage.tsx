@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Boxes, X, Truck } from 'lucide-react';
+import { Boxes, X } from 'lucide-react';
 import { api } from '../api/client';
 import { useProjects, useItemMasters } from '../hooks/useMasters';
-import { InboundFormPage } from './InboundFormPage';
-import { FormModal } from '../components/FormModal';
 import { NumberInput } from '../components/ui/NumberInput';
 import { formatNumber } from '../lib/number';
-import { pageTitleCls, sectionTitleCls, primaryBtnCls, inputCls, tableWrapCls, thCls,
+import { pageTitleCls, primaryBtnCls, inputCls, tableWrapCls, thCls,
   thNumCls,
   tdNumCls, tdCls, trCls } from '../components/ui/classes';
 import type { InventoryValuation, InventoryValuationRow, LedgerEntry } from '../types';
@@ -25,9 +23,9 @@ export function InventoryPage() {
   const { projects } = useProjects();
   const { items } = useItemMasters();
   const [projectId, setProjectId] = useState('');
+  const [itemCode, setItemCode] = useState('');
   const [valuation, setValuation] = useState<InventoryValuation | null>(null);
   const [drilldown, setDrilldown] = useState<{ row: InventoryValuationRow; entries: LedgerEntry[] } | null>(null);
-  const [inboundOpen, setInboundOpen] = useState(false);
 
   const search = () => {
     const params = new URLSearchParams();
@@ -39,6 +37,35 @@ export function InventoryPage() {
     search();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  const rows = (valuation?.rows ?? []).filter((r) => !itemCode || r.itemCode === itemCode);
+
+  const totals = rows.reduce(
+    (acc, r) => ({
+      inWeight: acc.inWeight + r.inWeight,
+      outWeight: acc.outWeight + r.outWeight,
+      valuationAmount: acc.valuationAmount + r.valuationAmount,
+    }),
+    { inWeight: 0, outWeight: 0, valuationAmount: 0 },
+  );
+
+  // 품목을 고르면 합계도 그 품목만 반영한다.
+  const totalValuation = itemCode ? totals.valuationAmount : (valuation?.totalValuation ?? 0);
+
+  // 같은 품목이 여러 프로젝트에 흩어져 있으므로 품목코드로 합산한다.
+  const itemTotals = Object.values(
+    rows.reduce<Record<string, { itemCode: string; itemName: string; inWeight: number; outWeight: number; remaining: number }>>(
+      (acc, r) => {
+        const cur = acc[r.itemCode] ?? { itemCode: r.itemCode, itemName: r.itemName, inWeight: 0, outWeight: 0, remaining: 0 };
+        cur.inWeight += r.inWeight;
+        cur.outWeight += r.outWeight;
+        cur.remaining += r.remaining;
+        acc[r.itemCode] = cur;
+        return acc;
+      },
+      {},
+    ),
+  ).sort((a, b) => b.inWeight - a.inWeight);
 
   const openDrilldown = async (row: InventoryValuationRow) => {
     const entries = await api.get<LedgerEntry[]>(`/api/inventory/snapshot/${row.projectId}/${row.itemCode}/entries`);
@@ -52,8 +79,46 @@ export function InventoryPage() {
         <h1 className={pageTitleCls}>재고 스냅샷 / 재고평가</h1>
       </div>
 
-      <div className="mb-5 flex items-center gap-2">
-        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-auto`}>
+      {valuation && (
+        <>
+          <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <SummaryCard label="총 입고" value={`${formatNumber(totals.inWeight)}kg`} />
+            <SummaryCard label="총 출고" value={`${formatNumber(totals.outWeight)}kg`} />
+            <SummaryCard label="재고평가 합계" value={`${formatNumber(totalValuation)}원`} highlight />
+          </div>
+
+          <div className="mb-4 rounded-[12px] border border-border bg-card px-4 py-3">
+            <div className="mb-2 text-[12.5px] font-semibold text-text-faint">품목별 입출고량</div>
+            {itemTotals.length === 0 ? (
+              <div className="py-2 text-[13px] text-text-faint">품목 데이터가 없습니다.</div>
+            ) : (
+              <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2 xl:grid-cols-4">
+                {itemTotals.map((i) => (
+                  <div
+                    key={i.itemCode}
+                    className="flex items-center justify-between gap-4 border-b border-border/60 py-1.5 text-[13px] last:border-b-0"
+                  >
+                    <span className="truncate text-text-sub">{i.itemName}</span>
+                    <span className="tabular whitespace-nowrap">
+                      <span className="font-bold text-success">입 {formatNumber(i.inWeight)}</span>
+                      <span className="mx-1.5 text-text-faint">/</span>
+                      <span className="font-bold text-danger">출 {formatNumber(i.outWeight)}</span>
+                      <span className="mx-1.5 text-text-faint">/</span>
+                      <span className="font-bold text-text-strong">잔 {formatNumber(i.remaining)}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      <PriceRegisterForm items={items} projects={projects} onRegistered={search} />
+
+      <div className="mb-5 flex w-full items-center gap-2 rounded-[12px] border border-border bg-card px-4 py-2.5">
+        <span className="mr-1 whitespace-nowrap text-[13px] font-extrabold text-text-strong">검색</span>
+        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-[200px] min-w-0`}>
           <option value="">전체 프로젝트</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
@@ -61,18 +126,18 @@ export function InventoryPage() {
             </option>
           ))}
         </select>
-        <button type="button" onClick={() => setInboundOpen(true)} className={primaryBtnCls}>
-          <Truck size={15} /> 입고 등록
-        </button>
+        <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} w-[160px] min-w-0`}>
+          <option value="">전체 품목</option>
+          {items.map((i) => (
+            <option key={i.itemCode} value={i.itemCode}>
+              {i.itemName}
+            </option>
+          ))}
+        </select>
       </div>
 
       {valuation && (
         <>
-          <div className="mb-4 w-fit rounded-[12px] border border-primary bg-card p-4">
-            <div className="text-[13px] text-text-faint">재고평가 합계</div>
-            <div className="tabular text-[22px] font-extrabold text-text-strong">{formatNumber(valuation.totalValuation)}원</div>
-          </div>
-
           <div className={`${tableWrapCls} mb-8`}>
             <table className="w-full border-collapse">
               <thead>
@@ -88,7 +153,7 @@ export function InventoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {valuation.rows.map((r) => (
+                {rows.map((r) => (
                   <tr key={`${r.projectId}-${r.itemCode}`} onClick={() => openDrilldown(r)} className={`${trCls} cursor-pointer`}>
                     <td className={tdCls}>{r.projectName}</td>
                     <td className={tdCls}>{r.itemName}</td>
@@ -100,7 +165,7 @@ export function InventoryPage() {
                     <td className={tdNumCls}>{formatNumber(r.valuationAmount)}</td>
                   </tr>
                 ))}
-                {valuation.rows.length === 0 && (
+                {rows.length === 0 && (
                   <tr>
                     <td colSpan={8} className="py-10 text-center text-[13px] text-text-faint">
                       재고 데이터가 없습니다.
@@ -111,15 +176,6 @@ export function InventoryPage() {
             </table>
           </div>
         </>
-      )}
-
-      <PriceRegisterForm items={items} projects={projects} onRegistered={search} />
-
-      {inboundOpen && (
-        <FormModal title="입고(반입) 등록" icon={Truck} onClose={() => setInboundOpen(false)}>
-          {/* 등록 즉시 재고 목록을 갱신한다 — 입고가 재고의 시작점이다. */}
-          <InboundFormPage embedded onCreated={search} />
-        </FormModal>
       )}
 
       {drilldown && (
@@ -198,6 +254,15 @@ export function InventoryPage() {
   );
 }
 
+function SummaryCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={`rounded-[12px] border bg-card px-4 py-3 ${highlight ? 'border-primary' : 'border-border'}`}>
+      <div className="text-[12.5px] font-semibold text-text-faint">{label}</div>
+      <div className="tabular text-[22px] font-extrabold text-text-strong">{value}</div>
+    </div>
+  );
+}
+
 function PriceRegisterForm({
   items,
   projects,
@@ -227,36 +292,42 @@ function PriceRegisterForm({
   };
 
   return (
-    <div>
-      <h2 className={`${sectionTitleCls} mb-2`}>품목 추정단가 등록</h2>
-      <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2">
-        <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} w-auto`}>
-          <option value="">품목 선택</option>
-          {items.map((i) => (
-            <option key={i.itemCode} value={i.itemCode}>
-              {i.itemName}
-            </option>
-          ))}
-        </select>
-        <NumberInput
-          placeholder="단가"
-          value={price}
-          onChange={setPrice}
-          className={`${inputCls} tabular w-[120px] text-right`}
-        />
-        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-auto`}>
-          <option value="">전체 적용</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.roundName}만 적용
-            </option>
-          ))}
-        </select>
-        <input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} className={`${inputCls} w-auto`} />
-        <button type="submit" className={primaryBtnCls}>
-          등록
-        </button>
-      </form>
-    </div>
+    <form
+      onSubmit={handleSubmit}
+      className="mb-3 flex w-full items-center gap-2 rounded-[12px] border border-border bg-card px-4 py-2.5"
+    >
+      <span className="mr-1 whitespace-nowrap text-[13px] font-extrabold text-text-strong">품목 추정단가 등록</span>
+      <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} w-[160px] min-w-0`}>
+        <option value="">품목 선택</option>
+        {items.map((i) => (
+          <option key={i.itemCode} value={i.itemCode}>
+            {i.itemName}
+          </option>
+        ))}
+      </select>
+      <NumberInput
+        placeholder="단가"
+        value={price}
+        onChange={setPrice}
+        className={`${inputCls} tabular w-[110px] min-w-0 text-right`}
+      />
+      <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-[170px] min-w-0`}>
+        <option value="">전체 적용</option>
+        {projects.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.roundName}만 적용
+          </option>
+        ))}
+      </select>
+      <input
+        type="date"
+        value={effectiveDate}
+        onChange={(e) => setEffectiveDate(e.target.value)}
+        className={`${inputCls} w-[150px] min-w-0`}
+      />
+      <button type="submit" className={`${primaryBtnCls} shrink-0 whitespace-nowrap`}>
+        등록
+      </button>
+    </form>
   );
 }

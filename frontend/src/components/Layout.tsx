@@ -57,7 +57,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: '재고 / 손익',
     items: [
       { to: '/inventory', label: '재고 / 재고평가', icon: Boxes },
-      { to: '/pnl', label: '차수 손익 대시보드', icon: TrendingUp },
+      { to: '/pnl', label: '프로젝트 손익요약', icon: TrendingUp },
     ],
   },
   {
