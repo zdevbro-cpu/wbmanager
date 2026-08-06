@@ -66,6 +66,7 @@ router.post('/', async (req, res) => {
               certifications: {
                 create: certRows.map((c) => ({
                   certName: c.certName,
+                  certType: c.certType || null,
                   acquiredDate: toISO(c.acquiredDate),
                   expiryDate: toISO(c.expiryDate),
                 })),
@@ -92,6 +93,31 @@ router.post('/', async (req, res) => {
   res.status(201).json(employee);
 });
 
+// 기본정보 수정. 사번(empCode)은 근태 QR 식별자로 쓰이므로 바꾸지 않는다.
+// 보낸 항목만 반영해, 일부만 고쳐도 나머지가 지워지지 않게 한다.
+router.patch('/:id', async (req, res) => {
+  const { name, phone, department, position, hireDate } = req.body;
+  if (name !== undefined && !String(name).trim()) {
+    return res.status(400).json({ error: '성명은 비울 수 없습니다.' });
+  }
+
+  const employee = await prisma.employee.update({
+    where: { id: req.params.id },
+    data: {
+      ...(name !== undefined ? { name } : {}),
+      ...(phone !== undefined ? { phone: phone || null } : {}),
+      ...(department !== undefined ? { department: department || null } : {}),
+      ...(position !== undefined ? { position: position || null } : {}),
+      ...(hireDate !== undefined ? { hireDate: toISO(hireDate) } : {}),
+    },
+    include: {
+      certifications: { orderBy: [{ expiryDate: 'desc' }, { acquiredDate: 'desc' }] },
+      trainings: { orderBy: [{ nextDueDate: 'desc' }, { trainingDate: 'desc' }] },
+    },
+  });
+  res.json(employee);
+});
+
 // 임직원 삭제 — 자격/교육 이력을 함께 지우고, 자산 책임자 지정은 비운다.
 router.delete('/:id', async (req, res) => {
   const deleted = await prisma.$transaction(async (tx) => {
@@ -101,6 +127,54 @@ router.delete('/:id', async (req, res) => {
     return tx.employee.delete({ where: { id: req.params.id } });
   });
   res.json(deleted);
+});
+
+// 이력 행 오타 정정. 갱신은 새 행으로 쌓는 것이 원칙이고, 이 경로는 잘못 적은 값을 고치는 용도다.
+router.patch('/:id/certifications/:certId', async (req, res) => {
+  const { certName, certType, acquiredDate, expiryDate } = req.body;
+  if (certName !== undefined && !String(certName).trim()) {
+    return res.status(400).json({ error: '자격증명은 비울 수 없습니다.' });
+  }
+
+  const cert = await prisma.employeeCertification.update({
+    where: { id: req.params.certId },
+    data: {
+      ...(certName !== undefined ? { certName } : {}),
+      ...(certType !== undefined ? { certType: certType || null } : {}),
+      ...(acquiredDate !== undefined ? { acquiredDate: toISO(acquiredDate) } : {}),
+      ...(expiryDate !== undefined ? { expiryDate: toISO(expiryDate) } : {}),
+    },
+  });
+  res.json(cert);
+});
+
+router.patch('/:id/trainings/:trainingId', async (req, res) => {
+  const { trainingName, trainingType, trainingDate, cycleMonths, nextDueDate } = req.body;
+  if (trainingName !== undefined && !String(trainingName).trim()) {
+    return res.status(400).json({ error: '교육명은 비울 수 없습니다.' });
+  }
+
+  const current = await prisma.employeeTraining.findUnique({ where: { id: req.params.trainingId } });
+  if (!current) return res.status(404).json({ error: '교육 이력을 찾을 수 없습니다.' });
+
+  // 이수일이나 주기를 고쳤는데 예정일을 직접 주지 않았다면 다시 계산한다.
+  const resolvedDue = resolveNextDue({
+    nextDueDate,
+    trainingDate: trainingDate ?? current.trainingDate,
+    cycleMonths: cycleMonths ?? current.cycleMonths,
+  });
+
+  const training = await prisma.employeeTraining.update({
+    where: { id: req.params.trainingId },
+    data: {
+      ...(trainingName !== undefined ? { trainingName } : {}),
+      ...(trainingType !== undefined ? { trainingType: trainingType || null } : {}),
+      ...(trainingDate !== undefined ? { trainingDate: toISO(trainingDate) } : {}),
+      ...(cycleMonths !== undefined ? { cycleMonths: cycleMonths ? Number(cycleMonths) : null } : {}),
+      ...(resolvedDue !== undefined ? { nextDueDate: resolvedDue } : {}),
+    },
+  });
+  res.json(training);
 });
 
 router.delete('/:id/certifications/:certId', async (req, res) => {

@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Users, Plus, Trash2, ChevronDown } from 'lucide-react';
+import { Users, Plus, Trash2, ChevronDown, Pencil } from 'lucide-react';
 import { api } from '../api/client';
+import { formatPhone } from '../lib/phone';
 import { useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { QrCode } from '../components/QrCode';
 import { Badge } from '../components/ui/Badge';
 import { primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
-import type { Employee } from '../types';
+import type { Employee, EmployeeCertification, EmployeeTraining } from '../types';
 
 const TRAINING_TYPES = ['의무', '보수'];
+const CERT_TYPES = ['국가기술자격', '면허', '교육이수증', '기타'];
 
 function addMonths(date: string, months: number) {
   const d = new Date(date);
@@ -55,6 +57,9 @@ export function EmployeeDetailModal({
   const [emp, setEmp] = useState<Employee | null>(initial ?? null);
   const [loadError, setLoadError] = useState('');
   const [adding, setAdding] = useState<'cert' | 'training' | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editCert, setEditCert] = useState<EmployeeCertification | null>(null);
+  const [editTraining, setEditTraining] = useState<EmployeeTraining | null>(null);
   const { labels: certOptions } = useCommonCodes('자격증 종류');
   const { labels: trainingOptions } = useCommonCodes('교육 과정');
 
@@ -77,14 +82,16 @@ export function EmployeeDetailModal({
     onChanged();
   };
 
-  const certs = [...(emp?.certifications ?? [])].sort(
-    (a, b) =>
-      new Date(b.expiryDate ?? b.acquiredDate ?? 0).getTime() - new Date(a.expiryDate ?? a.acquiredDate ?? 0).getTime(),
-  );
-  const trainings = [...(emp?.trainings ?? [])].sort(
-    (a, b) =>
-      new Date(b.nextDueDate ?? b.trainingDate ?? 0).getTime() - new Date(a.nextDueDate ?? a.trainingDate ?? 0).getTime(),
-  );
+  // 만료가 임박한 순. 여러 건을 보유했을 때 급한 것이 먼저 보여야 한다.
+  const byUrgency = <T,>(rows: T[], due: (r: T) => string | null | undefined) =>
+    [...rows].sort((a, b) => {
+      const da = due(a) ? new Date(due(a) as string).getTime() : Number.POSITIVE_INFINITY;
+      const db = due(b) ? new Date(due(b) as string).getTime() : Number.POSITIVE_INFINITY;
+      return da - db;
+    });
+
+  const certs = byUrgency(emp?.certifications ?? [], (c) => c.expiryDate ?? c.acquiredDate);
+  const trainings = byUrgency(emp?.trainings ?? [], (t) => t.nextDueDate ?? t.trainingDate);
 
   const removeCert = async (id: string) => {
     if (!window.confirm('이 자격 이력을 삭제하시겠습니까?')) return;
@@ -114,9 +121,12 @@ export function EmployeeDetailModal({
             </span>
             <button
               type="button"
-              onClick={() => setAdding('cert')}
+              onClick={() => setEditing(true)}
               className={`${outlineBtnCls} ml-auto h-8 px-3 text-[12.5px]`}
             >
+              <Pencil size={14} /> 정보 수정
+            </button>
+            <button type="button" onClick={() => setAdding('cert')} className={`${outlineBtnCls} h-8 px-3 text-[12.5px]`}>
               <Plus size={14} /> 자격 이력 추가
             </button>
             <button type="button" onClick={() => setAdding('training')} className={`${outlineBtnCls} h-8 px-3 text-[12.5px]`}>
@@ -125,21 +135,32 @@ export function EmployeeDetailModal({
           </div>
 
           <div className="flex gap-5">
-            <dl className="grid flex-1 grid-cols-2 gap-x-5 gap-y-2">
-              {[
-                { label: '사번', value: emp.empCode ?? '-' },
-                { label: '성명', value: emp.name },
-                { label: '연락처', value: emp.phone ?? '-' },
-                { label: '입사일', value: day(emp.hireDate) },
-                { label: '부서', value: emp.department ?? '-' },
-                { label: '직급', value: emp.position ?? '-' },
-              ].map((f) => (
-                <div key={f.label} className="flex justify-between gap-3 border-b border-border pb-1.5">
-                  <dt className="text-[12.5px] text-text-sub">{f.label}</dt>
-                  <dd className="text-[13px] font-semibold text-text-strong">{f.value}</dd>
-                </div>
-              ))}
-            </dl>
+            {editing ? (
+              <BasicInfoForm
+                emp={emp}
+                onDone={() => {
+                  setEditing(false);
+                  refresh();
+                }}
+                onCancel={() => setEditing(false)}
+              />
+            ) : (
+              <dl className="grid flex-1 grid-cols-2 gap-x-5 gap-y-2">
+                {[
+                  { label: '사번', value: emp.empCode ?? '-' },
+                  { label: '성명', value: emp.name },
+                  { label: '연락처', value: emp.phone ?? '-' },
+                  { label: '입사일', value: day(emp.hireDate) },
+                  { label: '부서', value: emp.department ?? '-' },
+                  { label: '직급', value: emp.position ?? '-' },
+                ].map((f) => (
+                  <div key={f.label} className="flex justify-between gap-3 border-b border-border pb-1.5">
+                    <dt className="text-[12.5px] text-text-sub">{f.label}</dt>
+                    <dd className="text-[13px] font-semibold text-text-strong">{f.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
             {emp.empCode && (
               <div className="shrink-0">
                 <QrCode value={emp.empCode} fileName={`${emp.empCode}_${emp.name}`} size={130} />
@@ -147,26 +168,38 @@ export function EmployeeDetailModal({
             )}
           </div>
 
-          {adding === 'cert' && (
+          {(adding === 'cert' || editCert) && (
             <CertForm
+              key={editCert?.id ?? 'new-cert'}
               employeeId={employeeId}
               options={certOptions}
+              edit={editCert ?? undefined}
               onDone={() => {
                 setAdding(null);
+                setEditCert(null);
                 refresh();
               }}
-              onCancel={() => setAdding(null)}
+              onCancel={() => {
+                setAdding(null);
+                setEditCert(null);
+              }}
             />
           )}
-          {adding === 'training' && (
+          {(adding === 'training' || editTraining) && (
             <TrainingForm
+              key={editTraining?.id ?? 'new-training'}
               employeeId={employeeId}
               options={trainingOptions}
+              edit={editTraining ?? undefined}
               onDone={() => {
                 setAdding(null);
+                setEditTraining(null);
                 refresh();
               }}
-              onCancel={() => setAdding(null)}
+              onCancel={() => {
+                setAdding(null);
+                setEditTraining(null);
+              }}
             />
           )}
 
@@ -174,11 +207,13 @@ export function EmployeeDetailModal({
             title="자격사항"
             total={certs.length}
             emptyText="등록된 자격사항이 없습니다."
+            onEditLatest={certs[0] ? () => setEditCert(certs[0]) : undefined}
             onRemoveLatest={certs[0] ? () => removeCert(certs[0].id) : undefined}
             latest={
               certs[0] ? (
                 <div className="grid grid-cols-2 gap-x-5 gap-y-2">
                   <Field label="자격증명" value={certs[0].certName} />
+                  <Field label="구분" value={certs[0].certType ?? '-'} />
                   <Field label="취득일" value={day(certs[0].acquiredDate)} />
                   <Field label="만료일" value={day(certs[0].expiryDate)} />
                   <div className="flex justify-between gap-3">
@@ -190,8 +225,9 @@ export function EmployeeDetailModal({
             }
             rows={certs.slice(1).map((c) => ({
               id: c.id,
-              badge: <Badge tone="slate">자격</Badge>,
+              badge: <Badge tone="slate">{c.certType ?? '자격'}</Badge>,
               summary: `${c.certName} · ${day(c.acquiredDate)} ~ ${day(c.expiryDate)}`,
+              onEdit: () => setEditCert(c),
               onRemove: () => removeCert(c.id),
             }))}
           />
@@ -200,6 +236,7 @@ export function EmployeeDetailModal({
             title="교육이력"
             total={trainings.length}
             emptyText="등록된 교육이력이 없습니다."
+            onEditLatest={trainings[0] ? () => setEditTraining(trainings[0]) : undefined}
             onRemoveLatest={trainings[0] ? () => removeTraining(trainings[0].id) : undefined}
             latest={
               trainings[0] ? (
@@ -219,6 +256,7 @@ export function EmployeeDetailModal({
               id: t.id,
               badge: <Badge tone={t.trainingType === '의무' ? 'amber' : 'blue'}>{t.trainingType ?? '교육'}</Badge>,
               summary: `${t.trainingName} · 이수 ${day(t.trainingDate)} · 다음 ${day(t.nextDueDate)}`,
+              onEdit: () => setEditTraining(t),
               onRemove: () => removeTraining(t.id),
             }))}
           />
@@ -231,6 +269,109 @@ export function EmployeeDetailModal({
         </div>
       )}
     </FormModal>
+  );
+}
+
+// 기본정보 수정 — 사번은 근태 QR 식별자라 바꾸지 않는다.
+function BasicInfoForm({
+  emp,
+  onDone,
+  onCancel,
+}: {
+  emp: Employee;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const { labels: departmentOptions } = useCommonCodes('부서');
+  const { labels: positionOptions } = useCommonCodes('직급');
+
+  const [name, setName] = useState(emp.name);
+  const [phone, setPhone] = useState(emp.phone ?? '');
+  const [department, setDepartment] = useState(emp.department ?? '');
+  const [position, setPosition] = useState(emp.position ?? '');
+  const [hireDate, setHireDate] = useState(emp.hireDate ? emp.hireDate.slice(0, 10) : '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setError('');
+    setSaving(true);
+    try {
+      await api.patch(`/api/employees/${emp.id}`, { name, phone, department, position, hireDate });
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '저장하지 못했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const label = 'mb-1 block text-[12px] font-semibold text-text-sub';
+
+  return (
+    <form onSubmit={submit} className="flex-1 rounded-[10px] border border-primary/40 bg-input p-3.5">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+        <div>
+          <span className={label}>사번</span>
+          <div className="flex h-[38px] items-center text-[13px] font-semibold text-text-faint">
+            {emp.empCode ?? '-'} <span className="ml-2 text-[11.5px]">(변경 불가)</span>
+          </div>
+        </div>
+        <div>
+          <label className={label}>성명</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
+        </div>
+        <div>
+          <label className={label}>연락처</label>
+          <input
+            value={phone}
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
+            placeholder="010-0000-0000"
+            className={inputCls}
+          />
+        </div>
+        <div>
+          <label className={label}>입사일</label>
+          <input type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} className={inputCls} />
+        </div>
+        <div>
+          <label className={label}>부서</label>
+          <input
+            list="edit-departments"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            className={inputCls}
+          />
+          <datalist id="edit-departments">
+            {departmentOptions.map((o) => (
+              <option key={o} value={o} />
+            ))}
+          </datalist>
+        </div>
+        <div>
+          <label className={label}>직급</label>
+          <input list="edit-positions" value={position} onChange={(e) => setPosition(e.target.value)} className={inputCls} />
+          <datalist id="edit-positions">
+            {positionOptions.map((o) => (
+              <option key={o} value={o} />
+            ))}
+          </datalist>
+        </div>
+      </div>
+
+      {error && <p className="mt-2 text-[12.5px] text-danger">{error}</p>}
+
+      <div className="mt-3 flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className={`${outlineBtnCls} h-9 px-3`}>
+          취소
+        </button>
+        <button type="submit" disabled={saving} className={`${primaryBtnCls} h-9 px-4`}>
+          {saving ? '저장 중...' : '저장'}
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -249,13 +390,15 @@ function HistorySection({
   latest,
   rows,
   total,
+  onEditLatest,
   onRemoveLatest,
   emptyText,
 }: {
   title: string;
   latest: React.ReactNode;
-  rows: { id: string; badge: React.ReactNode; summary: string; onRemove: () => void }[];
+  rows: { id: string; badge: React.ReactNode; summary: string; onEdit: () => void; onRemove: () => void }[];
   total: number;
+  onEditLatest?: () => void;
   onRemoveLatest?: () => void;
   emptyText: string;
 }) {
@@ -263,21 +406,33 @@ function HistorySection({
 
   return (
     <div>
-      <h3 className="mb-2 text-[14px] font-extrabold text-text-strong">최근 {title}</h3>
+      {/* 삭제 버튼을 카드 위에 겹쳐 놓으면 우측 정렬된 첫 줄 값(취득일·구분)을 가린다.
+          제목 줄에 두어 값과 부딪히지 않게 한다. */}
+      <div className="mb-2 flex items-center gap-3">
+        <h3 className="text-[14px] font-extrabold text-text-strong">최근 {title}</h3>
+        {onEditLatest && (
+          <button
+            type="button"
+            onClick={onEditLatest}
+            title="수정"
+            className="ml-auto flex items-center gap-1 text-[12px] text-text-faint hover:text-primary"
+          >
+            <Pencil size={13} /> 수정
+          </button>
+        )}
+        {onRemoveLatest && (
+          <button
+            type="button"
+            onClick={onRemoveLatest}
+            title="삭제"
+            className={`flex items-center gap-1 text-[12px] text-text-faint hover:text-danger ${onEditLatest ? '' : 'ml-auto'}`}
+          >
+            <Trash2 size={13} /> 삭제
+          </button>
+        )}
+      </div>
       {latest ? (
-        <div className="relative rounded-[10px] border border-border bg-input p-3.5">
-          {latest}
-          {onRemoveLatest && (
-            <button
-              type="button"
-              onClick={onRemoveLatest}
-              title="삭제"
-              className="absolute top-2 right-2 text-text-faint hover:text-danger"
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
-        </div>
+        <div className="rounded-[10px] border border-border bg-input p-3.5">{latest}</div>
       ) : (
         <p className="text-[13px] text-text-faint">{emptyText}</p>
       )}
@@ -300,10 +455,13 @@ function HistorySection({
                   <span className="text-[13px] text-text">{r.summary}</span>
                   <button
                     type="button"
-                    onClick={r.onRemove}
-                    title="삭제"
-                    className="ml-auto text-text-faint hover:text-danger"
+                    onClick={r.onEdit}
+                    title="수정"
+                    className="ml-auto text-text-faint hover:text-primary"
                   >
+                    <Pencil size={14} />
+                  </button>
+                  <button type="button" onClick={r.onRemove} title="삭제" className="text-text-faint hover:text-danger">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -316,38 +474,51 @@ function HistorySection({
   );
 }
 
+// 추가·수정 겸용. edit이 있으면 그 행을 고치고, 없으면 새 이력을 쌓는다.
 function CertForm({
   employeeId,
   options,
+  edit,
   onDone,
   onCancel,
 }: {
   employeeId: string;
   options: string[];
+  edit?: EmployeeCertification;
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [certName, setCertName] = useState('');
-  const [acquiredDate, setAcquiredDate] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
+  const [certName, setCertName] = useState(edit?.certName ?? '');
+  const [certType, setCertType] = useState(edit?.certType ?? CERT_TYPES[0]);
+  const [acquiredDate, setAcquiredDate] = useState(edit?.acquiredDate?.slice(0, 10) ?? '');
+  const [expiryDate, setExpiryDate] = useState(edit?.expiryDate?.slice(0, 10) ?? '');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!certName.trim()) return;
-    await api.post(`/api/employees/${employeeId}/certifications`, {
-      certName,
-      acquiredDate: acquiredDate || undefined,
-      expiryDate: expiryDate || undefined,
-    });
+    const body = { certName, certType, acquiredDate, expiryDate };
+    if (edit) {
+      await api.patch(`/api/employees/${employeeId}/certifications/${edit.id}`, body);
+    } else {
+      await api.post(`/api/employees/${employeeId}/certifications`, body);
+    }
     onDone();
   };
 
   return (
     <form onSubmit={submit} className="rounded-[10px] border border-primary/40 bg-input p-3.5">
       <p className="mb-2 text-[13px] font-bold text-text-strong">
-        자격 이력 추가 <span className="font-normal text-text-faint">— 갱신 시에도 새 이력으로 쌓입니다</span>
+        {edit ? (
+          <>
+            자격 이력 수정 <span className="font-normal text-text-faint">— 잘못 적은 값을 고칩니다</span>
+          </>
+        ) : (
+          <>
+            자격 이력 추가 <span className="font-normal text-text-faint">— 갱신 시에도 새 이력으로 쌓입니다</span>
+          </>
+        )}
       </p>
-      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,150px)_minmax(0,150px)_auto] items-center gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,132px)_minmax(0,150px)_minmax(0,150px)_auto] items-center gap-2">
         <input
           list="detail-certs"
           value={certName}
@@ -360,6 +531,18 @@ function CertForm({
             <option key={o} value={o} />
           ))}
         </datalist>
+        <select
+          value={certType}
+          onChange={(e) => setCertType(e.target.value)}
+          aria-label="구분"
+          className={`${inputCls} min-w-0 px-2`}
+        >
+          {CERT_TYPES.map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
         <input
           type="date"
           value={acquiredDate}
@@ -376,7 +559,7 @@ function CertForm({
         />
         <div className="flex gap-2">
           <button type="submit" className={`${primaryBtnCls} h-9 whitespace-nowrap px-4`}>
-            추가
+            {edit ? '저장' : '추가'}
           </button>
           <button type="button" onClick={onCancel} className={`${outlineBtnCls} h-9 px-3`}>
             취소
@@ -390,38 +573,53 @@ function CertForm({
 function TrainingForm({
   employeeId,
   options,
+  edit,
   onDone,
   onCancel,
 }: {
   employeeId: string;
   options: string[];
+  edit?: EmployeeTraining;
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [trainingName, setTrainingName] = useState('');
-  const [trainingType, setTrainingType] = useState('의무');
-  const [trainingDate, setTrainingDate] = useState('');
-  const [cycleMonths, setCycleMonths] = useState('12');
-  const [nextDueDate, setNextDueDate] = useState('');
+  const [trainingName, setTrainingName] = useState(edit?.trainingName ?? '');
+  const [trainingType, setTrainingType] = useState(edit?.trainingType ?? '의무');
+  const [trainingDate, setTrainingDate] = useState(edit?.trainingDate?.slice(0, 10) ?? '');
+  const [cycleMonths, setCycleMonths] = useState(edit?.cycleMonths ? String(edit.cycleMonths) : '12');
+  const [nextDueDate, setNextDueDate] = useState(edit?.nextDueDate?.slice(0, 10) ?? '');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!trainingName.trim()) return;
-    await api.post(`/api/employees/${employeeId}/trainings`, {
+    const body = {
       trainingName,
-      trainingType: trainingType || undefined,
-      trainingDate: trainingDate || undefined,
-      cycleMonths: cycleMonths ? Number(cycleMonths) : undefined,
+      trainingType,
+      trainingDate,
+      cycleMonths,
       // 비우면 이수일 + 주기로 서버가 산출한다.
-      nextDueDate: nextDueDate || undefined,
-    });
+      nextDueDate,
+    };
+    if (edit) {
+      await api.patch(`/api/employees/${employeeId}/trainings/${edit.id}`, body);
+    } else {
+      await api.post(`/api/employees/${employeeId}/trainings`, body);
+    }
     onDone();
   };
 
   return (
     <form onSubmit={submit} className="rounded-[10px] border border-primary/40 bg-input p-3.5">
       <p className="mb-2 text-[13px] font-bold text-text-strong">
-        교육 이력 추가 <span className="font-normal text-text-faint">— 재이수 시에도 새 이력으로 쌓입니다</span>
+        {edit ? (
+          <>
+            교육 이력 수정 <span className="font-normal text-text-faint">— 잘못 적은 값을 고칩니다</span>
+          </>
+        ) : (
+          <>
+            교육 이력 추가 <span className="font-normal text-text-faint">— 재이수 시에도 새 이력으로 쌓입니다</span>
+          </>
+        )}
       </p>
       <div className="grid grid-cols-[minmax(0,1fr)_84px_minmax(0,132px)_72px_minmax(0,132px)_auto] items-center gap-2">
         <input
@@ -474,7 +672,7 @@ function TrainingForm({
         />
         <div className="flex gap-2">
           <button type="submit" className={`${primaryBtnCls} h-9 whitespace-nowrap px-4`}>
-            추가
+            {edit ? '저장' : '추가'}
           </button>
           <button type="button" onClick={onCancel} className={`${outlineBtnCls} h-9 px-3`}>
             취소

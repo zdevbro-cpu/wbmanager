@@ -4,7 +4,11 @@ import { api } from '../api/client';
 import { useProjects, useItemMasters } from '../hooks/useMasters';
 import { InboundFormPage } from './InboundFormPage';
 import { FormModal } from '../components/FormModal';
-import { pageTitleCls, sectionTitleCls, primaryBtnCls, inputCls, tableWrapCls, thCls, tdCls, trCls } from '../components/ui/classes';
+import { NumberInput } from '../components/ui/NumberInput';
+import { formatNumber } from '../lib/number';
+import { pageTitleCls, sectionTitleCls, primaryBtnCls, inputCls, tableWrapCls, thCls,
+  thNumCls,
+  tdNumCls, tdCls, trCls } from '../components/ui/classes';
 import type { InventoryValuation, InventoryValuationRow, LedgerEntry } from '../types';
 
 const SOURCE_LABEL: Record<string, string> = { project: '차수전용', global: '전체적용', base: '기준단가' };
@@ -66,7 +70,7 @@ export function InventoryPage() {
         <>
           <div className="mb-4 w-fit rounded-[12px] border border-primary bg-card p-4">
             <div className="text-[13px] text-text-faint">재고평가 합계</div>
-            <div className="tabular text-[22px] font-extrabold text-text-strong">{valuation.totalValuation.toLocaleString()}원</div>
+            <div className="tabular text-[22px] font-extrabold text-text-strong">{formatNumber(valuation.totalValuation)}원</div>
           </div>
 
           <div className={`${tableWrapCls} mb-8`}>
@@ -75,12 +79,12 @@ export function InventoryPage() {
                 <tr className="border-y border-border">
                   <th className={thCls}>프로젝트</th>
                   <th className={thCls}>품목</th>
-                  <th className={thCls}>입고합계</th>
-                  <th className={thCls}>출고합계</th>
-                  <th className={thCls}>잔량</th>
-                  <th className={thCls}>적용단가</th>
+                  <th className={thNumCls}>입고합계</th>
+                  <th className={thNumCls}>출고합계</th>
+                  <th className={thNumCls}>잔량</th>
+                  <th className={thNumCls}>적용단가</th>
                   <th className={thCls}>단가출처</th>
-                  <th className={thCls}>평가금액</th>
+                  <th className={thNumCls}>평가금액</th>
                 </tr>
               </thead>
               <tbody>
@@ -88,12 +92,12 @@ export function InventoryPage() {
                   <tr key={`${r.projectId}-${r.itemCode}`} onClick={() => openDrilldown(r)} className={`${trCls} cursor-pointer`}>
                     <td className={tdCls}>{r.projectName}</td>
                     <td className={tdCls}>{r.itemName}</td>
-                    <td className={`${tdCls} tabular`}>{r.inWeight}</td>
-                    <td className={`${tdCls} tabular`}>{r.outWeight}</td>
-                    <td className={`${tdCls} tabular font-bold text-text-strong`}>{r.remaining}</td>
-                    <td className={`${tdCls} tabular`}>{r.unitPrice.toLocaleString()}</td>
+                    <td className={tdNumCls}>{formatNumber(r.inWeight)}</td>
+                    <td className={tdNumCls}>{formatNumber(r.outWeight)}</td>
+                    <td className={`${tdNumCls} font-bold text-text-strong`}>{formatNumber(r.remaining)}</td>
+                    <td className={tdNumCls}>{formatNumber(r.unitPrice)}</td>
                     <td className={tdCls}>{SOURCE_LABEL[r.priceSource]}</td>
-                    <td className={`${tdCls} tabular`}>{r.valuationAmount.toLocaleString()}</td>
+                    <td className={tdNumCls}>{formatNumber(r.valuationAmount)}</td>
                   </tr>
                 ))}
                 {valuation.rows.length === 0 && (
@@ -124,7 +128,7 @@ export function InventoryPage() {
             <h2 className="text-[16px] font-extrabold text-text-strong">
               {drilldown.row.projectName} / {drilldown.row.itemName}
               <span className="ml-2 text-[13px] font-semibold text-text-sub">
-                잔량 <span className="tabular">{drilldown.row.remaining}</span>kg
+                잔량 <span className="tabular">{formatNumber(drilldown.row.remaining)}</span>kg
               </span>
             </h2>
             <button type="button" onClick={() => setDrilldown(null)} className="text-text-sub hover:text-text-strong">
@@ -144,10 +148,10 @@ export function InventoryPage() {
                   <th className={thCls}>차량번호</th>
                   <th className={thCls}>운전자</th>
                   <th className={thCls}>연락처</th>
-                  <th className={thCls}>총중량</th>
-                  <th className={thCls}>공차중량</th>
-                  <th className={thCls}>감량</th>
-                  <th className={thCls}>반영중량</th>
+                  <th className={thNumCls}>총중량</th>
+                  <th className={thNumCls}>공차중량</th>
+                  <th className={thNumCls}>감량</th>
+                  <th className={thNumCls}>반영중량</th>
                   <th className={thCls}>비고</th>
                 </tr>
               </thead>
@@ -170,10 +174,10 @@ export function InventoryPage() {
                       <td className={`${tdCls} whitespace-nowrap`}>{d?.vehicleNo ?? '-'}</td>
                       <td className={tdCls}>{d?.driverName ?? '-'}</td>
                       <td className={`${tdCls} whitespace-nowrap`}>{d?.driverPhone ?? '-'}</td>
-                      <td className={`${tdCls} tabular`}>{d?.grossWeight ?? '-'}</td>
-                      <td className={`${tdCls} tabular`}>{d?.tareWeight ?? '-'}</td>
-                      <td className={`${tdCls} tabular`}>{d?.lossWeight ?? '-'}</td>
-                      <td className={`${tdCls} tabular font-bold text-text-strong`}>{e.weight}</td>
+                      <td className={tdNumCls}>{formatNumber(d?.grossWeight)}</td>
+                      <td className={tdNumCls}>{formatNumber(d?.tareWeight)}</td>
+                      <td className={tdNumCls}>{formatNumber(d?.lossWeight)}</td>
+                      <td className={`${tdNumCls} font-bold text-text-strong`}>{formatNumber(e.weight)}</td>
                       <td className={tdCls}>{d?.memo ?? '-'}</td>
                     </tr>
                   );
@@ -234,7 +238,12 @@ function PriceRegisterForm({
             </option>
           ))}
         </select>
-        <input type="number" step="0.01" placeholder="단가" value={price} onChange={(e) => setPrice(e.target.value)} className={`${inputCls} w-[120px]`} />
+        <NumberInput
+          placeholder="단가"
+          value={price}
+          onChange={setPrice}
+          className={`${inputCls} tabular w-[120px] text-right`}
+        />
         <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-auto`}>
           <option value="">전체 적용</option>
           {projects.map((p) => (

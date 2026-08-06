@@ -11,6 +11,8 @@ import { uploadStagedFiles } from '../lib/uploadStaged';
 import { API_BASE_URL } from '../api/client';
 import { auth } from '../lib/firebase';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
+import { NumberInput } from '../components/ui/NumberInput';
+import { formatNumber } from '../lib/number';
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import {
   pageTitleCls,
@@ -22,6 +24,8 @@ import {
   inputCls,
   tableWrapCls,
   thCls,
+  thNumCls,
+  tdNumCls,
   tdCls,
   trCls,
 } from '../components/ui/classes';
@@ -520,16 +524,11 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
         </div>
         <div>
           <label className={labelCls}>취득가액(원)</label>
-          <input type="number" value={form.acquireCost} onChange={(e) => set({ acquireCost: e.target.value })} className={inputCls} />
+          <NumberInput value={form.acquireCost} onChange={(v) => set({ acquireCost: v })} />
         </div>
         <div>
           <label className={labelCls}>내용연수(개월)</label>
-          <input
-            type="number"
-            value={form.usefulLifeMonth}
-            onChange={(e) => set({ usefulLifeMonth: e.target.value })}
-            className={inputCls}
-          />
+          <NumberInput value={form.usefulLifeMonth} onChange={(v) => set({ usefulLifeMonth: v })} />
         </div>
 
         <p className="col-span-3 border-t border-border pt-3 text-[13px] font-bold text-text-strong">
@@ -585,11 +584,9 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
 
             <div>
               <label className={labelCls}>현재 주행거리(km)</label>
-              <input
-                type="number"
+              <NumberInput
                 value={vehicle.currentMileage}
-                onChange={(e) => setVehicle({ ...vehicle, currentMileage: e.target.value })}
-                className={inputCls}
+                onChange={(v) => setVehicle({ ...vehicle, currentMileage: v })}
               />
             </div>
             <div>
@@ -654,12 +651,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
             </div>
             <div>
               <label className={labelCls}>수량</label>
-              <input
-                type="number"
-                value={equipment.quantity}
-                onChange={(e) => setEquipment({ ...equipment, quantity: e.target.value })}
-                className={inputCls}
-              />
+              <NumberInput value={equipment.quantity} onChange={(v) => setEquipment({ ...equipment, quantity: v })} />
             </div>
 
             <div className="flex items-end gap-4 pb-2">
@@ -693,11 +685,9 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
             </div>
             <div>
               <label className={labelCls}>점검 주기(개월)</label>
-              <input
-                type="number"
+              <NumberInput
                 value={equipment.inspectionCycleMonth}
-                onChange={(e) => setEquipment({ ...equipment, inspectionCycleMonth: e.target.value })}
-                className={inputCls}
+                onChange={(v) => setEquipment({ ...equipment, inspectionCycleMonth: v })}
               />
             </div>
 
@@ -844,14 +834,14 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                 { label: '책임자', value: show(asset.manager?.name) },
                 { label: '위치', value: show(asset.location) },
                 { label: '취득일', value: date(asset.acquiredAt) },
-                { label: '취득가액', value: asset.acquireCost ? Number(asset.acquireCost).toLocaleString() : '-' },
+                { label: '취득가액', value: formatNumber(asset.acquireCost) },
                 { label: '내용연수(개월)', value: show(asset.usefulLifeMonth) },
                 ...(asset.assetType === 'VEHICLE'
                   ? [
                       { label: '차량번호', value: show(asset.vehicle?.plateNo) },
                       { label: '차종', value: show(asset.vehicle?.vehicleType) },
                       { label: '연료', value: show(asset.vehicle?.fuelType) },
-                      { label: '주행거리(km)', value: show(asset.vehicle?.currentMileage) },
+                      { label: '주행거리(km)', value: formatNumber(asset.vehicle?.currentMileage) },
                       { label: '보험사', value: show(asset.vehicle?.insuranceCompany) },
                       { label: '보험 만료', value: date(asset.vehicle?.insuranceEnd) },
                       { label: '다음 정기검사', value: date(asset.vehicle?.inspectionNext) },
@@ -984,8 +974,8 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                       <th className={thCls}>완료일</th>
                       <th className={thCls}>업체</th>
                       <th className={thCls}>조치</th>
-                      <th className={thCls}>계기판</th>
-                      <th className={thCls}>비용</th>
+                      <th className={thNumCls}>계기판</th>
+                      <th className={thNumCls}>비용</th>
                       <th className={thCls}>다음 예정</th>
                       <th className={thCls}>상태</th>
                       <th className={thCls}>관리</th>
@@ -998,8 +988,8 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                         <td className={`${tdCls} tabular`}>{date(m.completedAt)}</td>
                         <td className={tdCls}>{show(m.vendor?.name)}</td>
                         <td className={tdCls}>{show(m.action ?? m.symptom)}</td>
-                        <td className={`${tdCls} tabular`}>{show(m.mileageAt)}</td>
-                        <td className={`${tdCls} tabular`}>{m.cost ? Number(m.cost).toLocaleString() : '-'}</td>
+                        <td className={tdNumCls}>{formatNumber(m.mileageAt)}</td>
+                        <td className={tdNumCls}>{formatNumber(m.cost)}</td>
                         <td className={`${tdCls} tabular`}>{date(m.nextDueDate)}</td>
                         <td className={tdCls}>
                           <Badge tone={m.status === '완료' ? 'green' : 'amber'}>{m.status}</Badge>

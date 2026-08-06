@@ -6,6 +6,8 @@ import { MasterSelect } from '../components/MasterSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
 import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
+import { NumberInput } from '../components/ui/NumberInput';
+import { formatNumber } from '../lib/number';
 import { uploadStagedFiles } from '../lib/uploadStaged';
 import { pageTitleCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { OutboundSale } from '../types';
@@ -77,15 +79,17 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
   // 실중량 = 총중량 - 공차중량 (거래처 감량 반영 전)
   const actualWeightNum =
     grossWeight && tareWeight ? Number(grossWeight) - Number(tareWeight) : null;
-  const actualWeight = actualWeightNum === null ? '-' : actualWeightNum.toFixed(3);
+  const actualWeight = formatNumber(actualWeightNum);
 
   // 정산중량 = 총중량 - 공차중량 - 감량
   const settledWeightNum =
     actualWeightNum === null ? null : actualWeightNum - Number(lossWeight || 0);
-  const settledWeight = settledWeightNum === null ? '-' : settledWeightNum.toFixed(3);
+  // 입력창에는 콤마 없는 원시값이, 화면에는 포맷값이 필요하다.
+  const settledWeightRaw = settledWeightNum === null ? '' : String(Number(settledWeightNum.toFixed(3)));
+  const settledWeight = formatNumber(settledWeightNum);
 
   // 재고반영중량은 ecount 필수 항목이며 정산중량과 일치해야 한다.
-  const stockWeightValue = stockWeight === '' ? settledWeight : stockWeight;
+  const stockWeightValue = stockWeight === '' ? settledWeightRaw : stockWeight;
   const stockMismatch =
     settledWeightNum !== null && stockWeight !== '' && Number(stockWeight) !== settledWeightNum;
 
@@ -213,11 +217,11 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
 
           <div>
             <label className={labelCls}>공차중량(kg)</label>
-            <input type="number" step="0.001" value={tareWeight} onChange={(e) => setTareWeight(e.target.value)} className={inputCls} />
+            <NumberInput value={tareWeight} onChange={setTareWeight} decimals={3} />
           </div>
           <div>
             <label className={labelCls}>총중량(kg)</label>
-            <input type="number" step="0.001" value={grossWeight} onChange={(e) => setGrossWeight(e.target.value)} className={inputCls} />
+            <NumberInput value={grossWeight} onChange={setGrossWeight} decimals={3} />
           </div>
 
           <div>
@@ -227,11 +231,11 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
 
           <div>
             <label className={labelCls}>거래처 감량 전 실중량(kg)</label>
-            <input type="number" step="0.001" value={preLossWeight} onChange={(e) => setPreLossWeight(e.target.value)} className={inputCls} />
+            <NumberInput value={preLossWeight} onChange={setPreLossWeight} decimals={3} />
           </div>
           <div>
             <label className={labelCls}>감량(kg)</label>
-            <input type="number" step="0.001" value={lossWeight} onChange={(e) => setLossWeight(e.target.value)} className={inputCls} />
+            <NumberInput value={lossWeight} onChange={setLossWeight} decimals={3} />
           </div>
 
           <div>
@@ -245,13 +249,7 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
 
           <div>
             <label className={labelCls}>재고반영중량(kg)</label>
-            <input
-              type="number"
-              step="0.001"
-              value={stockWeightValue === '-' ? '' : stockWeightValue}
-              onChange={(e) => setStockWeight(e.target.value)}
-              className={inputCls}
-            />
+            <NumberInput value={stockWeightValue} onChange={setStockWeight} decimals={3} />
             {stockMismatch && (
               <p className="mt-1 flex items-center gap-1 text-[12.5px] text-danger">
                 <AlertTriangle size={13} /> 정산중량({settledWeight}kg)과 일치하지 않습니다. 확인 후 저장하세요.
@@ -261,13 +259,13 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
 
           <div>
             <label className={labelCls}>단가(원)</label>
-            <input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className={inputCls} />
+            <NumberInput value={unitPrice} onChange={setUnitPrice} />
           </div>
 
           <p className="col-span-3 text-[13px] text-text-sub">
-            공급가액: <span className="tabular font-bold text-text-strong">{amountNum === null ? '-' : amountNum.toLocaleString()}</span> 원
+            공급가액: <span className="tabular font-bold text-text-strong">{formatNumber(amountNum)}</span> 원
             <span className="mx-2 text-text-faint">/</span>
-            부가세: <span className="tabular font-bold text-text-strong">{vatNum === null ? '-' : vatNum.toLocaleString()}</span> 원
+            부가세: <span className="tabular font-bold text-text-strong">{formatNumber(vatNum)}</span> 원
           </p>
 
           <div>

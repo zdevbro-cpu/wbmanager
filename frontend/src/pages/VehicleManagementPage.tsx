@@ -3,6 +3,8 @@ import { Truck, Wrench, ClipboardCheck, FileText } from 'lucide-react';
 import { api } from '../api/client';
 import { useVehicles } from '../hooks/useMasters';
 import { FileUpload } from '../components/FileUpload';
+import { NumberInput } from '../components/ui/NumberInput';
+import { formatNumber } from '../lib/number';
 import { Badge } from '../components/ui/Badge';
 import {
   pageTitleCls,
@@ -13,6 +15,8 @@ import {
   cardPadCls,
   tableWrapCls,
   thCls,
+  thNumCls,
+  tdNumCls,
   tdCls,
   trCls,
 } from '../components/ui/classes';
@@ -284,7 +288,7 @@ function MaintenanceSection({ vehicle }: { vehicle: Vehicle }) {
         </div>
         <div className="min-w-[130px]">
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">비용(원)</label>
-          <input type="number" step="1" value={cost} onChange={(e) => setCost(e.target.value)} className={inputCls} />
+          <NumberInput value={cost} onChange={setCost} />
         </div>
         <button type="submit" className={`${outlineBtnCls} shrink-0`}>
           등록
@@ -309,7 +313,7 @@ function MaintenanceSection({ vehicle }: { vehicle: Vehicle }) {
             <tr className="border-y border-border">
               <th className={thCls}>정비일</th>
               <th className={thCls}>내용</th>
-              <th className={thCls}>비용</th>
+              <th className={thNumCls}>비용</th>
               <th className={thCls}>명세서</th>
             </tr>
           </thead>
@@ -318,7 +322,7 @@ function MaintenanceSection({ vehicle }: { vehicle: Vehicle }) {
               <tr key={m.id} className={trCls}>
                 <td className={`${tdCls} tabular`}>{m.maintenanceDate.slice(0, 10)}</td>
                 <td className={tdCls}>{m.description ?? '-'}</td>
-                <td className={`${tdCls} tabular`}>{m.cost ? Number(m.cost).toLocaleString() : '-'}</td>
+                <td className={tdNumCls}>{formatNumber(m.cost)}</td>
                 <td className={tdCls}>
                   <AttachmentLinks attachments={m.attachments} />
                 </td>

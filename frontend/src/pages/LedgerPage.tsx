@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ListTree, Download, Paperclip, X } from 'lucide-react';
 import { api } from '../api/client';
+import { formatNumber } from '../lib/number';
 import { downloadFile } from '../lib/download';
 import { useProjects, useVendors, useItemMasters } from '../hooks/useMasters';
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { FilterField, DateRangeField } from '../components/FilterField';
-import { pageTitleCls, outlineBtnCls, inputCls, tableWrapCls, thCls, tdCls, trCls } from '../components/ui/classes';
+import { pageTitleCls, outlineBtnCls, inputCls, tableWrapCls, thCls,
+  thNumCls,
+  tdNumCls, tdCls, trCls } from '../components/ui/classes';
 import type { LedgerRow, LedgerDetail, LedgerType } from '../types';
 
 const TYPE_LABEL: Record<LedgerType, string> = {
@@ -169,8 +172,8 @@ export function LedgerPage() {
               <th className={thCls}>프로젝트</th>
               <th className={thCls}>거래처</th>
               <th className={thCls}>품목</th>
-              <th className={thCls}>중량(kg)</th>
-              <th className={thCls}>금액</th>
+              <th className={thNumCls}>중량(kg)</th>
+              <th className={thNumCls}>금액</th>
               <th className={thCls}>첨부</th>
             </tr>
           </thead>
@@ -184,8 +187,8 @@ export function LedgerPage() {
                 <td className={tdCls}>{r.projectName}</td>
                 <td className={tdCls}>{r.vendorName ?? '-'}</td>
                 <td className={tdCls}>{r.itemName ?? '-'}</td>
-                <td className={`${tdCls} tabular`}>{r.weight}</td>
-                <td className={`${tdCls} tabular`}>{r.amount ?? '-'}</td>
+                <td className={tdNumCls}>{formatNumber(r.weight)}</td>
+                <td className={tdNumCls}>{formatNumber(r.amount)}</td>
                 <td className={tdCls}>
                   {r.attachmentCount > 0 ? (
                     <span className="inline-flex items-center gap-1 text-text-sub">

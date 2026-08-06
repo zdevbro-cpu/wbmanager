@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { formatPhone } from '../lib/phone';
 import { inputCls, primaryBtnCls } from '../components/ui/classes';
 
 export function LoginPage() {
@@ -9,6 +10,7 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -20,7 +22,7 @@ export function LoginPage() {
       if (mode === 'login') {
         await login(email, password);
       } else {
-        await register(email, password, name);
+        await register(email, password, name, phone);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '처리 중 오류가 발생했습니다.');
@@ -65,10 +67,25 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           {mode === 'register' && (
-            <div>
-              <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">이름</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
-            </div>
+            <>
+              <div>
+                <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">이름</label>
+                <input value={name} onChange={(e) => setName(e.target.value)} required className={inputCls} />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">연락처</label>
+                {/* 승인 담당자가 신청자 본인 확인·연락에 쓴다. 하이픈은 자동으로 붙는다. */}
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={phone}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
+                  placeholder="010-0000-0000"
+                  required
+                  className={inputCls}
+                />
+              </div>
+            </>
           )}
           <div>
             <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">이메일</label>

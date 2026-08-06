@@ -3,6 +3,19 @@ export interface Vendor {
   name: string;
   vendorType?: string | null;
   isTemporary: boolean;
+  // 세금계산서 발행 정보
+  bizRegNo?: string | null;
+  corpRegNo?: string | null;
+  ceoName?: string | null;
+  bizType?: string | null;
+  bizItem?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  fax?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
+  memo?: string | null;
 }
 
 export interface ItemMaster {
@@ -13,6 +26,36 @@ export interface ItemMaster {
   itemName: string;
   basePrice?: string | null;
   isTemporary: boolean;
+  // 식별·분류
+  aliasNames?: string | null;
+  minorCategory?: string | null;
+  material?: string | null;
+  grade?: string | null;
+  // 단위·수량
+  baseUnit?: string | null;
+  weighUnit?: string | null;
+  purchaseUnit?: string | null;
+  salesUnit?: string | null;
+  unitFactor?: string | null;
+  qtyManaged?: boolean;
+  // 스크랩 업종 특수
+  usageType?: string | null;
+  convertToItemCode?: string | null;
+  expectedYield?: string | null;
+  deductImpurity?: string | null;
+  deductSoil?: string | null;
+  deductMoisture?: string | null;
+  zoneCode?: string | null;
+  priceLinked?: boolean;
+  priceRefCode?: string | null;
+  // 세무·회계
+  taxType?: string | null;
+  recycleDeductible?: boolean;
+  ecountItemCode?: string | null;
+  accountCode?: string | null;
+  // 상태
+  isActive?: boolean;
+  createdBy?: string | null;
 }
 
 export interface Project {
@@ -278,6 +321,7 @@ export interface EmployeeCertification {
   id: string;
   employeeId: string;
   certName: string;
+  certType?: string | null; // 국가기술자격 / 면허 / 교육이수증 / 기타
   acquiredDate?: string | null;
   expiryDate?: string | null;
 }
@@ -288,6 +332,7 @@ export interface EmployeeTraining {
   trainingName: string;
   trainingType?: string | null; // 의무 / 보수
   trainingDate?: string | null; // 이수일
+  cycleMonths?: number | null; // 교육 주기(개월) — 이수일 + 주기 = 다음 예정일
   nextDueDate?: string | null; // 다음 교육 예정일
 }
 

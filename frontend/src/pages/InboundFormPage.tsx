@@ -7,6 +7,8 @@ import { MasterSelect } from '../components/MasterSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
 import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
+import { NumberInput } from '../components/ui/NumberInput';
+import { formatNumber } from '../lib/number';
 import { uploadStagedFiles } from '../lib/uploadStaged';
 import { pageTitleCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { Inbound } from '../types';
@@ -93,10 +95,12 @@ export function InboundFormPage({ embedded = false, onCreated }: Props = {}) {
     grossWeight && tareWeight
       ? Number(grossWeight) - Number(tareWeight) - Number(lossWeight || 0)
       : null;
-  const netWeight = netWeightNum === null ? '-' : netWeightNum.toFixed(3);
+  // 입력창에 넣을 원시값과 화면에 보여 줄 포맷값을 분리한다. 콤마가 붙은 값을 입력창에 넣으면 안 된다.
+  const netWeightRaw = netWeightNum === null ? '' : String(Number(netWeightNum.toFixed(3)));
+  const netWeight = formatNumber(netWeightNum);
 
   // 재고반영중량은 ecount 필수 항목이며 입고량과 일치해야 한다. 미입력 시 입고량을 그대로 사용한다.
-  const stockWeightValue = stockWeight === '' ? netWeight : stockWeight;
+  const stockWeightValue = stockWeight === '' ? netWeightRaw : stockWeight;
   const stockMismatch =
     netWeightNum !== null && stockWeight !== '' && Number(stockWeight) !== netWeightNum;
 
@@ -247,28 +251,22 @@ export function InboundFormPage({ embedded = false, onCreated }: Props = {}) {
 
           <div>
             <label className={labelCls}>총중량(kg)</label>
-            <input type="number" step="0.001" value={grossWeight} onChange={(e) => setGrossWeight(e.target.value)} required className={inputCls} />
+            <NumberInput value={grossWeight} onChange={setGrossWeight} decimals={3} required />
           </div>
 
           <div>
             <label className={labelCls}>공차중량(kg)</label>
-            <input type="number" step="0.001" value={tareWeight} onChange={(e) => setTareWeight(e.target.value)} required className={inputCls} />
+            <NumberInput value={tareWeight} onChange={setTareWeight} decimals={3} required />
           </div>
 
           <div>
             <label className={labelCls}>감량(kg)</label>
-            <input type="number" step="0.001" value={lossWeight} onChange={(e) => setLossWeight(e.target.value)} className={inputCls} />
+            <NumberInput value={lossWeight} onChange={setLossWeight} decimals={3} />
           </div>
 
           <div>
             <label className={labelCls}>재고반영중량(kg)</label>
-            <input
-              type="number"
-              step="0.001"
-              value={stockWeightValue === '-' ? '' : stockWeightValue}
-              onChange={(e) => setStockWeight(e.target.value)}
-              className={inputCls}
-            />
+            <NumberInput value={stockWeightValue} onChange={setStockWeight} decimals={3} />
           </div>
 
           <p className="col-span-3 text-[13px] text-text-sub">

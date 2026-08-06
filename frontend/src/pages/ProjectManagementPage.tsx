@@ -5,6 +5,8 @@ import { useVendors, useEmployees, useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FilterField, DateRangeField } from '../components/FilterField';
 import { Badge } from '../components/ui/Badge';
+import { NumberInput } from '../components/ui/NumberInput';
+import { formatNumber } from '../lib/number';
 import {
   pageTitleCls,
   sectionTitleCls,
@@ -23,7 +25,7 @@ const STATUSES = ['진행', '완료', '보류'];
 const DEFAULT_CYCLES = ['월별', '차수완료', '수시'];
 
 const day = (v?: string | null) => (v ? v.slice(0, 10) : '-');
-const money = (v?: string | null) => (v ? Number(v).toLocaleString() : '-');
+const money = (v?: string | null) => formatNumber(v);
 const show = (v?: string | null) => (v == null || v === '' ? '-' : v);
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
 
@@ -40,18 +42,27 @@ export function ProjectManagementPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [detail, setDetail] = useState<Project | null>(null);
+  const [detailEdit, setDetailEdit] = useState(false);
 
-  const reload = useCallback(() => {
-    api.get<Project[]>('/api/projects').then(setProjects);
+  const reload = useCallback(async () => {
+    const list = await api.get<Project[]>('/api/projects');
+    setProjects(list);
+    return list;
   }, []);
 
   useEffect(() => {
     reload();
   }, [reload]);
 
-  const changeStatus = async (p: Project, next: string) => {
+  // 상세 모달에서 바꾼 상태·수정 결과를 목록과 열려 있는 상세에 함께 반영한다.
+  const syncDetail = async (id: string) => {
+    const list = await reload();
+    setDetail(list.find((x) => x.id === id) ?? null);
+  };
+
+  const changeDetailStatus = async (p: Project, next: string) => {
     await api.patch(`/api/projects/${p.id}`, { status: next });
-    reload();
+    await syncDetail(p.id);
   };
 
   // 건수가 많지 않아 화면에서 거른다. 계약기간은 구간이 겹치는 건을 남긴다.
@@ -172,28 +183,6 @@ export function ProjectManagementPage() {
                     >
                       <Eye size={15} />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditing(p);
-                        setOpen(true);
-                      }}
-                      className="text-[12.5px] font-semibold text-primary hover:underline"
-                    >
-                      수정
-                    </button>
-                    <select
-                      value={p.status}
-                      onChange={(e) => changeStatus(p, e.target.value)}
-                      aria-label="상태 변경"
-                      className={`${inputCls} h-8 w-[86px] px-2 text-[12.5px]`}
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
                   </div>
                 </td>
               </tr>
@@ -214,8 +203,30 @@ export function ProjectManagementPage() {
       </p>
 
       {detail && (
-        <FormModal title={`${detail.roundName} 상세`} icon={Layers} onClose={() => setDetail(null)}>
-          <ProjectDetail project={detail} />
+        <FormModal
+          title={`${detail.roundName} ${detailEdit ? '수정' : '상세'}`}
+          icon={Layers}
+          onClose={() => {
+            setDetail(null);
+            setDetailEdit(false);
+          }}
+        >
+          {detailEdit ? (
+            <ProjectForm
+              project={detail}
+              onDone={async () => {
+                await syncDetail(detail.id);
+                setDetailEdit(false);
+              }}
+              onCancel={() => setDetailEdit(false)}
+            />
+          ) : (
+            <ProjectDetail
+              project={detail}
+              onEdit={() => setDetailEdit(true)}
+              onStatusChange={(next) => changeDetailStatus(detail, next)}
+            />
+          )}
         </FormModal>
       )}
 
@@ -246,7 +257,26 @@ export function ProjectManagementPage() {
   );
 }
 
-function ProjectDetail({ project: p }: { project: Project }) {
+function ProjectDetail({
+  project: p,
+  onEdit,
+  onStatusChange,
+}: {
+  project: Project;
+  onEdit: () => void;
+  onStatusChange: (next: string) => Promise<void>;
+}) {
+  const [saving, setSaving] = useState(false);
+
+  const changeStatus = async (next: string) => {
+    setSaving(true);
+    try {
+      await onStatusChange(next);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const fields: { label: string; value: string }[] = [
     { label: '프로젝트 코드', value: show(p.projectCode) },
     { label: '사업명', value: p.roundName },
@@ -260,12 +290,11 @@ function ProjectDetail({ project: p }: { project: Project }) {
     { label: '계약기간', value: `${day(p.startDate)} ~ ${day(p.endDate)}` },
     { label: '계약금액', value: `${money(p.contractAmount)}${p.vatIncluded ? ' (부가세 포함)' : ''}` },
     { label: '매입가', value: money(p.purchasePrice) },
-    { label: '계약중량(kg)', value: p.contractWeight ? Number(p.contractWeight).toLocaleString() : '-' },
+    { label: '계약중량(kg)', value: formatNumber(p.contractWeight) },
     { label: '계약보증금', value: money(p.deposit) },
     { label: '선급금', value: money(p.advancePayment) },
     { label: '정산주기', value: show(p.settlementCycle) },
     { label: '담당자', value: show(p.manager?.name) },
-    { label: '상태', value: p.status },
   ];
 
   return (
@@ -277,6 +306,24 @@ function ProjectDetail({ project: p }: { project: Project }) {
             <dd className="text-[13px] font-semibold text-text-strong">{f.value}</dd>
           </div>
         ))}
+        <div className="flex items-center justify-between gap-3 border-b border-border pb-1.5">
+          <dt className="text-[12.5px] text-text-sub">상태</dt>
+          <dd>
+            <select
+              value={p.status}
+              disabled={saving}
+              onChange={(e) => changeStatus(e.target.value)}
+              aria-label="상태 변경"
+              className={`${inputCls} h-8 w-[86px] px-2 text-[12.5px]`}
+            >
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </dd>
+        </div>
       </dl>
       {p.memo && (
         <div>
@@ -284,6 +331,11 @@ function ProjectDetail({ project: p }: { project: Project }) {
           <p className="text-[13px] text-text">{p.memo}</p>
         </div>
       )}
+      <div className="flex justify-end gap-2 border-t border-border pt-3">
+        <button type="button" onClick={onEdit} className={primaryBtnCls}>
+          수정
+        </button>
+      </div>
     </div>
   );
 }
@@ -426,7 +478,11 @@ function ProjectForm({
         </div>
         <div>
           <label className={labelCls}>상태</label>
-          <select value={f.status} onChange={(e) => set({ status: e.target.value })} className={inputCls}>
+          <select
+            value={f.status}
+            onChange={(e) => set({ status: e.target.value })}
+            className={`${inputCls}${project ? ' status-alert' : ''}`}
+          >
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -437,21 +493,11 @@ function ProjectForm({
 
         <div>
           <label className={labelCls}>계약금액(원)</label>
-          <input
-            type="number"
-            value={f.contractAmount}
-            onChange={(e) => set({ contractAmount: e.target.value })}
-            className={inputCls}
-          />
+          <NumberInput value={f.contractAmount} onChange={(v) => set({ contractAmount: v })} />
         </div>
         <div>
           <label className={labelCls}>매입가(원)</label>
-          <input
-            type="number"
-            value={f.purchasePrice}
-            onChange={(e) => set({ purchasePrice: e.target.value })}
-            className={inputCls}
-          />
+          <NumberInput value={f.purchasePrice} onChange={(v) => set({ purchasePrice: v })} />
         </div>
         <div className="flex items-end pb-2">
           <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
@@ -467,26 +513,15 @@ function ProjectForm({
 
         <div>
           <label className={labelCls}>계약(예상)중량(kg)</label>
-          <input
-            type="number"
-            step="0.001"
-            value={f.contractWeight}
-            onChange={(e) => set({ contractWeight: e.target.value })}
-            className={inputCls}
-          />
+          <NumberInput value={f.contractWeight} onChange={(v) => set({ contractWeight: v })} decimals={3} />
         </div>
         <div>
           <label className={labelCls}>계약보증금(원)</label>
-          <input type="number" value={f.deposit} onChange={(e) => set({ deposit: e.target.value })} className={inputCls} />
+          <NumberInput value={f.deposit} onChange={(v) => set({ deposit: v })} />
         </div>
         <div>
           <label className={labelCls}>선급금(원)</label>
-          <input
-            type="number"
-            value={f.advancePayment}
-            onChange={(e) => set({ advancePayment: e.target.value })}
-            className={inputCls}
-          />
+          <NumberInput value={f.advancePayment} onChange={(v) => set({ advancePayment: v })} />
         </div>
 
         <div>

@@ -1,8 +1,10 @@
 // 데모 데이터 — 화면·집계·보고서를 실제로 눌러 보기 위한 표본.
 // 이름·품목·금액은 원본 자료(원방_거래처별 스크랩 출고 현황_Sample.xlsx, 대표이사 손익보고)에서 따왔다.
 //
-//   node prisma/seed.js          데모 데이터 적재
-//   node prisma/seed.js --clear  데모 데이터 삭제(아래에 정의된 것만)
+//   node prisma/seed.js                     데모 데이터 적재
+//   node prisma/seed.js --clear             데모 데이터 삭제(아래에 정의된 것만)
+//   node prisma/seed.js --masters           마스터 검증용 목데이터만 적재
+//   node prisma/seed.js --masters --clear   마스터 검증용 목데이터만 삭제
 //
 // 지우기 기준을 이름으로 잡아 두었으므로, 실제 업무 데이터와 이름이 겹치지 않게 관리한다.
 import { PrismaClient } from '@prisma/client';
@@ -20,6 +22,229 @@ const ITEMS = [
   { itemCode: 'W-CONC', category: '폐기물', itemName: '폐콘크리트', basePrice: 20 },
   { itemCode: 'W-SYN', category: '폐기물', itemName: '폐합성수지', basePrice: 170 },
 ];
+// 마스터 화면 기능검증용 목데이터 — 이름·코드에 표식을 달아 --clear로 정확히 지운다.
+// 실제 거래가 참조하지 않으므로 화면에서 삭제 버튼도 그대로 눌러 볼 수 있다.
+const MOCK_VENDORS = [
+  {
+    name: '목데이터_한빛금속',
+    vendorType: '매입처',
+    bizRegNo: '123-45-67890',
+    corpRegNo: '110111-1234567',
+    ceoName: '김한빛',
+    bizType: '도매및소매업',
+    bizItem: '고철',
+    address: '경기 안산시 단원구 시화공단 1로 25',
+    phone: '031-486-1200',
+    fax: '031-486-1201',
+    contactName: '박정우',
+    contactPhone: '010-2211-0001',
+    contactEmail: 'tax@hanbit-metal.test',
+    memo: '계산서는 매월 말일 발행',
+  },
+  {
+    name: '목데이터_대성스크랩',
+    vendorType: '매각처',
+    bizRegNo: '214-81-33210',
+    corpRegNo: '110111-7654321',
+    ceoName: '이대성',
+    bizType: '제조업',
+    bizItem: '비철금속',
+    address: '충남 당진시 송악읍 부곡공단 3로 88',
+    phone: '041-357-4400',
+    fax: '041-357-4401',
+    contactName: '최수연',
+    contactPhone: '010-2211-0002',
+    contactEmail: 'account@daesung-scrap.test',
+    memo: '',
+  },
+  {
+    name: '목데이터_동방자원',
+    vendorType: '매입처',
+    bizRegNo: '506-86-11223',
+    ceoName: '정동방',
+    bizType: '서비스업',
+    bizItem: '재활용',
+    address: '경북 포항시 남구 철강로 210',
+    phone: '054-278-9100',
+    contactName: '한지훈',
+    contactPhone: '010-2211-0003',
+    contactEmail: 'jhan@dongbang.test',
+  },
+  {
+    name: '목데이터_남부환경',
+    vendorType: '폐기물업체',
+    bizRegNo: '618-81-55667',
+    corpRegNo: '110111-9988776',
+    ceoName: '오남부',
+    bizType: '환경복원업',
+    bizItem: '폐기물처리',
+    address: '경남 김해시 진례면 산업로 44',
+    phone: '055-345-7788',
+    contactName: '서민아',
+    contactPhone: '010-2211-0004',
+    contactEmail: 'waste@nambu-env.test',
+    memo: '지정폐기물 허가 보유',
+  },
+  {
+    // 임시 등록 배지·정식 승격 버튼 확인용
+    name: '목데이터_에스제이메탈',
+    vendorType: '매각처',
+    isTemporary: true,
+    contactName: '신재영',
+    contactPhone: '010-2211-0005',
+  },
+];
+
+const MOCK_ITEMS = [
+  {
+    itemCode: 'MOCK-FE-H1',
+    itemName: '중량철(목데이터)',
+    aliasNames: '중량, 중량철, 헤비',
+    category: '철스크랩',
+    subCategory: '생철',
+    minorCategory: '중량',
+    material: '철',
+    grade: '중량',
+    baseUnit: 'kg',
+    weighUnit: 'kg',
+    purchaseUnit: 'kg',
+    salesUnit: 'ton',
+    unitFactor: 1000,
+    qtyManaged: false,
+    usageType: '매출전용',
+    expectedYield: 96.5,
+    deductImpurity: 1.5,
+    deductSoil: 0.5,
+    deductMoisture: 0.8,
+    zoneCode: 'A-01',
+    priceLinked: true,
+    priceRefCode: '고철시세',
+    taxType: '과세',
+    recycleDeductible: false,
+    ecountItemCode: 'EC-FE-H1',
+    accountCode: '146',
+    isActive: true,
+  },
+  {
+    itemCode: 'MOCK-FE-MIX',
+    itemName: '혼합철(목데이터)',
+    aliasNames: '혼합철, 잡철, 섞인고철',
+    category: '철스크랩',
+    subCategory: '혼합',
+    material: '철',
+    grade: '경량',
+    baseUnit: 'kg',
+    weighUnit: 'kg',
+    purchaseUnit: 'kg',
+    salesUnit: 'kg',
+    unitFactor: 1,
+    qtyManaged: false,
+    usageType: '매입전용',
+    convertToItemCode: 'MOCK-FE-H1',
+    expectedYield: 78.0,
+    deductImpurity: 4.0,
+    deductSoil: 2.5,
+    deductMoisture: 1.2,
+    zoneCode: 'A-02',
+    priceLinked: true,
+    priceRefCode: '고철시세',
+    taxType: '과세',
+    recycleDeductible: true,
+    ecountItemCode: 'EC-FE-MIX',
+    accountCode: '146',
+    isActive: true,
+  },
+  {
+    itemCode: 'MOCK-STS-316',
+    itemName: 'STS316(목데이터)',
+    aliasNames: '316, 스텐316',
+    category: '비철',
+    subCategory: '스테인리스',
+    minorCategory: '316계열',
+    material: '스테인리스',
+    grade: '선반설',
+    baseUnit: 'kg',
+    purchaseUnit: 'kg',
+    salesUnit: 'kg',
+    unitFactor: 1,
+    qtyManaged: true,
+    usageType: '공용',
+    expectedYield: 92.0,
+    deductImpurity: 3.0,
+    zoneCode: 'B-01',
+    priceLinked: true,
+    priceRefCode: 'LME',
+    taxType: '과세',
+    ecountItemCode: 'EC-STS-316',
+    accountCode: '146',
+    isActive: true,
+  },
+  {
+    itemCode: 'MOCK-AL-CAN',
+    itemName: '알루미늄캔(목데이터)',
+    aliasNames: '알캔, 캔',
+    category: '비철',
+    subCategory: '알루미늄',
+    material: '알루미늄',
+    grade: '경량',
+    baseUnit: 'kg',
+    purchaseUnit: 'kg',
+    salesUnit: 'kg',
+    unitFactor: 1,
+    qtyManaged: true,
+    usageType: '매입전용',
+    deductImpurity: 6.0,
+    deductMoisture: 3.0,
+    zoneCode: 'B-02',
+    priceLinked: false,
+    taxType: '과세',
+    recycleDeductible: true,
+    isActive: true,
+  },
+  {
+    itemCode: 'MOCK-CU-MIX',
+    itemName: '동스크랩(목데이터)',
+    aliasNames: '동, 구리, 파동',
+    category: '비철',
+    subCategory: '동',
+    material: '동',
+    grade: '중량',
+    baseUnit: 'kg',
+    purchaseUnit: 'kg',
+    salesUnit: 'kg',
+    unitFactor: 1,
+    usageType: '공용',
+    expectedYield: 88.0,
+    zoneCode: 'B-03',
+    priceLinked: true,
+    priceRefCode: 'LME',
+    taxType: '과세',
+    ecountItemCode: 'EC-CU-MIX',
+    isActive: true,
+  },
+  {
+    // 미사용 배지 확인용
+    itemCode: 'MOCK-W-WOOD',
+    itemName: '폐목재(목데이터)',
+    aliasNames: '폐목, 나무',
+    category: '기타',
+    subCategory: '폐기물',
+    material: '목재',
+    baseUnit: 'ton',
+    purchaseUnit: 'ton',
+    salesUnit: 'ton',
+    unitFactor: 1,
+    usageType: '매출전용',
+    zoneCode: 'C-01',
+    taxType: '면세',
+    accountCode: '831',
+    isActive: false,
+  },
+];
+
+const MOCK_VENDOR_NAMES = MOCK_VENDORS.map((v) => v.name);
+const MOCK_ITEM_CODES = MOCK_ITEMS.map((i) => i.itemCode);
+
 const EMPLOYEES = ['김태정', '이민수', '박기술', '최안전'];
 const WORKERS = ['정해철', '오상근', '한민규', '서동일'];
 const ASSET_NOS = ['V-2026-901', 'V-2026-902', 'E-2026-901'];
@@ -33,6 +258,26 @@ const day = (offset) => {
 const iso = (d) => d.toISOString();
 // 날짜별로 물량이 달라야 추이·농도 그래프가 의미를 갖는다.
 const wave = (i, base, amp) => Math.round(base + Math.sin(i / 2.3) * amp + (i % 3) * amp * 0.2);
+
+// 마스터 화면 검증용 목데이터만 따로 넣고 뺀다 — 거래 데모 데이터는 건드리지 않는다.
+async function seedMockMasters() {
+  // 다시 돌려도 화면에서 고친 값이 기준값으로 되돌아가도록 update까지 채운다.
+  for (const v of MOCK_VENDORS) {
+    const found = await prisma.vendor.findFirst({ where: { name: v.name } });
+    if (found) await prisma.vendor.update({ where: { id: found.id }, data: v });
+    else await prisma.vendor.create({ data: v });
+  }
+  for (const item of MOCK_ITEMS) {
+    await prisma.itemMaster.upsert({ where: { itemCode: item.itemCode }, update: item, create: item });
+  }
+  console.log(`목데이터 적재 — 거래처 ${MOCK_VENDORS.length}건, 품목 ${MOCK_ITEMS.length}건`);
+}
+
+async function clearMockMasters() {
+  const items = await prisma.itemMaster.deleteMany({ where: { itemCode: { in: MOCK_ITEM_CODES } } });
+  const vendors = await prisma.vendor.deleteMany({ where: { name: { in: MOCK_VENDOR_NAMES } } });
+  console.log(`목데이터 삭제 — 거래처 ${vendors.count}건, 품목 ${items.count}건`);
+}
 
 async function clear() {
   const projects = await prisma.project.findMany({ where: { roundName: { in: PROJECT_NAMES } } });
@@ -81,6 +326,8 @@ async function clear() {
   await prisma.itemMaster.deleteMany({ where: { itemCode: { in: ITEMS.map((i) => i.itemCode) } } });
   await prisma.vendor.deleteMany({ where: { name: { in: VENDOR_NAMES } } });
 
+  await clearMockMasters();
+
   console.log('데모 데이터를 삭제했습니다.');
 }
 
@@ -101,6 +348,8 @@ async function seed() {
     update: {},
     create: { itemCode: 'UNCLASSIFIED', category: '미분류', itemName: '미분류' },
   });
+
+  await seedMockMasters();
 
   // ── 임직원 (자격 만료·교육 예정이 알림에 걸리도록 날짜를 흩뿌린다) ──
   const employees = {};
@@ -559,10 +808,19 @@ async function seed() {
   });
 }
 
-const mode = process.argv.includes('--clear') ? 'clear' : 'seed';
+const args = process.argv;
+const mode = args.includes('--masters')
+  ? args.includes('--clear')
+    ? 'clear-masters'
+    : 'masters'
+  : args.includes('--clear')
+    ? 'clear'
+    : 'seed';
 
 try {
   if (mode === 'clear') await clear();
+  else if (mode === 'masters') await seedMockMasters();
+  else if (mode === 'clear-masters') await clearMockMasters();
   else await seed();
 } catch (err) {
   console.error('실패:', err);
