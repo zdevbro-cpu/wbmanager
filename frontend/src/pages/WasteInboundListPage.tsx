@@ -89,6 +89,8 @@ export function WasteInboundListPage() {
         setFilter={setFilter}
         onAdd={() => setOpen(true)}
         onDelete={remove}
+        exportType="waste_inbound"
+        exportName="폐기물입고현황"
         emptyText="등록된 폐기물 입고 내역이 없습니다."
       />
 

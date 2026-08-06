@@ -81,6 +81,8 @@ export function InboundListPage() {
         setFilter={setFilter}
         onAdd={() => setOpen(true)}
         onDelete={remove}
+        exportType="inbound"
+        exportName="입고현황"
         emptyText="등록된 입고 내역이 없습니다."
       />
 
