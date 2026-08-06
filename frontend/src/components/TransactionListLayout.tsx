@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react';
-import { Plus, Paperclip, Eye, Trash2, X, RotateCcw, type LucideIcon } from 'lucide-react';
+import { Plus, Paperclip, Eye, Trash2, X, RotateCcw, Download, type LucideIcon } from 'lucide-react';
 import { useProjects, useItemMasters, useVehicles, useEmployees } from '../hooks/useMasters';
 import { useEscapeClose } from '../hooks/useEscapeClose';
+import { downloadFile } from '../lib/download';
 import { pageTitleCls, primaryBtnCls, outlineBtnCls, inputCls, cardCls, tableWrapCls, thCls, trCls } from './ui/classes';
 import type { Attachment } from '../types';
 
@@ -55,6 +56,9 @@ interface Props<T> {
   setFilter: (f: TxFilter) => void;
   onAdd: () => void;
   onDelete: (row: T) => void;
+  /** 엑셀 내보내기 대상 — /api/list-exports/{exportType} 로 현재 필터가 그대로 전달된다. */
+  exportType?: 'inbound' | 'waste_inbound' | 'outbound_sale' | 'waste_outbound';
+  exportName?: string;
   emptyText: string;
 }
 
@@ -72,6 +76,8 @@ export function TransactionListLayout<T>({
   setFilter,
   onAdd,
   onDelete,
+  exportType,
+  exportName,
   emptyText,
 }: Props<T>) {
   const { projects } = useProjects();
@@ -84,6 +90,16 @@ export function TransactionListLayout<T>({
   const tdBase = 'px-3 py-1.5 text-[13px] text-text';
   const set = (patch: Partial<TxFilter>) => setFilter({ ...filter, ...patch });
 
+  // 화면에 걸린 조건 그대로 내려받아, 파일과 화면이 어긋나지 않게 한다.
+  const exportExcel = () => {
+    if (!exportType) return;
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(filter)) if (v) params.set(k, v);
+    downloadFile(`/api/list-exports/${exportType}?${params.toString()}`, `${exportName ?? exportType}.xlsx`).catch(
+      (err: unknown) => window.alert(err instanceof Error ? err.message : '엑셀 내려받기에 실패했습니다.'),
+    );
+  };
+
   const confirmDelete = (row: T) => {
     if (window.confirm('이 건을 삭제하시겠습니까? 재고 반영분도 함께 취소됩니다.')) onDelete(row);
   };
@@ -94,9 +110,16 @@ export function TransactionListLayout<T>({
         <Icon size={20} className="text-primary" />
         <h1 className={pageTitleCls}>{title}</h1>
         <span className="ml-1 text-[13px] text-text-sub">{rows.length}건</span>
-        <button type="button" onClick={onAdd} className={`${primaryBtnCls} ml-auto`}>
-          <Plus size={15} /> {addLabel}
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          {exportType && (
+            <button type="button" onClick={exportExcel} className={`${outlineBtnCls} whitespace-nowrap`}>
+              <Download size={15} /> 엑셀 다운로드
+            </button>
+          )}
+          <button type="button" onClick={onAdd} className={primaryBtnCls}>
+            <Plus size={15} /> {addLabel}
+          </button>
+        </div>
       </div>
 
       {/* 필터 바 — 1줄 배치. 각 항목에 라벨을 달아 좁아져도 무엇을 고르는지 알 수 있게 한다. */}
