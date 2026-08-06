@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TrendingUp, TrendingDown, FileDown, FilePlus } from 'lucide-react';
 import { api } from '../api/client';
 import { formatNumber } from '../lib/number';
 import { downloadFile } from '../lib/download';
+import { kstToday } from '../lib/datetime';
 import { useProjects } from '../hooks/useMasters';
 import {
   pageTitleCls,
@@ -23,6 +24,15 @@ export function PnlPage() {
   const [projectId, setProjectId] = useState('');
   const [pnl, setPnl] = useState<ProjectPnl | null>(null);
   const [published, setPublished] = useState('');
+  const autoSelected = useRef(false);
+
+  // 목록은 최근 생성순이므로 첫 항목이 가장 최근 프로젝트다.
+  // 최초 1회만 자동 선택하고, 이후에는 사용자가 고른 프로젝트를 그대로 둔다.
+  useEffect(() => {
+    if (autoSelected.current || projects.length === 0) return;
+    autoSelected.current = true;
+    setProjectId(projects[0].id);
+  }, [projects]);
 
   useEffect(() => {
     if (!projectId) {
@@ -57,7 +67,7 @@ export function PnlPage() {
                 await api.post('/api/reports/publish', {
                   reportType: 'pnl',
                   projectId,
-                  date: new Date().toISOString().slice(0, 10),
+                  date: kstToday(),
                 });
                 setPublished('보고서 보관함에 발행했습니다.');
               }}

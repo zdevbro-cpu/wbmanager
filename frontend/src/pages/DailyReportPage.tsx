@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { CalendarDays, FileText, FileType2, Download, Plus, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 import { api } from '../api/client';
 import { downloadFile } from '../lib/download';
+import { kstToday, kstThisMonth } from '../lib/datetime';
 import { useProjects } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FilterField } from '../components/FilterField';
@@ -21,8 +22,8 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 const kg = (v: number) => `${Math.round(v).toLocaleString()}kg`;
 const won = (v: number) => `${Math.round(v).toLocaleString()}원`;
-const thisMonth = () => new Date().toISOString().slice(0, 7);
-const today = () => new Date().toISOString().slice(0, 10);
+const thisMonth = () => kstThisMonth();
+const today = () => kstToday();
 
 function shiftMonth(month: string, delta: number) {
   const [y, m] = month.split('-').map(Number);

@@ -3,6 +3,7 @@ import { ShieldCheck } from 'lucide-react';
 import { api } from '../api/client';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { pageTitleCls, tableWrapCls, thCls, tdCls, trCls, outlineBtnCls } from '../components/ui/classes';
+import { kstStamp } from '../lib/datetime';
 import type { AppUser } from '../context/AuthContext';
 
 const STATUS_LABEL: Record<string, string> = { pending: '대기중', approved: '승인됨', rejected: '거절됨' };
@@ -59,7 +60,7 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
                 <td className={`${tdCls} tabular whitespace-nowrap`}>{u.phone ?? '-'}</td>
                 <td className={tdCls}>{u.email}</td>
                 <td className={`${tdCls} tabular whitespace-nowrap`}>
-                  {u.lastLoginAt ? `${u.lastLoginAt.slice(0, 16).replace('T', ' ')} (${u.loginCount ?? 0}회)` : '접속 기록 없음'}
+                  {u.lastLoginAt ? `${kstStamp(u.lastLoginAt)} (${u.loginCount ?? 0}회)` : '접속 기록 없음'}
                 </td>
                 <td className={`${tdCls} tabular whitespace-nowrap`}>{u.lastLoginIp ?? '-'}</td>
                 <td className={tdCls}>

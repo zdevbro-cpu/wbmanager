@@ -13,6 +13,7 @@ import { auth } from '../lib/firebase';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { NumberInput } from '../components/ui/NumberInput';
 import { formatNumber } from '../lib/number';
+import { kstToday } from '../lib/datetime';
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import {
   pageTitleCls,
@@ -794,7 +795,7 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
   const completeSchedule = async (s: AssetSchedule) => {
     await api.patch(`/api/assets/${assetId}/schedules/${s.id}`, {
       status: '완료',
-      completedAt: new Date().toISOString().slice(0, 10),
+      completedAt: kstToday(),
     });
     load();
     onChanged();

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BellRing, Truck, Award, GraduationCap, Boxes, AlertTriangle, Clock, CalendarClock } from 'lucide-react';
+import { BellRing, Truck, Award, GraduationCap, Boxes, AlertTriangle, Clock, CalendarClock, ArrowUpRight } from 'lucide-react';
 import { api } from '../api/client';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import {
@@ -216,8 +216,13 @@ function AlertRow({ item }: { item: ExpiringItem }) {
         <Badge tone={overdue ? 'red' : 'amber'}>{overdue ? '기한 초과' : '임박'}</Badge>
       </td>
       <td className={tdCls}>
-        <Link to={meta.to} className="text-[12.5px] font-semibold text-primary hover:underline">
-          이동
+        <Link
+          to={meta.to}
+          title={`${meta.label} 화면으로 이동`}
+          aria-label={`${meta.label} 화면으로 이동`}
+          className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border text-primary hover:bg-hover"
+        >
+          <ArrowUpRight size={15} />
         </Link>
       </td>
     </tr>
