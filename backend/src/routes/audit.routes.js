@@ -8,8 +8,10 @@ const router = Router();
 router.get('/', requireAdmin, async (req, res) => {
   const { action, appUserId, ip, from, to, q } = req.query;
   const range = {};
-  if (from) range.gte = new Date(from);
-  if (to) range.lte = new Date(`${to}T23:59:59`);
+  // 조회 기간은 한국표준시 기준으로 해석한다.
+  // 오프셋을 명시하지 않으면 시작일은 UTC, 종료일은 서버 로컬로 해석돼 기준이 어긋난다.
+  if (from) range.gte = new Date(`${from}T00:00:00+09:00`);
+  if (to) range.lte = new Date(`${to}T23:59:59.999+09:00`);
 
   const logs = await prisma.auditLog.findMany({
     where: {

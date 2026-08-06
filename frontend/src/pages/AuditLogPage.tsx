@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ShieldAlert, RotateCcw, Globe } from 'lucide-react';
 import { api } from '../api/client';
 import { FilterField, DateRangeField } from '../components/FilterField';
+import { kstStamp } from '../lib/datetime';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import {
   pageTitleCls,
@@ -31,7 +32,7 @@ const ACTION_TONE: Record<string, BadgeTone> = {
   delete: 'red',
 };
 
-const stamp = (v: string) => v.slice(0, 16).replace('T', ' ');
+const stamp = (v: string) => kstStamp(v);
 
 // 접속·변경 이력 — 누가 언제 어디서 무엇을 바꿨는지 확인한다(관리자 전용).
 export function AuditLogPage({ embedded = false }: { embedded?: boolean }) {
