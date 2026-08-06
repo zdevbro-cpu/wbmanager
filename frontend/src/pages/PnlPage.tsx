@@ -6,8 +6,6 @@ import { downloadFile } from '../lib/download';
 import { useProjects } from '../hooks/useMasters';
 import {
   pageTitleCls,
-  sectionTitleCls,
-  cardPadCls,
   primaryBtnCls,
   outlineBtnCls,
   inputCls,
@@ -39,11 +37,11 @@ export function PnlPage() {
     <div>
       <div className="mb-5 flex items-center gap-2">
         <TrendingUp size={20} className="text-primary" />
-        <h1 className={pageTitleCls}>차수 손익 대시보드</h1>
+        <h1 className={pageTitleCls}>프로젝트 손익요약</h1>
       </div>
 
-      <div className="mb-5 flex items-center gap-2">
-        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-auto`}>
+      <div className="mb-5 flex w-full flex-wrap items-center gap-2 rounded-[12px] border border-border bg-card px-4 py-2.5">
+        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-[220px] min-w-0`}>
           <option value="">프로젝트(차수) 선택</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
@@ -83,7 +81,13 @@ export function PnlPage() {
 
       {pnl && (
         <div>
-          <div className="mb-4 grid grid-cols-5 gap-4">
+          <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <StatCard label="① 실현손익 (매각수입 − 총지출)" value={pnl.realizedPnl} big />
+            <StatCard label="② 재고평가 (미실현)" value={pnl.inventoryValuation} big />
+            <StatCard label="③ 예상 최종손익 (①+②)" value={pnl.expectedFinalPnl} big highlight />
+          </div>
+
+          <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
             <StatCard label="매입비" value={pnl.purchaseCost} />
             <StatCard label="매각수입" value={pnl.salesRevenue} positive />
             <StatCard label="폐기물비용" value={pnl.wasteCost} />
@@ -91,15 +95,9 @@ export function PnlPage() {
             <StatCard label="인건비" value={pnl.laborCost} />
           </div>
 
-          <div className="mb-8 flex flex-wrap gap-4">
-            <StatCard label="① 실현손익 (매각수입 − 총지출)" value={pnl.realizedPnl} big />
-            <StatCard label="② 재고평가 (미실현)" value={pnl.inventoryValuation} big />
-            <StatCard label="③ 예상 최종손익 (①+②)" value={pnl.expectedFinalPnl} big highlight />
-          </div>
-
-          <div className="mb-8 grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-4">
-            <div className={cardPadCls}>
-              <h2 className={`${sectionTitleCls} mb-3 text-[15px]`}>자재 회수 현황</h2>
+          <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+            <div className="rounded-[12px] border border-border bg-card px-4 py-3">
+              <h2 className="mb-2 text-[12.5px] font-semibold text-text-faint">자재 회수 현황</h2>
               <div className="mb-2 flex items-end justify-between">
                 <span className="text-[12.5px] text-text-sub">회수율 (매각중량 ÷ 반입중량)</span>
                 <span className="tabular text-[22px] font-extrabold text-text-strong">
@@ -132,8 +130,8 @@ export function PnlPage() {
               </dl>
             </div>
 
-            <div className={cardPadCls}>
-              <h2 className={`${sectionTitleCls} mb-3 text-[15px]`}>품목별 매각 구성</h2>
+            <div className="rounded-[12px] border border-border bg-card px-4 py-3">
+              <h2 className="mb-2 text-[12.5px] font-semibold text-text-faint">품목별 매각 구성</h2>
               {(pnl.salesByItem ?? []).length === 0 ? (
                 <p className="py-8 text-center text-[13px] text-text-faint">매각 실적이 없습니다.</p>
               ) : (
@@ -158,8 +156,8 @@ export function PnlPage() {
             </div>
           </div>
 
-          <h2 className={`${sectionTitleCls} mb-2`}>재고평가 상세</h2>
-          <div className={`${tableWrapCls} max-w-[720px]`}>
+          <h2 className="mb-2 text-[12.5px] font-semibold text-text-faint">재고평가 상세</h2>
+          <div className={`${tableWrapCls} mb-8`}>
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-y border-border">
@@ -212,16 +210,15 @@ function StatCard({
   return (
     <div
       className={[
-        'rounded-[12px] border bg-card p-4',
+        'rounded-[12px] border bg-card px-4 py-3',
         highlight ? 'border-primary' : 'border-border',
-        big ? 'min-w-[220px]' : 'min-w-[130px]',
       ].join(' ')}
     >
-      <div className="flex items-center gap-1 text-[12.5px] font-semibold text-text-faint">
-        {big && (negative ? <TrendingDown size={13} /> : <TrendingUp size={13} />)}
+      <div className="flex items-center gap-1 truncate text-[12.5px] font-semibold text-text-faint">
+        {big && (negative ? <TrendingDown size={13} className="shrink-0" /> : <TrendingUp size={13} className="shrink-0" />)}
         {label}
       </div>
-      <div className={`tabular ${big ? 'text-[22px]' : 'text-[18px]'} font-extrabold ${color}`}>
+      <div className={`tabular truncate ${big ? 'text-[22px]' : 'text-[18px]'} font-extrabold ${color}`}>
         {value.toLocaleString()}원
       </div>
     </div>
