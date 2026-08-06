@@ -5,12 +5,14 @@ import { useAuth } from '../context/AuthContext';
 import { BaseInfoPage } from './BaseInfoPage';
 import { MasterManagementPage } from './MasterManagementPage';
 import { UserApprovalPage } from './UserApprovalPage';
+import { AuditLogPage } from './AuditLogPage';
 import { pageTitleCls } from '../components/ui/classes';
 
-type Tab = 'masters' | 'base' | 'users';
+type Tab = 'masters' | 'base' | 'users' | 'audit';
 
 function initialTab(param: string | null, isAdmin: boolean): Tab {
   if (param === 'users' && isAdmin) return 'users';
+  if (param === 'audit' && isAdmin) return 'audit';
   if (param === 'masters') return 'masters';
   return 'base';
 }
@@ -44,9 +46,22 @@ export function SystemAdminPage() {
             사용자 승인 관리
           </TabButton>
         )}
+        {isAdmin && (
+          <TabButton active={tab === 'audit'} onClick={() => setTab('audit')}>
+            접속·변경 이력
+          </TabButton>
+        )}
       </div>
 
-      {tab === 'users' && isAdmin ? <UserApprovalPage embedded /> : tab === 'base' ? <BaseInfoPage /> : <MasterManagementPage embedded />}
+      {tab === 'users' && isAdmin ? (
+        <UserApprovalPage embedded />
+      ) : tab === 'audit' && isAdmin ? (
+        <AuditLogPage embedded />
+      ) : tab === 'base' ? (
+        <BaseInfoPage />
+      ) : (
+        <MasterManagementPage embedded />
+      )}
     </div>
   );
 }

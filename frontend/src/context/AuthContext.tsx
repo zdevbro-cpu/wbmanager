@@ -17,6 +17,9 @@ export interface AppUser {
   phone?: string | null;
   role: 'admin' | 'worker';
   status: 'pending' | 'approved' | 'rejected';
+  lastLoginAt?: string | null;
+  lastLoginIp?: string | null;
+  loginCount?: number;
 }
 
 interface AuthContextValue {

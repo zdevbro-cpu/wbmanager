@@ -47,6 +47,8 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
               <th className={thCls}>이메일</th>
               <th className={thCls}>역할</th>
               <th className={thCls}>상태</th>
+              <th className={thCls}>최종 접속</th>
+              <th className={thCls}>접속 IP</th>
               <th className={thCls}>작업</th>
             </tr>
           </thead>
@@ -56,6 +58,10 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
                 <td className={tdCls}>{u.name ?? '-'}</td>
                 <td className={`${tdCls} tabular whitespace-nowrap`}>{u.phone ?? '-'}</td>
                 <td className={tdCls}>{u.email}</td>
+                <td className={`${tdCls} tabular whitespace-nowrap`}>
+                  {u.lastLoginAt ? `${u.lastLoginAt.slice(0, 16).replace('T', ' ')} (${u.loginCount ?? 0}회)` : '접속 기록 없음'}
+                </td>
+                <td className={`${tdCls} tabular whitespace-nowrap`}>{u.lastLoginIp ?? '-'}</td>
                 <td className={tdCls}>
                   <select
                     value={u.role}

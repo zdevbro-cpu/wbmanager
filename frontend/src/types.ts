@@ -309,6 +309,29 @@ export interface Asset {
   attachments?: Attachment[];
 }
 
+export interface AuditLog {
+  id: string;
+  appUserId?: string | null;
+  appUser?: { name?: string | null; email: string; role: string } | null;
+  email?: string | null;
+  action: string;
+  method?: string | null;
+  path?: string | null;
+  statusCode?: number | null;
+  ip?: string | null;
+  userAgent?: string | null;
+  summary?: string | null;
+  createdAt: string;
+}
+
+export interface AuditIpSummary {
+  ip: string;
+  count: number;
+  firstAt: string;
+  lastAt: string;
+  users: string[];
+}
+
 export interface CommonCode {
   id: string;
   group: string;

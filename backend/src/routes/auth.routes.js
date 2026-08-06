@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { firebaseAuth } from '../lib/firebaseAdmin.js';
 import { prisma } from '../lib/prisma.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { recordLogin } from '../middleware/audit.js';
 
 const router = Router();
 
@@ -53,6 +54,12 @@ router.get('/me', async (req, res) => {
 
   const appUser = await prisma.appUser.findUnique({ where: { firebaseUid: decoded.uid } });
   if (!appUser) return res.status(404).json({ error: '가입 신청이 필요합니다.' });
+
+  // 접속 이력 — 화면을 옮길 때마다 호출되므로 기록은 30분 간격으로만 남는다.
+  if (appUser.status === 'approved') {
+    recordLogin(appUser, req).catch((err) => console.error('[audit] 로그인 기록 실패:', err.message));
+  }
+
   res.json(appUser);
 });
 
