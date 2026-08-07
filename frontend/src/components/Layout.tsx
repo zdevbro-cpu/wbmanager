@@ -124,6 +124,22 @@ export function Layout() {
             </div>
           ))}
         </nav>
+
+        {/* 어느 계정으로 들어와 있는지 화면을 옮겨도 계속 보이도록 사이드바 하단에 둔다. */}
+        <div className="flex items-center gap-2 border-t border-border-top px-4 py-3">
+          <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-[#9fb3d1]" title={appUser?.email ?? ''}>
+            {appUser?.email ?? '-'}
+          </span>
+          <button
+            type="button"
+            onClick={() => logout()}
+            title="로그아웃"
+            aria-label="로그아웃"
+            className="shrink-0 text-[#9fb3d1] hover:text-text-strong"
+          >
+            <LogOut size={15} />
+          </button>
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
