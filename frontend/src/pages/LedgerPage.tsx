@@ -78,13 +78,19 @@ export function LedgerPage() {
   // 선별은 품목을 바꿔 다는 재분류라 입출고 어느 쪽에도 넣지 않는다.
   const summary = useMemo(() => {
     const w = (v?: string | null) => (v == null ? 0 : Number(v));
-    let inbound = 0;
-    let outbound = 0;
+    let inScrap = 0;
+    let inWaste = 0;
+    let outSale = 0;
+    let outWaste = 0;
     for (const r of visibleRows) {
-      if (r.type === 'inbound' || r.type === 'waste_inbound') inbound += w(r.weight);
-      else if (r.type === 'outbound_sale' || r.type === 'waste_outbound') outbound += w(r.weight);
+      if (r.type === 'inbound') inScrap += w(r.weight);
+      else if (r.type === 'waste_inbound') inWaste += w(r.weight);
+      else if (r.type === 'outbound_sale') outSale += w(r.weight);
+      else if (r.type === 'waste_outbound') outWaste += w(r.weight);
     }
-    return { inbound, outbound, stock: inbound - outbound };
+    const inbound = inScrap + inWaste;
+    const outbound = outSale + outWaste;
+    return { inbound, outbound, inScrap, inWaste, outSale, outWaste, stock: inbound - outbound };
   }, [visibleRows]);
 
   useEffect(() => {
@@ -103,6 +109,29 @@ export function LedgerPage() {
         <span className="ml-1 text-[13px] text-text-sub">
           {visibleRows.length}건{visibleRows.length !== rows.length ? ` / ${rows.length}건` : ''}
         </span>
+      </div>
+
+      {/* 조회 조건 기준 재고 요약 — 검색 결과가 바뀌면 그대로 따라간다. */}
+      <div className="mb-4 grid grid-cols-3 gap-3">
+        <SummaryCard
+          label="입고 합계"
+          value={summary.inbound}
+          tone="blue"
+          lines={[
+            { label: '스크랩', value: summary.inScrap },
+            { label: '폐기물', value: summary.inWaste },
+          ]}
+        />
+        <SummaryCard
+          label="출고 합계"
+          value={summary.outbound}
+          tone="amber"
+          lines={[
+            { label: '매각', value: summary.outSale },
+            { label: '폐기물반출', value: summary.outWaste },
+          ]}
+        />
+        <SummaryCard label="재고" value={summary.stock} tone="green" hint="입고 합계 − 출고 합계" />
       </div>
 
       {/* 검색 필터 — 가로 스크롤 없이 한 줄에 모두 들어가도록 트랙 폭을 고정한다. */}
@@ -167,13 +196,6 @@ export function LedgerPage() {
         >
           <Download size={15} /> 엑셀(CSV)
         </button>
-      </div>
-
-      {/* 조회 조건 기준 재고 요약 — 목록은 그대로 두고 합계만 위에 얹는다. */}
-      <div className="mb-4 grid grid-cols-3 gap-3">
-        <SummaryCard label="입고 합계" value={summary.inbound} hint="입고 + 폐기물입고" />
-        <SummaryCard label="출고 합계" value={summary.outbound} hint="매각(출고) + 폐기물반출" />
-        <SummaryCard label="재고" value={summary.stock} hint="입고 합계 − 출고 합계" strong />
       </div>
 
       <div className={`${tableWrapCls} overflow-x-auto`}>
@@ -278,25 +300,45 @@ function EscPanel({ onClose, children }: { onClose: () => void; children: ReactN
   );
 }
 
-// 재고 요약 카드 — 목록 위에서 조회 조건의 입고·출고·잔량을 한눈에 보여 준다.
+// 재고 요약 카드 — 입고는 파랑, 출고는 주황, 재고는 초록으로 구분한다.
+// 스크랩과 폐기물은 성격이 달라 합계 아래에 내역으로 함께 보여 준다.
+const SUMMARY_COLOR = {
+  blue: '#60a5fa',
+  amber: '#f59e0b',
+  green: '#22c55e',
+} as const;
+
 function SummaryCard({
   label,
   value,
   hint,
-  strong = false,
+  tone,
+  lines,
 }: {
   label: string;
   value: number;
-  hint: string;
-  strong?: boolean;
+  hint?: string;
+  tone: keyof typeof SUMMARY_COLOR;
+  lines?: { label: string; value: number }[];
 }) {
+  const color = SUMMARY_COLOR[tone];
   return (
-    <div className="rounded-[14px] border border-border bg-card p-3">
+    <div className="rounded-[14px] border border-border bg-card p-3" style={{ borderLeft: `3px solid ${color}` }}>
       <p className="text-[12.5px] text-text-sub">{label}</p>
-      <p className={`tabular text-[20px] font-extrabold ${strong ? 'text-primary' : 'text-text-strong'}`}>
+      <p className="tabular text-[20px] font-extrabold" style={{ color }}>
         {formatNumber(value)} <span className="text-[13px] font-semibold text-text-sub">kg</span>
       </p>
-      <p className="mt-0.5 text-[12px] text-text-faint">{hint}</p>
+      {lines ? (
+        <div className="mt-1 flex gap-4">
+          {lines.map((l) => (
+            <span key={l.label} className="text-[12px] text-text-faint">
+              {l.label} <span className="tabular text-text-sub">{formatNumber(l.value)}</span>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-0.5 text-[12px] text-text-faint">{hint}</p>
+      )}
     </div>
   );
 }
