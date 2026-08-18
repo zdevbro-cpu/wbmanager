@@ -42,8 +42,8 @@ function Gate() {
         <Route path="/ledger" element={<LedgerPage />} />
         <Route path="/aggregation" element={<AggregationPage />} />
         <Route path="/daily-report" element={<DailyReportPage />} />
-        {/* 보고서 보관함은 출고보고 화면의 목록 보기로 합쳤다. */}
-        <Route path="/reports" element={<Navigate to="/daily-report?view=list" replace />} />
+        {/* 보고서 보관함(보기)과 일일 출고보고(발행)는 같은 화면을 쓰고 경로로 갈린다. */}
+        <Route path="/reports" element={<DailyReportPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/pnl" element={<PnlPage />} />
         <Route path="/waste" element={<WasteManagementPage />} />
