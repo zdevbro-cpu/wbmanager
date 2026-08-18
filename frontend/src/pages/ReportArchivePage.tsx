@@ -25,7 +25,7 @@ const day = (v?: string | null) => (v ? v.slice(0, 10) : '-');
 const num = (v: unknown) => (v == null ? '-' : Math.round(Number(v)).toLocaleString());
 
 // 발행한 보고서 보관함 — 일일 출고보고·손익보고를 발행 시점 그대로 남겨 다시 열람·전달한다.
-export function ReportArchivePage() {
+export function ReportArchivePage({ embedded = false }: { embedded?: boolean } = {}) {
   const { projects } = useProjects();
   const [rows, setRows] = useState<SavedReport[]>([]);
   const [reportType, setReportType] = useState('');
@@ -56,14 +56,16 @@ export function ReportArchivePage() {
 
   return (
     <div>
-      <div className="mb-5 flex items-center gap-2">
-        <FileText size={20} className="text-primary" />
-        <h1 className={pageTitleCls}>보고서 보관함</h1>
-        <span className="ml-1 text-[13px] text-text-sub">{rows.length}건</span>
-        <button type="button" onClick={() => setPublishing(true)} className={`${primaryBtnCls} ml-auto`}>
-          <Plus size={15} /> 보고서 발행
-        </button>
-      </div>
+      {!embedded && (
+        <div className="mb-5 flex items-center gap-2">
+          <FileText size={20} className="text-primary" />
+          <h1 className={pageTitleCls}>보고서 보관함</h1>
+          <span className="ml-1 text-[13px] text-text-sub">{rows.length}건</span>
+          <button type="button" onClick={() => setPublishing(true)} className={`${primaryBtnCls} ml-auto`}>
+            <Plus size={15} /> 보고서 발행
+          </button>
+        </div>
+      )}
 
       <div
         className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:280px_minmax(0,1fr)_minmax(0,1fr)_auto]`}

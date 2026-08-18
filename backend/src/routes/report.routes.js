@@ -293,8 +293,10 @@ router.get('/daily-diary', async (req, res) => {
 
   const [rows, reports] = await Promise.all([
     queryLedger({ from, to, projectId }),
+    // 일일보고뿐 아니라 그 기간에 발행된 손익보고도 함께 보여 준다.
     prisma.report.findMany({
-      where: { reportType: 'daily', reportDate: { gte: new Date(from), lte: new Date(`${to}T23:59:59`) } },
+      where: { reportDate: { gte: new Date(from), lte: new Date(`${to}T23:59:59`) } },
+      include: { project: true },
       orderBy: { createdAt: 'desc' },
     }),
   ]);
@@ -340,7 +342,13 @@ router.get('/daily-diary', async (req, res) => {
       byProject: [...projectMap.values()].sort((a, b) => b.weight - a.weight),
       reports: reports
         .filter((rep) => rep.reportDate.toISOString().slice(0, 10) === date)
-        .map((rep) => ({ id: rep.id, title: rep.title, createdAt: rep.createdAt })),
+        .map((rep) => ({
+          id: rep.id,
+          title: rep.title,
+          reportType: rep.reportType,
+          projectName: rep.project?.roundName ?? null,
+          createdAt: rep.createdAt,
+        })),
     });
   }
 
