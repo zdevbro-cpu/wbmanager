@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarDays, FileText, FileSpreadsheet, Plus } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { CalendarDays, FileText, FileSpreadsheet, Plus, Trash2, BarChart3 } from 'lucide-react';
 import { api } from '../api/client';
 import { downloadFile } from '../lib/download';
 import { kstToday, kstThisMonth } from '../lib/datetime';
@@ -7,6 +8,7 @@ import { useProjects } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FilterField } from '../components/FilterField';
 import { Badge } from '../components/ui/Badge';
+import { ReportArchivePage } from './ReportArchivePage';
 import {
   pageTitleCls,
   sectionTitleCls,
@@ -25,15 +27,19 @@ const won = (v: number) => `${Math.round(v).toLocaleString()}원`;
 const thisMonth = () => kstThisMonth();
 const today = () => kstToday();
 
-// 일일 출고보고 — 하루를 한 장씩 넘겨 보는 업무일지 형태.
-// 그날 출고 요약과 발행한 보고서를 한 자리에서 확인한다.
+// 출고보고 — 달력에서 하루 또는 구간을 골라 보고서를 발행하고, 그 기간에 발행된
+// 일일보고·손익보고를 함께 본다. 여러 달에 걸친 검색은 목록 보기(옛 보고서 보관함)에서 한다.
 export function DailyReportPage() {
   const { projects } = useProjects();
+  const [searchParams] = useSearchParams();
+  const [view, setView] = useState<'calendar' | 'list'>(searchParams.get('view') === 'list' ? 'list' : 'calendar');
   const [month, setMonth] = useState(thisMonth());
   const [projectId, setProjectId] = useState('');
   const [days, setDays] = useState<DiaryDay[]>([]);
-  const [publishDate, setPublishDate] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [publishRange, setPublishRange] = useState<{ from: string; to: string } | null>(null);
+  // 시작일만 있으면 하루, 종료일까지 있으면 구간이다.
+  const [rangeStart, setRangeStart] = useState<string | null>(null);
+  const [rangeEnd, setRangeEnd] = useState<string | null>(null);
 
   const load = useCallback(() => {
     const params = new URLSearchParams({ month });
@@ -45,87 +51,148 @@ export function DailyReportPage() {
     load();
   }, [load]);
 
+  const removeReport = async (id: string, title: string) => {
+    if (!window.confirm(`'${title}' 보고서를 삭제할까요?`)) return;
+    await api.del(`/api/reports/published/${id}`);
+    load();
+  };
+
   const activeDays = days.filter((d) => d.count > 0);
   const monthWeight = days.reduce((sum, d) => sum + d.totalWeight, 0);
   const monthAmount = days.reduce((sum, d) => sum + d.totalAmount, 0);
   const monthCount = days.reduce((sum, d) => sum + d.count, 0);
   const publishedCount = days.reduce((sum, d) => sum + d.reports.length, 0);
+
   // 고른 날이 없으면 오늘, 오늘이 이 달에 없으면 출고가 있던 마지막 날을 편다.
-  const selectedDay =
-    days.find((d) => d.date === selected) ??
-    days.find((d) => d.date === today()) ??
-    [...activeDays].pop() ??
-    days[0] ??
-    null;
+  const fallback = days.find((d) => d.date === today()) ?? [...activeDays].pop() ?? days[0] ?? null;
+  const from = rangeStart ?? fallback?.date ?? null;
+  const to = rangeEnd ?? from;
+  const picked = from && to ? days.filter((d) => d.date >= from && d.date <= to) : [];
+
+  // 달력에서 시작일 → 종료일 순으로 고른다. 시작일을 다시 누르면 하루로 돌아간다.
+  const pickDate = (date: string) => {
+    if (!rangeStart || rangeEnd) {
+      setRangeStart(date);
+      setRangeEnd(null);
+      return;
+    }
+    if (date < rangeStart) {
+      setRangeStart(date);
+      return;
+    }
+    setRangeEnd(date === rangeStart ? null : date);
+  };
 
   return (
     <div>
       <div className="mb-5 flex items-center gap-2">
         <CalendarDays size={20} className="text-primary" />
-        <h1 className={pageTitleCls}>일일 출고보고</h1>
+        <h1 className={pageTitleCls}>출고보고</h1>
         <span className="ml-1 text-[13px] text-text-sub">
           {month} · 출고 {activeDays.length}일 / 보고서 {publishedCount}건
         </span>
-        <button type="button" onClick={() => setPublishDate(today())} className={`${primaryBtnCls} ml-auto`}>
-          <Plus size={15} /> 오늘 보고서 발행
-        </button>
-      </div>
 
-      <div
-        className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:180px_minmax(0,1fr)_minmax(0,1.4fr)]`}
-      >
-        <FilterField label="기준 월">
-          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} px-2`} />
-        </FilterField>
-        <FilterField label="프로젝트">
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} px-2`}>
-            <option value="">전체</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.roundName}
-              </option>
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex overflow-hidden rounded-[10px] border border-border">
+            {(['calendar', 'list'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setView(v)}
+                className={`px-3 py-2 text-[12.5px] font-bold ${
+                  view === v ? 'bg-primary text-white' : 'text-text-sub hover:bg-hover'
+                }`}
+              >
+                {v === 'calendar' ? '달력' : '목록'}
+              </button>
             ))}
-          </select>
-        </FilterField>
-        <p className="pb-2 text-[12.5px] text-text-faint">
-          이 달 출고 {monthCount}건 · {kg(monthWeight)} · {won(monthAmount)}
-        </p>
+          </div>
+          {view === 'calendar' && (
+            <button
+              type="button"
+              onClick={() => from && setPublishRange({ from, to: to ?? from })}
+              className={primaryBtnCls}
+            >
+              <Plus size={15} /> {from && to && from !== to ? '구간 보고서 발행' : '보고서 발행'}
+            </button>
+          )}
+        </div>
       </div>
 
-      {days.length === 0 ? (
-        <p className="py-16 text-center text-[13px] text-text-faint">불러오는 중이거나 해당 월 데이터가 없습니다.</p>
+      {view === 'list' ? (
+        <ReportArchivePage embedded />
       ) : (
-        <div className="grid grid-cols-[minmax(0,1fr)_360px] gap-4">
-          <MonthCalendar days={days} selected={selectedDay?.date ?? null} onSelect={setSelected} />
-          <DayPanel day={selectedDay} onPublish={() => selectedDay && setPublishDate(selectedDay.date)} />
-        </div>
+        <>
+          <div
+            className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:180px_minmax(0,1fr)_minmax(0,1.4fr)]`}
+          >
+            <FilterField label="기준 월">
+              <input
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className={`${inputCls} px-2`}
+              />
+            </FilterField>
+            <FilterField label="프로젝트">
+              <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} px-2`}>
+                <option value="">전체</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.roundName}
+                  </option>
+                ))}
+              </select>
+            </FilterField>
+            <p className="pb-2 text-[12.5px] text-text-faint">
+              이 달 출고 {monthCount}건 · {kg(monthWeight)} · {won(monthAmount)} · 시작일을 누른 뒤 종료일을 누르면 구간이
+              잡힙니다.
+            </p>
+          </div>
+
+          {days.length === 0 ? (
+            <p className="py-16 text-center text-[13px] text-text-faint">불러오는 중이거나 해당 월 데이터가 없습니다.</p>
+          ) : (
+            <div className="grid grid-cols-[minmax(0,1fr)_380px] gap-4">
+              <MonthCalendar days={days} from={from} to={to} onSelect={pickDate} />
+              <RangePanel
+                days={picked}
+                onPublish={() => from && setPublishRange({ from, to: to ?? from })}
+                onPublishDay={(date) => setPublishRange({ from: date, to: date })}
+                onDelete={removeReport}
+              />
+            </div>
+          )}
+        </>
       )}
 
-      {publishDate && (
-        <FormModal title={`${publishDate} 보고서 발행`} icon={FileText} onClose={() => setPublishDate(null)}>
+      {publishRange && (
+        <FormModal title="보고서 발행" icon={FileText} onClose={() => setPublishRange(null)}>
           <PublishDialog
-            date={publishDate}
+            from={publishRange.from}
+            to={publishRange.to}
             onDone={() => {
-              setPublishDate(null);
+              setPublishRange(null);
               load();
             }}
-            onCancel={() => setPublishDate(null)}
+            onCancel={() => setPublishRange(null)}
           />
         </FormModal>
       )}
-
     </div>
   );
 }
 
-// 한 달을 7×5 격자로 펼친다. 칸에는 건수·중량과 보고서 발행 여부만 두고 자세한 건 옆 패널에서 본다.
+// 한 달을 7×5 격자로 펼친다. 칸에는 건수·중량과 발행 상태만 두고 자세한 건 옆 패널에서 본다.
 function MonthCalendar({
   days,
-  selected,
+  from,
+  to,
   onSelect,
 }: {
   days: DiaryDay[];
-  selected: string | null;
+  from: string | null;
+  to: string | null;
   onSelect: (date: string) => void;
 }) {
   const lead = days[0]?.weekday ?? 0;
@@ -150,36 +217,62 @@ function MonthCalendar({
       <div className="grid grid-cols-7 gap-1.5">
         {cells.map((d, i) =>
           d === null ? (
-            <div key={`pad-${i}`} className="min-h-[88px] rounded-[10px] border border-transparent" />
+            <div key={`pad-${i}`} className="min-h-[92px] rounded-[10px] border border-transparent" />
           ) : (
-            <CalendarCell key={d.date} day={d} selected={d.date === selected} onSelect={onSelect} />
+            <CalendarCell
+              key={d.date}
+              day={d}
+              inRange={!!from && !!to && d.date >= from && d.date <= to}
+              edge={d.date === from || d.date === to}
+              onSelect={onSelect}
+            />
           ),
         )}
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-text-faint">
+        <span className="flex items-center gap-1">
+          <Dot color="#60a5fa" /> 일일 출고보고
+        </span>
+        <span className="flex items-center gap-1">
+          <Dot color="#a78bfa" /> 손익보고
+        </span>
+        <span className="flex items-center gap-1">
+          <Dot color="#f59e0b" /> 출고는 있으나 미발행
+        </span>
       </div>
     </div>
   );
 }
 
+function Dot({ color }: { color: string }) {
+  return <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: color }} />;
+}
+
 function CalendarCell({
   day: d,
-  selected,
+  inRange,
+  edge,
   onSelect,
 }: {
   day: DiaryDay;
-  selected: boolean;
+  inRange: boolean;
+  edge: boolean;
   onSelect: (date: string) => void;
 }) {
   const isToday = d.date === today();
-  const published = d.reports.length > 0;
+  const daily = d.reports.filter((r) => r.reportType === 'daily');
+  const pnl = d.reports.filter((r) => r.reportType !== 'daily');
+  const missing = d.count > 0 && daily.length === 0;
 
   return (
     <button
       type="button"
       onClick={() => onSelect(d.date)}
       className={[
-        'min-h-[88px] rounded-[10px] border p-2 text-left transition-colors',
-        selected ? 'border-primary bg-nav-active' : 'border-border hover:bg-hover',
-        d.count === 0 ? 'opacity-55' : '',
+        'min-h-[92px] rounded-[10px] border p-2 text-left transition-colors',
+        edge ? 'border-primary bg-nav-active' : inRange ? 'border-primary bg-nav-hover' : 'border-border hover:bg-hover',
+        d.count === 0 && d.reports.length === 0 ? 'opacity-55' : '',
       ].join(' ')}
     >
       <div className="flex items-center justify-between">
@@ -199,57 +292,86 @@ function CalendarCell({
         <div className="mt-1.5">
           <div className="tabular text-[12.5px] font-bold text-text-strong">{d.count}건</div>
           <div className="tabular text-[11.5px] text-text-sub">{kg(d.totalWeight)}</div>
-          <div className="mt-1 flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: published ? '#22c55e' : '#f59e0b' }} />
-            <span className={`text-[11px] ${published ? 'text-text-sub' : 'text-warning'}`}>
-              {published ? `보고서 ${d.reports.length}` : '미발행'}
-            </span>
-          </div>
         </div>
       )}
+
+      <div className="mt-1.5 flex items-center gap-1">
+        {daily.length > 0 && <Dot color="#60a5fa" />}
+        {pnl.length > 0 && <Dot color="#a78bfa" />}
+        {missing && <Dot color="#f59e0b" />}
+        {d.reports.length > 0 && <span className="text-[11px] text-text-sub">{d.reports.length}</span>}
+        {missing && <span className="text-[11px] text-warning">미발행</span>}
+      </div>
     </button>
   );
 }
 
-// 고른 날의 상세 — 예전 목록 카드에 있던 내용을 그대로 옮겼다.
-function DayPanel({ day, onPublish }: { day: DiaryDay | null; onPublish: () => void }) {
-  if (!day) return <div className={`${cardPadCls} text-[13px] text-text-faint`}>날짜를 고르세요.</div>;
+// 고른 하루 또는 구간의 요약·발행·발행물. 구간이면 날짜별로 한 줄씩 편다.
+function RangePanel({
+  days,
+  onPublish,
+  onPublishDay,
+  onDelete,
+}: {
+  days: DiaryDay[];
+  onPublish: () => void;
+  onPublishDay: (date: string) => void;
+  onDelete: (id: string, title: string) => void;
+}) {
+  if (days.length === 0) return <div className={`${cardPadCls} text-[13px] text-text-faint`}>날짜를 고르세요.</div>;
+
+  const single = days.length === 1;
+  const first = days[0];
+  const last = days[days.length - 1];
+  const count = days.reduce((s, d) => s + d.count, 0);
+  const weight = days.reduce((s, d) => s + d.totalWeight, 0);
+  const amount = days.reduce((s, d) => s + d.totalAmount, 0);
+  const activeCount = days.filter((d) => d.count > 0).length;
+  const missingCount = days.filter((d) => d.count > 0 && !d.reports.some((r) => r.reportType === 'daily')).length;
+  const reports = days.flatMap((d) => d.reports);
 
   return (
     <div className={`${cardPadCls} space-y-4`}>
       <div>
         <div className="text-[16px] font-extrabold text-text-strong">
-          {day.date} ({WEEKDAYS[day.weekday]})
+          {single ? `${first.date} (${WEEKDAYS[first.weekday]})` : `${first.date} ~ ${last.date}`}
         </div>
-        {day.count === 0 ? (
+        {count === 0 ? (
           <p className="mt-1 text-[13px] text-text-faint">출고 없음</p>
         ) : (
           <div className="mt-1.5 space-y-1">
             <div className="text-[15px] font-bold text-text-strong">
-              {day.count}건 · {kg(day.totalWeight)}
+              {!single && `출고 ${activeCount}일 · `}
+              {count}건 · {kg(weight)}
             </div>
-            <div className="tabular text-[13px] text-text-sub">{won(day.totalAmount)}</div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-text-sub">
-              <span className="flex items-center gap-1.5">
-                <Badge tone="green">매각 {day.saleCount}</Badge>
-                {kg(day.saleWeight)}
-              </span>
-              {day.wasteCount > 0 && (
+            <div className="tabular text-[13px] text-text-sub">{won(amount)}</div>
+            {single && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-text-sub">
                 <span className="flex items-center gap-1.5">
-                  <Badge tone="amber">폐기물 {day.wasteCount}</Badge>
-                  {kg(day.wasteWeight)}
+                  <Badge tone="green">매각 {first.saleCount}</Badge>
+                  {kg(first.saleWeight)}
                 </span>
-              )}
-            </div>
+                {first.wasteCount > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <Badge tone="amber">폐기물 {first.wasteCount}</Badge>
+                    {kg(first.wasteWeight)}
+                  </span>
+                )}
+              </div>
+            )}
+            {missingCount > 0 && <div className="text-[12.5px] text-warning">미발행 {missingCount}일</div>}
           </div>
         )}
+        <button type="button" onClick={onPublish} className={`${primaryBtnCls} mt-3 h-9`}>
+          <Plus size={15} /> {single ? '보고서 발행' : '구간 보고서 발행'}
+        </button>
       </div>
 
-      {day.byProject.length > 0 && (
+      {single && first.byProject.length > 0 && (
         <div>
           <h3 className="mb-1.5 text-[12.5px] font-semibold text-text-mid">프로젝트별</h3>
           <div className="space-y-1">
-            {day.byProject.map((p) => (
+            {first.byProject.map((p) => (
               <div
                 key={p.projectName}
                 className="flex items-center justify-between gap-2 border-b border-border pb-1 text-[12.5px]"
@@ -264,38 +386,90 @@ function DayPanel({ day, onPublish }: { day: DiaryDay | null; onPublish: () => v
         </div>
       )}
 
+      {!single && (
+        <div>
+          <h3 className="mb-1.5 text-[12.5px] font-semibold text-text-mid">날짜별</h3>
+          <div className="max-h-[220px] space-y-1 overflow-y-auto pr-1">
+            {days.map((d) => {
+              const hasDaily = d.reports.some((r) => r.reportType === 'daily');
+              return (
+                <div key={d.date} className="flex items-center gap-2 border-b border-border pb-1 text-[12.5px]">
+                  <span className="tabular w-[54px] shrink-0 text-text-sub">{d.date.slice(5)}</span>
+                  <span className="tabular min-w-0 flex-1 truncate text-text-strong">
+                    {d.count === 0 ? '-' : `${d.count}건 · ${kg(d.totalWeight)}`}
+                  </span>
+                  {d.count > 0 && (
+                    <>
+                      <span className={`shrink-0 text-[11.5px] ${hasDaily ? 'text-text-faint' : 'text-warning'}`}>
+                        {hasDaily ? '발행' : '미발행'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onPublishDay(d.date)}
+                        className="shrink-0 text-[11.5px] font-semibold text-primary hover:underline"
+                      >
+                        발행
+                      </button>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div>
         <h3 className="mb-1.5 text-[12.5px] font-semibold text-text-mid">발행 보고서</h3>
-        {day.reports.length === 0 ? (
-          <p className="mb-2 text-[12.5px] text-text-faint">발행된 보고서가 없습니다.</p>
+        {reports.length === 0 ? (
+          <p className="text-[12.5px] text-text-faint">이 기간에 발행된 보고서가 없습니다.</p>
         ) : (
-          <div className="mb-2 space-y-1.5">
-            {day.reports.map((rep) => (
-              <button
-                key={rep.id}
-                type="button"
-                onClick={() => downloadFile(`/api/reports/published/${rep.id}/xlsx`, `${rep.title}.xlsx`)}
-                className="flex w-full items-center gap-1.5 text-left text-[12.5px] font-semibold text-primary hover:underline"
-                title="엑셀로 내려받기"
-              >
-                <FileSpreadsheet size={14} className="shrink-0" />
-                <span className="min-w-0 truncate">{rep.title}</span>
-              </button>
+          <div className="space-y-1.5">
+            {reports.map((rep) => (
+              <div key={rep.id} className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => downloadFile(`/api/reports/published/${rep.id}/xlsx`, `${rep.title}.xlsx`)}
+                  className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-[12.5px] font-semibold text-primary hover:underline"
+                  title="엑셀로 내려받기"
+                >
+                  {rep.reportType === 'daily' ? (
+                    <FileSpreadsheet size={14} className="shrink-0" />
+                  ) : (
+                    <BarChart3 size={14} className="shrink-0" />
+                  )}
+                  <span className="min-w-0 truncate">{rep.title}</span>
+                </button>
+                <button
+                  type="button"
+                  title="보고서 삭제"
+                  onClick={() => onDelete(rep.id, rep.title)}
+                  className="shrink-0 rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-danger"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             ))}
           </div>
         )}
-        <button type="button" onClick={onPublish} className={`${outlineBtnCls} h-8 px-3 text-[12.5px]`}>
-          <Plus size={14} /> {day.reports.length === 0 ? '보고서 발행' : '다시 발행'}
-        </button>
       </div>
     </div>
   );
 }
 
-function PublishDialog({ date, onDone, onCancel }: { date: string; onDone: () => void; onCancel: () => void }) {
-  // 하루만 낼 때는 두 칸을 같은 날로 두고, 구간으로 낼 때는 종료일을 뒤로 민다.
-  const [from, setFrom] = useState(date);
-  const [to, setTo] = useState(date);
+function PublishDialog({
+  from: initialFrom,
+  to: initialTo,
+  onDone,
+  onCancel,
+}: {
+  from: string;
+  to: string;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [from, setFrom] = useState(initialFrom);
+  const [to, setTo] = useState(initialTo);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -334,13 +508,12 @@ function PublishDialog({ date, onDone, onCancel }: { date: string; onDone: () =>
       </div>
 
       <p className="text-[12.5px] text-text-faint">
-        구간으로 내면 계근공유방·스크랩반출List·폐기물반출List 세 탭 모두 날짜별 블록으로 나뉘어 작성됩니다.
+        구간으로 내면 계근공유방·스크랩반출List·폐기물반출List 세 탭 모두 날짜별 블록으로 나뉘어 작성됩니다. 출고가 없던
+        프로젝트는 &quot;출고 없음&quot;으로 표기됩니다.
       </p>
-      <p className="text-[13px] text-text-sub">
-        앞단에 그날 전체 요약을 두고, 진행 중인 프로젝트를 하나씩 담아 한 장으로 만듭니다. 출고가 없던 프로젝트는 &quot;출고
-        없음&quot;으로 표기됩니다. 발행 후 엑셀(xlsx)로 내려받을 수 있습니다.
-      </p>
+
       {error && <p className="text-[13px] text-danger">{error}</p>}
+
       <div className="flex justify-end gap-2 border-t border-border pt-3">
         <button type="button" onClick={onCancel} className={outlineBtnCls}>
           취소

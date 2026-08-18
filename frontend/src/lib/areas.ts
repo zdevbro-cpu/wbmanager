@@ -6,7 +6,6 @@ import {
   ListTree,
   BarChart3,
   FileText,
-  FileArchive,
   Boxes,
   Layers,
   TrendingUp,
@@ -68,8 +67,7 @@ export const AREAS: Area[] = [
         items: [
           { to: '/ledger', label: '통합 원장 조회', icon: ListTree },
           { to: '/aggregation', label: '자동집계 현황', icon: BarChart3 },
-          { to: '/daily-report', label: '일일 출고보고', icon: FileText },
-          { to: '/reports', label: '보고서 보관함', icon: FileArchive },
+          { to: '/daily-report', label: '출고보고', icon: FileText },
         ],
       },
       {

@@ -488,7 +488,7 @@ export interface DiaryDay {
   wasteCount: number;
   wasteWeight: number;
   byProject: { projectName: string; count: number; weight: number; amount: number }[];
-  reports: { id: string; title: string; createdAt: string }[];
+  reports: { id: string; title: string; reportType: string; projectName: string | null; createdAt: string }[];
 }
 
 export interface DiaryResponse {

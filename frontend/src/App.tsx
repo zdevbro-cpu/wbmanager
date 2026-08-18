@@ -15,7 +15,6 @@ import { EntryPage } from './pages/EntryPage';
 import { LedgerPage } from './pages/LedgerPage';
 import { AggregationPage } from './pages/AggregationPage';
 import { DailyReportPage } from './pages/DailyReportPage';
-import { ReportArchivePage } from './pages/ReportArchivePage';
 import { InventoryPage } from './pages/InventoryPage';
 import { PnlPage } from './pages/PnlPage';
 import { WasteManagementPage } from './pages/WasteManagementPage';
@@ -43,7 +42,8 @@ function Gate() {
         <Route path="/ledger" element={<LedgerPage />} />
         <Route path="/aggregation" element={<AggregationPage />} />
         <Route path="/daily-report" element={<DailyReportPage />} />
-        <Route path="/reports" element={<ReportArchivePage />} />
+        {/* 보고서 보관함은 출고보고 화면의 목록 보기로 합쳤다. */}
+        <Route path="/reports" element={<Navigate to="/daily-report?view=list" replace />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/pnl" element={<PnlPage />} />
         <Route path="/waste" element={<WasteManagementPage />} />
