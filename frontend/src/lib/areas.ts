@@ -80,7 +80,7 @@ export const AREAS: Area[] = [
     id: 'assets',
     acronym: 'AMS',
     title: '관리항목',
-    summary: '차량·장비 자산, 임직원, 프로젝트·폐기물·알림',
+    summary: '프로젝트·폐기물·알림, 차량·장비 자산',
     icon: ClipboardList,
     accent: '#22c55e',
     ready: true,
@@ -94,11 +94,23 @@ export const AREAS: Area[] = [
         ],
       },
       {
-        label: '자산 / 인원',
-        items: [
-          { to: '/assets', label: '자산 관리 (차량·장비)', icon: Boxes },
-          { to: '/employees', label: '임직원 관리', icon: Users },
-        ],
+        label: '자산',
+        items: [{ to: '/assets', label: '자산 관리 (차량·장비)', icon: Boxes }],
+      },
+    ],
+  },
+  {
+    id: 'hr',
+    acronym: 'HRM',
+    title: '임직원 관리',
+    summary: '임직원 정보와 자격·교육 이력',
+    icon: Users,
+    accent: '#8b5cf6',
+    ready: true,
+    groups: [
+      {
+        label: '임직원',
+        items: [{ to: '/employees', label: '임직원 관리', icon: Users }],
       },
     ],
   },
