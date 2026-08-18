@@ -25,14 +25,25 @@ function commonWhere({ projectId, vehicleType, vehicleNo, driverName, itemCode }
   };
 }
 
-// 폐기물 입고 화면에만 있는 필터 — 올바로/배출자/운반자/처리자. 자유 입력은 부분 일치로 찾는다.
+// 폐기물 화면에만 있는 필터 — 올바로/배출자/운반자/처리자. 자유 입력은 부분 일치로 찾는다.
+const like = (v) => ({ contains: v, mode: 'insensitive' });
+
 function wasteInboundWhere({ olbaro, dischargerName, transporterName, processorName }) {
-  const like = (v) => ({ contains: v, mode: 'insensitive' });
   return {
     ...(olbaro ? { olbaroReported: olbaro === 'O' } : {}),
     ...(dischargerName ? { dischargerName: like(dischargerName) } : {}),
     ...(transporterName ? { transporterName: like(transporterName) } : {}),
     ...(processorName ? { processorName: like(processorName) } : {}),
+  };
+}
+
+// 반출의 처리자는 거래처 마스터(buyer)다.
+function wasteOutboundWhere({ olbaro, dischargerName, transporterName, processorName }) {
+  return {
+    ...(olbaro ? { olbaroReported: olbaro === 'O' } : {}),
+    ...(dischargerName ? { dischargerName: like(dischargerName) } : {}),
+    ...(transporterName ? { transporterName: like(transporterName) } : {}),
+    ...(processorName ? { buyer: { name: like(processorName) } } : {}),
   };
 }
 
@@ -245,6 +256,7 @@ const BUILDERS = {
       const rows = await prisma.wasteOutbound.findMany({
         where: {
           ...commonWhere(q),
+          ...wasteOutboundWhere(q),
           ...(range ? { outboundDate: range } : {}),
           ...(q.unreported === 'true' ? { OR: [{ olbaroReported: false }, { handoverDate: null }] } : {}),
         },
