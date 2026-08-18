@@ -55,6 +55,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
   const [settledWeight, setSettledWeight] = useState(initNum(record?.weight));
   const [cubicMeter, setCubicMeter] = useState(initNum(record?.cubicMeter));
   const [unitPrice, setUnitPrice] = useState(initNum(record?.unitPrice));
+  const [transportCost, setTransportCost] = useState(initNum(record?.transportCost));
   const [amount, setAmount] = useState(initNum(record?.amount));
   const [category, setCategory] = useState(record?.category ?? '출고');
   const [isSubsidiary, setIsSubsidiary] = useState(record?.isSubsidiary ?? false);
@@ -90,6 +91,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
     setSettledWeight('');
     setCubicMeter('');
     setUnitPrice('');
+    setTransportCost('');
     setAmount('');
     setCategory('출고');
     setIsSubsidiary(false);
@@ -146,6 +148,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
         weight: settledNum ?? undefined,
         unitPrice: unitPrice ? Number(unitPrice) : undefined,
         cubicMeter: cubicMeter ? Number(cubicMeter) : undefined,
+        transportCost: transportCost ? Number(transportCost) : undefined,
         amount: amount ? Number(amount) : undefined,
         category: category || undefined,
         isSubsidiary,
@@ -339,6 +342,11 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
           <div>
             <label className={labelCls}>단가(원)</label>
             <NumberInput value={unitPrice} onChange={setUnitPrice} />
+          </div>
+
+          <div>
+            <label className={labelCls}>운반비(원)</label>
+            <NumberInput value={transportCost} onChange={setTransportCost} />
           </div>
 
           <div>

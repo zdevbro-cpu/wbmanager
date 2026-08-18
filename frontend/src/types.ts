@@ -196,6 +196,7 @@ export interface WasteOutbound {
   weight: string;
   unitPrice?: string | null;
   cubicMeter?: string | null;
+  transportCost?: string | null;
   amount?: string | null;
   category?: string | null;
   memo?: string | null;

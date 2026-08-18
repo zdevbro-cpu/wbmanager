@@ -373,7 +373,8 @@ model WasteOutbound {
   weight       Decimal  @map("weight") @db.Decimal(12, 3)            // 정산 중량
   unitPrice       Decimal? @map("unit_price") @db.Decimal(12, 2)     // 단가
   cubicMeter      Decimal? @map("cubic_meter") @db.Decimal(10, 2)    // 루베 적용
-  amount       Decimal? @map("amount") @db.Decimal(14, 2) // 지출 = 정산중량 × 단가
+  transportCost   Decimal? @map("transport_cost") @db.Decimal(14, 2) // 운반비 — 보고 양식의 운반비 칸
+  amount       Decimal? @map("amount") @db.Decimal(14, 2) // 지출 = 정산중량 × 단가(처리비)
   category        String?  @map("category")               // 구분: 출고/이동
   memo            String?  @map("memo")                   // 비고
   isSubsidiary    Boolean  @default(false) @map("is_subsidiary") // 자회사 출고 여부
