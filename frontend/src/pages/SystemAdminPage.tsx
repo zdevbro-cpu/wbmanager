@@ -2,19 +2,17 @@ import { useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { BaseInfoPage } from './BaseInfoPage';
 import { MasterManagementPage } from './MasterManagementPage';
 import { UserApprovalPage } from './UserApprovalPage';
 import { AuditLogPage } from './AuditLogPage';
 import { pageTitleCls } from '../components/ui/classes';
 
-type Tab = 'masters' | 'base' | 'users' | 'audit';
+type Tab = 'masters' | 'users' | 'audit';
 
 function initialTab(param: string | null, isAdmin: boolean): Tab {
   if (param === 'users' && isAdmin) return 'users';
   if (param === 'audit' && isAdmin) return 'audit';
-  if (param === 'masters') return 'masters';
-  return 'base';
+  return 'masters';
 }
 
 export function SystemAdminPage() {
@@ -35,9 +33,6 @@ export function SystemAdminPage() {
       </div>
 
       <div className="mb-5 flex gap-1 border-b border-border">
-        <TabButton active={tab === 'base'} onClick={() => setTab('base')}>
-          기준정보 관리
-        </TabButton>
         <TabButton active={tab === 'masters'} onClick={() => setTab('masters')}>
           마스터 관리
         </TabButton>
@@ -57,8 +52,6 @@ export function SystemAdminPage() {
         <UserApprovalPage embedded />
       ) : tab === 'audit' && isAdmin ? (
         <AuditLogPage embedded />
-      ) : tab === 'base' ? (
-        <BaseInfoPage />
       ) : (
         <MasterManagementPage embedded />
       )}

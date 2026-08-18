@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Settings, Building2, Package, Plus, Eye, Trash2, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
+import { CommonCodePage } from './CommonCodePage';
 import { useVendors, useItemMasters } from '../hooks/useMasters';
 import { Badge } from '../components/ui/Badge';
 import { FormModal } from '../components/FormModal';
@@ -34,9 +35,14 @@ const iconBtnCls = 'rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-te
 
 // 마스터 관리 — 거래처·품목을 2열로 나란히 두고, 각 열은 검색 + 목록 + 신규등록으로 구성한다.
 // 공통코드와 한 화면에 있으면 목록이 길어질수록 아래로 밀려서 별도 탭으로 분리했다.
+// 마스터 관리 — 거래처·품목·공통코드를 기능별 탭으로 나눈다.
+// 한 화면에 모아 두면 목록이 길어질수록 아래 것이 밀려 내려가 찾기 어려워진다.
+type MasterTab = 'vendors' | 'items' | 'codes';
+
 export function MasterManagementPage({ embedded = false }: { embedded?: boolean }) {
   const { vendors, reload: reloadVendors } = useVendors();
   const { items, reload: reloadItems } = useItemMasters();
+  const [tab, setTab] = useState<MasterTab>('vendors');
 
   return (
     <div>
@@ -47,12 +53,59 @@ export function MasterManagementPage({ embedded = false }: { embedded?: boolean 
         </div>
       )}
 
-      {/* 두 목록이 화면 하단까지 같은 높이로 서고, 넘치는 행은 목록 안에서만 스크롤된다. */}
-      <div className="grid grid-cols-2 gap-6 h-[calc(100vh-240px)] min-h-[420px]">
-        <VendorSection vendors={vendors} reload={reloadVendors} />
-        <ItemSection items={items} reload={reloadItems} />
+      <div className="mb-5 flex gap-1 border-b border-border">
+        <MasterTabButton active={tab === 'vendors'} onClick={() => setTab('vendors')}>
+          거래처 <span className="ml-1 font-semibold text-text-faint">{vendors.length}</span>
+        </MasterTabButton>
+        <MasterTabButton active={tab === 'items'} onClick={() => setTab('items')}>
+          품목 <span className="ml-1 font-semibold text-text-faint">{items.length}</span>
+        </MasterTabButton>
+        <MasterTabButton active={tab === 'codes'} onClick={() => setTab('codes')}>
+          공통코드
+        </MasterTabButton>
       </div>
+
+      {tab === 'codes' ? (
+        <div>
+          <p className="mb-4 text-[13px] text-text-sub">
+            등록 화면에서 반복 입력되는 값 목록입니다. 기록 시점의 문자열로 저장되므로, 여기서 지워도 과거 데이터는 그대로
+            남고 선택 목록에서만 사라집니다.
+          </p>
+          <CommonCodePage embedded />
+        </div>
+      ) : (
+        <div className="h-[calc(100vh-260px)] min-h-[420px]">
+          {tab === 'vendors' ? (
+            <VendorSection vendors={vendors} reload={reloadVendors} />
+          ) : (
+            <ItemSection items={items} reload={reloadItems} />
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+function MasterTabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        '-mb-px border-b-2 px-4 py-2 text-[14px] font-bold transition-colors',
+        active ? 'border-primary text-text-strong' : 'border-transparent text-text-sub hover:text-text-strong',
+      ].join(' ')}
+    >
+      {children}
+    </button>
   );
 }
 

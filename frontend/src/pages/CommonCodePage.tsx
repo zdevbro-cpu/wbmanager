@@ -5,22 +5,56 @@ import { pageTitleCls, sectionTitleCls, cardPadCls, primaryBtnCls, inputCls } fr
 import type { CommonCode } from '../types';
 
 // 화면에 항상 노출할 그룹 — 각 등록 화면에서 실제로 쓰이는 값 목록
-const GROUPS: { group: string; hint: string }[] = [
-  { group: '배출자', hint: '폐기물 입고·반출 등록' },
-  { group: '운반자', hint: '폐기물 반출 등록' },
-  { group: '상차지', hint: '출고·폐기물 반출 등록' },
-  { group: '하차지', hint: '폐기물 입고 등록' },
-  { group: '차종', hint: '전 계근 등록 화면' },
-  { group: '거래 구분', hint: '출고/이동/보류/기타' },
-  { group: '제출서류 종류', hint: '첨부파일 분류' },
-  { group: '자격증 종류', hint: '임직원 자격사항' },
-  { group: '교육 과정', hint: '임직원 교육이력' },
-  { group: '부서', hint: '임직원 등록' },
-  { group: '직급', hint: '임직원 등록' },
+// 공통코드가 15종까지 늘어 한 화면에 늘어놓으면 찾기 어렵다.
+// 쓰이는 업무별로 묶어 탭으로 나눈다. hint는 그 값이 어느 등록 화면에 뜨는지다.
+const CATEGORIES: { id: string; label: string; groups: { group: string; hint: string }[] }[] = [
+  {
+    id: 'weighing',
+    label: '계근 · 입출고',
+    groups: [
+      { group: '배출자', hint: '폐기물 입고·반출 등록' },
+      { group: '운반자', hint: '폐기물 반출 등록' },
+      { group: '상차지', hint: '출고·폐기물 반출 등록' },
+      { group: '하차지', hint: '폐기물 입고 등록' },
+      { group: '차종', hint: '전 계근 등록 화면' },
+      { group: '거래 구분', hint: '출고/이동/보류/기타' },
+    ],
+  },
+  {
+    id: 'asset',
+    label: '자산 · 정비',
+    groups: [
+      { group: '자산 분류', hint: '자산 등록·조회' },
+      { group: '정비 구분', hint: '정비 등록·조회' },
+      { group: '일정 구분', hint: '자산 일정(보험·검사 등)' },
+    ],
+  },
+  {
+    id: 'employee',
+    label: '임직원',
+    groups: [
+      { group: '자격증 종류', hint: '임직원 자격사항' },
+      { group: '교육 과정', hint: '임직원 교육이력' },
+      { group: '부서', hint: '임직원 등록' },
+      { group: '직급', hint: '임직원 등록' },
+    ],
+  },
+  {
+    id: 'etc',
+    label: '프로젝트 · 기타',
+    groups: [
+      { group: '정산주기', hint: '프로젝트 등록' },
+      { group: '제출서류 종류', hint: '첨부파일 분류' },
+    ],
+  },
 ];
+
+const KNOWN_GROUPS = CATEGORIES.flatMap((c) => c.groups.map((g) => g.group));
 
 export function CommonCodePage({ embedded = false }: { embedded?: boolean }) {
   const [codes, setCodes] = useState<CommonCode[]>([]);
+
+  const [tab, setTab] = useState(CATEGORIES[0].id);
 
   const reload = useCallback(() => {
     api.get<CommonCode[]>('/api/common-codes?includeInactive=true').then(setCodes);
@@ -30,10 +64,16 @@ export function CommonCodePage({ embedded = false }: { embedded?: boolean }) {
     reload();
   }, [reload]);
 
-  // DB에만 있는 그룹도 빠뜨리지 않고 뒤에 붙여 보여준다.
+  // 정의에 없는 그룹이 DB에 있으면 기타 탭 끝에 붙여 빠뜨리지 않는다.
   const extraGroups = [...new Set(codes.map((c) => c.group))]
-    .filter((g) => !GROUPS.some((x) => x.group === g))
+    .filter((g) => !KNOWN_GROUPS.includes(g))
     .map((g) => ({ group: g, hint: '' }));
+
+  const categories = CATEGORIES.map((c) =>
+    c.id === 'etc' ? { ...c, groups: [...c.groups, ...extraGroups] } : c,
+  );
+  const current = categories.find((c) => c.id === tab) ?? categories[0];
+  const countOf = (group: string) => codes.filter((c) => c.group === group).length;
 
   return (
     <div>
@@ -51,15 +91,31 @@ export function CommonCodePage({ embedded = false }: { embedded?: boolean }) {
         </p>
       )}
 
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        {categories.map((c) => {
+          const total = c.groups.reduce((sum, g) => sum + countOf(g.group), 0);
+          const active = c.id === current.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setTab(c.id)}
+              className={[
+                'rounded-[9px] border px-3 py-1.5 text-[13px] font-bold transition-colors',
+                active
+                  ? 'border-primary bg-primary/10 text-text-strong'
+                  : 'border-border text-text-sub hover:bg-hover hover:text-text-strong',
+              ].join(' ')}
+            >
+              {c.label} <span className="ml-1 font-semibold text-text-faint">{total}</span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-        {[...GROUPS, ...extraGroups].map(({ group, hint }) => (
-          <GroupCard
-            key={group}
-            group={group}
-            hint={hint}
-            rows={codes.filter((c) => c.group === group)}
-            reload={reload}
-          />
+        {current.groups.map(({ group, hint }) => (
+          <GroupCard key={group} group={group} hint={hint} rows={codes.filter((c) => c.group === group)} reload={reload} />
         ))}
       </div>
     </div>
