@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { CalendarDays, FileText, FileSpreadsheet, Plus, Trash2, BarChart3 } from 'lucide-react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { CalendarDays, FileText, FileSpreadsheet, Trash2, BarChart3 } from 'lucide-react';
 import { api } from '../api/client';
 import { downloadFile } from '../lib/download';
 import { kstToday, kstThisMonth } from '../lib/datetime';
@@ -27,11 +27,15 @@ const won = (v: number) => `${Math.round(v).toLocaleString()}원`;
 const thisMonth = () => kstThisMonth();
 const today = () => kstToday();
 
-// 출고보고 — 달력에서 하루 또는 구간을 골라 보고서를 발행하고, 그 기간에 발행된
-// 일일보고·손익보고를 함께 본다. 여러 달에 걸친 검색은 목록 보기(옛 보고서 보관함)에서 한다.
+// 보고서 보관함 — 발행된 일일보고·손익보고를 달력과 목록 두 가지로 본다.
+// 발행은 사이드바의 '출고보고서'(/daily-report)로 들어와 모달에서 한다.
 export function DailyReportPage() {
   const { projects } = useProjects();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  // '일일 출고보고' 메뉴로 들어오면 발행 모달부터 띄운다.
+  const publishEntry = location.pathname === '/daily-report';
   const [view, setView] = useState<'calendar' | 'list'>(searchParams.get('view') === 'list' ? 'list' : 'calendar');
   const [month, setMonth] = useState(thisMonth());
   const [projectId, setProjectId] = useState('');
@@ -51,6 +55,10 @@ export function DailyReportPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (publishEntry) setPublishRange({ from: today(), to: today() });
+  }, [publishEntry]);
+
   const removeReport = async (id: string, title: string) => {
     if (!window.confirm(`'${title}' 보고서를 삭제할까요?`)) return;
     await api.del(`/api/reports/published/${id}`);
@@ -68,6 +76,12 @@ export function DailyReportPage() {
   const from = rangeStart ?? fallback?.date ?? null;
   const to = rangeEnd ?? from;
   const picked = from && to ? days.filter((d) => d.date >= from && d.date <= to) : [];
+
+  // 발행 모달을 닫으면 보관함으로 돌아온다(발행 메뉴로 들어온 경우).
+  const closePublish = () => {
+    setPublishRange(null);
+    if (publishEntry) navigate('/reports', { replace: true });
+  };
 
   // 달력에서 시작일 → 종료일 순으로 고른다. 시작일을 다시 누르면 하루로 돌아간다.
   const pickDate = (date: string) => {
@@ -87,7 +101,7 @@ export function DailyReportPage() {
     <div>
       <div className="mb-5 flex items-center gap-2">
         <CalendarDays size={20} className="text-primary" />
-        <h1 className={pageTitleCls}>출고보고</h1>
+        <h1 className={pageTitleCls}>보고서 보관함</h1>
         <span className="ml-1 text-[13px] text-text-sub">
           {month} · 출고 {activeDays.length}일 / 보고서 {publishedCount}건
         </span>
@@ -107,15 +121,6 @@ export function DailyReportPage() {
               </button>
             ))}
           </div>
-          {view === 'calendar' && (
-            <button
-              type="button"
-              onClick={() => from && setPublishRange({ from, to: to ?? from })}
-              className={primaryBtnCls}
-            >
-              <Plus size={15} /> {from && to && from !== to ? '구간 보고서 발행' : '보고서 발행'}
-            </button>
-          )}
         </div>
       </div>
 
@@ -155,27 +160,22 @@ export function DailyReportPage() {
           ) : (
             <div className="grid grid-cols-[minmax(0,1fr)_380px] gap-4">
               <MonthCalendar days={days} from={from} to={to} onSelect={pickDate} />
-              <RangePanel
-                days={picked}
-                onPublish={() => from && setPublishRange({ from, to: to ?? from })}
-                onPublishDay={(date) => setPublishRange({ from: date, to: date })}
-                onDelete={removeReport}
-              />
+              <RangePanel days={picked} onDelete={removeReport} />
             </div>
           )}
         </>
       )}
 
       {publishRange && (
-        <FormModal title="보고서 발행" icon={FileText} onClose={() => setPublishRange(null)}>
+        <FormModal title="출고보고서 발행" icon={FileText} onClose={closePublish}>
           <PublishDialog
             from={publishRange.from}
             to={publishRange.to}
             onDone={() => {
-              setPublishRange(null);
+              closePublish();
               load();
             }}
-            onCancel={() => setPublishRange(null)}
+            onCancel={closePublish}
           />
         </FormModal>
       )}
@@ -307,17 +307,7 @@ function CalendarCell({
 }
 
 // 고른 하루 또는 구간의 요약·발행·발행물. 구간이면 날짜별로 한 줄씩 편다.
-function RangePanel({
-  days,
-  onPublish,
-  onPublishDay,
-  onDelete,
-}: {
-  days: DiaryDay[];
-  onPublish: () => void;
-  onPublishDay: (date: string) => void;
-  onDelete: (id: string, title: string) => void;
-}) {
+function RangePanel({ days, onDelete }: { days: DiaryDay[]; onDelete: (id: string, title: string) => void }) {
   if (days.length === 0) return <div className={`${cardPadCls} text-[13px] text-text-faint`}>날짜를 고르세요.</div>;
 
   const single = days.length === 1;
@@ -362,9 +352,6 @@ function RangePanel({
             {missingCount > 0 && <div className="text-[12.5px] text-warning">미발행 {missingCount}일</div>}
           </div>
         )}
-        <button type="button" onClick={onPublish} className={`${primaryBtnCls} mt-3 h-9`}>
-          <Plus size={15} /> {single ? '보고서 발행' : '구간 보고서 발행'}
-        </button>
       </div>
 
       {single && first.byProject.length > 0 && (
@@ -403,13 +390,6 @@ function RangePanel({
                       <span className={`shrink-0 text-[11.5px] ${hasDaily ? 'text-text-faint' : 'text-warning'}`}>
                         {hasDaily ? '발행' : '미발행'}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => onPublishDay(d.date)}
-                        className="shrink-0 text-[11.5px] font-semibold text-primary hover:underline"
-                      >
-                        발행
-                      </button>
                     </>
                   )}
                 </div>
