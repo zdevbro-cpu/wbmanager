@@ -172,7 +172,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
 
       <form onSubmit={handleSubmit} className={`${cardPadCls} space-y-4`}>
         {/* 3열 그리드 — 모달 폭은 그대로 두고 한 행에 세 항목씩 배치한다. */}
-        <div className="grid grid-cols-3 gap-x-3 gap-y-3.5">
+        <div className="grid grid-cols-4 gap-x-3 gap-y-3.5">
           <div>
             <label className={labelCls}>프로젝트(차수)</label>
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required className={inputCls}>
@@ -221,7 +221,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             />
           </div>
 
-          <div className="col-span-3">
+          <div className="col-span-4">
             <MasterSelect
               label="제품명(품목)"
               options={items.map((i) => ({ value: i.itemCode, label: `${i.itemName} (${i.itemCode})`, isTemporary: i.isTemporary }))}
@@ -259,7 +259,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             <div className={`${inputCls} tabular flex items-center justify-end font-bold text-text-strong`}>{settledWeight}</div>
           </div>
 
-          <p className="col-span-3 text-[12.5px] text-text-faint">
+          <p className="col-span-4 text-[12.5px] text-text-faint">
             실중량 = 총중량 − 공차중량 · 정산중량 = 총중량 − 공차중량 − 감량
           </p>
 
@@ -278,7 +278,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             <NumberInput value={unitPrice} onChange={setUnitPrice} />
           </div>
 
-          <p className="col-span-3 text-[13px] text-text-sub">
+          <p className="col-span-4 text-[13px] text-text-sub">
             공급가액: <span className="tabular font-bold text-text-strong">{formatNumber(amountNum)}</span> 원
             <span className="mx-2 text-text-faint">/</span>
             부가세: <span className="tabular font-bold text-text-strong">{formatNumber(vatNum)}</span> 원
@@ -310,7 +310,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             자회사 출고
           </label>
 
-          <div className="col-span-3">
+          <div className="col-span-4">
             <label className={labelCls}>비고(특이사항)</label>
             <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
           </div>
