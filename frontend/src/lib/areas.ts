@@ -64,27 +64,14 @@ export const AREAS: Area[] = [
         ],
       },
       {
-        label: '보고 / 집계',
+        label: '보고 / 평가 / 집계',
         items: [
           { to: '/ledger', label: '통합 원장 조회', icon: ListTree },
           { to: '/aggregation', label: '자동집계 현황', icon: BarChart3 },
+          { to: '/inventory', label: '재고 / 재고평가', icon: Boxes },
+          { to: '/pnl', label: '손익보고서', icon: TrendingUp },
           { to: '/daily-report', label: '출고보고서', icon: FileText },
           { to: '/reports', label: '보고서 보관함', icon: FileArchive },
-        ],
-      },
-      {
-        label: '재고 / 손익',
-        items: [
-          { to: '/inventory', label: '재고 / 재고평가', icon: Boxes },
-          { to: '/pnl', label: '프로젝트 손익요약', icon: TrendingUp },
-        ],
-      },
-      {
-        label: '현장 관리',
-        items: [
-          { to: '/projects', label: '프로젝트 관리', icon: Layers },
-          { to: '/waste', label: '폐기물 / 올바로 관리', icon: ShieldAlert },
-          { to: '/admin-alerts', label: '알림 현황', icon: BellRing },
         ],
       },
     ],
@@ -93,7 +80,7 @@ export const AREAS: Area[] = [
     id: 'assets',
     acronym: 'AMS',
     title: '관리항목',
-    summary: '차량·장비 자산, 정비 이력, 임직원',
+    summary: '차량·장비 자산, 임직원, 프로젝트·폐기물·알림',
     icon: ClipboardList,
     accent: '#22c55e',
     ready: true,
@@ -103,6 +90,14 @@ export const AREAS: Area[] = [
         items: [
           { to: '/assets', label: '자산 관리 (차량·장비)', icon: Boxes },
           { to: '/employees', label: '임직원 관리', icon: Users },
+        ],
+      },
+      {
+        label: '현장 관리',
+        items: [
+          { to: '/projects', label: '프로젝트 관리', icon: Layers },
+          { to: '/waste', label: '폐기물 / 올바로 관리', icon: ShieldAlert },
+          { to: '/admin-alerts', label: '알림 현황', icon: BellRing },
         ],
       },
     ],
