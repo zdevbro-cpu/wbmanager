@@ -221,7 +221,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             />
           </div>
 
-          <div className="col-span-4">
+          <div className="col-span-2">
             <MasterSelect
               label="제품명(품목)"
               options={items.map((i) => ({ value: i.itemCode, label: `${i.itemName} (${i.itemCode})`, isTemporary: i.isTemporary }))}
@@ -259,10 +259,6 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             <div className={`${inputCls} tabular flex items-center justify-end font-bold text-text-strong`}>{settledWeight}</div>
           </div>
 
-          <p className="col-span-4 text-[12.5px] text-text-faint">
-            실중량 = 총중량 − 공차중량 · 정산중량 = 총중량 − 공차중량 − 감량
-          </p>
-
           <div>
             <label className={labelCls}>재고반영중량(kg)</label>
             <NumberInput value={stockWeightValue} onChange={setStockWeight} decimals={3} />
@@ -277,6 +273,10 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             <label className={labelCls}>단가(원)</label>
             <NumberInput value={unitPrice} onChange={setUnitPrice} />
           </div>
+
+          <p className="col-span-4 text-[12.5px] text-text-faint">
+            실중량 = 총중량 − 공차중량 · 정산중량 = 총중량 − 공차중량 − 감량
+          </p>
 
           <p className="col-span-4 text-[13px] text-text-sub">
             공급가액: <span className="tabular font-bold text-text-strong">{formatNumber(amountNum)}</span> 원
