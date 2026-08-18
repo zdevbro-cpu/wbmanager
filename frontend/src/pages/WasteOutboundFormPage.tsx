@@ -15,9 +15,16 @@ import type { WasteOutbound } from '../types';
 interface Props {
   embedded?: boolean;
   onCreated?: () => void;
+  /** 넘기면 수정 모드 — 값이 채워진 채로 열리고 저장 시 PATCH한다. */
+  record?: WasteOutbound | null;
+  onSaved?: () => void;
 }
 
-export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {}) {
+// 수정 모드 초기값 — 날짜는 YYYY-MM-DD, 숫자는 문자열로 맞춰 넣는다.
+const initDate = (v?: string | null) => (v ? v.slice(0, 10) : '');
+const initNum = (v?: string | number | null) => (v == null ? '' : String(Number(v)));
+
+export function WasteOutboundFormPage({ embedded = false, onCreated, record = null, onSaved }: Props = {}) {
   const { projects } = useProjects();
   const { vendors, quickCreate: quickCreateVendor } = useVendors();
   const { items, quickCreate: quickCreateItem } = useItemMasters();
@@ -28,37 +35,39 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
   const { labels: categoryOptions } = useCommonCodes('거래 구분');
   const categories = categoryOptions.length > 0 ? categoryOptions : ['출고', '이동', '기타'];
 
-  const [projectId, setProjectId] = useState('');
-  const [outboundDate, setOutboundDate] = useState('');
-  const [handoverDate, setHandoverDate] = useState('');
-  const [olbaroReported, setOlbaroReported] = useState(false);
-  const [dischargerName, setDischargerName] = useState('');
-  const [transporterName, setTransporterName] = useState('');
-  const [loadingPoint, setLoadingPoint] = useState('');
-  const [vehicleType, setVehicleType] = useState('');
-  const [vehicleNo, setVehicleNo] = useState('');
-  const [driverName, setDriverName] = useState('');
-  const [driverPhone, setDriverPhone] = useState('');
-  const [buyerId, setBuyerId] = useState('');
-  const [itemCode, setItemCode] = useState('');
-  const [grossWeight, setGrossWeight] = useState('');
-  const [tareWeight, setTareWeight] = useState('');
-  const [preLossWeight, setPreLossWeight] = useState('');
-  const [lossWeight, setLossWeight] = useState('');
-  const [settledWeight, setSettledWeight] = useState('');
-  const [cubicMeter, setCubicMeter] = useState('');
-  const [unitPrice, setUnitPrice] = useState('');
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('출고');
-  const [isSubsidiary, setIsSubsidiary] = useState(false);
-  const [transferDate, setTransferDate] = useState('');
-  const [memo, setMemo] = useState('');
-  const [olbaroMemo, setOlbaroMemo] = useState('');
+  const [projectId, setProjectId] = useState(record?.projectId ?? '');
+  const [outboundDate, setOutboundDate] = useState(initDate(record?.outboundDate));
+  const [handoverDate, setHandoverDate] = useState(initDate(record?.handoverDate));
+  const [olbaroReported, setOlbaroReported] = useState(record?.olbaroReported ?? false);
+  const [dischargerName, setDischargerName] = useState(record?.dischargerName ?? '');
+  const [transporterName, setTransporterName] = useState(record?.transporterName ?? '');
+  const [loadingPoint, setLoadingPoint] = useState(record?.loadingPoint ?? '');
+  const [vehicleType, setVehicleType] = useState(record?.vehicleType ?? '');
+  const [vehicleNo, setVehicleNo] = useState(record?.vehicleNo ?? '');
+  const [driverName, setDriverName] = useState(record?.driverName ?? '');
+  const [driverPhone, setDriverPhone] = useState(record?.driverPhone ?? '');
+  const [buyerId, setBuyerId] = useState(record?.buyerId ?? '');
+  const [itemCode, setItemCode] = useState(record?.itemCode ?? '');
+  const [grossWeight, setGrossWeight] = useState(initNum(record?.grossWeight));
+  const [tareWeight, setTareWeight] = useState(initNum(record?.tareWeight));
+  const [preLossWeight, setPreLossWeight] = useState(initNum(record?.preLossWeight));
+  const [lossWeight, setLossWeight] = useState(initNum(record?.lossWeight));
+  const [settledWeight, setSettledWeight] = useState(initNum(record?.weight));
+  const [cubicMeter, setCubicMeter] = useState(initNum(record?.cubicMeter));
+  const [unitPrice, setUnitPrice] = useState(initNum(record?.unitPrice));
+  const [amount, setAmount] = useState(initNum(record?.amount));
+  const [category, setCategory] = useState(record?.category ?? '출고');
+  const [isSubsidiary, setIsSubsidiary] = useState(record?.isSubsidiary ?? false);
+  const [transferDate, setTransferDate] = useState(initDate(record?.transferDate));
+  const [memo, setMemo] = useState(record?.memo ?? '');
+  const [olbaroMemo, setOlbaroMemo] = useState(record?.olbaroMemo ?? '');
   const [certFiles, setCertFiles] = useState<File[]>([]);
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [created, setCreated] = useState<WasteOutbound | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const isEdit = !!record;
 
   const reset = () => {
     setProjectId('');
@@ -116,7 +125,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
     setError('');
     setSubmitting(true);
     try {
-      const wasteOutbound = await api.post<WasteOutbound>('/api/waste-outbounds', {
+      const payload = {
         projectId,
         outboundDate,
         handoverDate: handoverDate || undefined,
@@ -143,7 +152,10 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
         transferDate: transferDate || undefined,
         memo: memo || undefined,
         olbaroMemo: olbaroMemo || undefined,
-      });
+      };
+      const wasteOutbound = isEdit
+        ? await api.patch<WasteOutbound>(`/api/waste-outbounds/${record.id}`, payload)
+        : await api.post<WasteOutbound>('/api/waste-outbounds', payload);
       await uploadStagedFiles(
         [
           { fileType: '계량증명서', files: certFiles },
@@ -152,12 +164,16 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
         'waste_outbound',
         wasteOutbound.id,
       );
-      setCreated(wasteOutbound);
       setCertFiles([]);
       setRefFiles([]);
-      onCreated?.();
+      if (isEdit) {
+        onSaved?.();
+      } else {
+        setCreated(wasteOutbound);
+        onCreated?.();
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '등록 실패');
+      setError(err instanceof Error ? err.message : isEdit ? '수정 실패' : '등록 실패');
     } finally {
       setSubmitting(false);
     }
@@ -399,11 +415,11 @@ export function WasteOutboundFormPage({ embedded = false, onCreated }: Props = {
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
         <div className="mt-4 flex justify-end gap-2 border-t border-border pt-3">
-          <button type="button" onClick={reset} className={outlineBtnCls}>
-            초기화
+          <button type="button" onClick={isEdit ? () => onSaved?.() : reset} className={outlineBtnCls}>
+            {isEdit ? '취소' : '초기화'}
           </button>
           <button type="submit" disabled={submitting} className={primaryBtnCls}>
-            {submitting ? '등록 중...' : '등록'}
+            {submitting ? '저장 중...' : isEdit ? '수정' : '등록'}
           </button>
         </div>
       </form>

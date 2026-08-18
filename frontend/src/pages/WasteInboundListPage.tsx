@@ -102,6 +102,16 @@ export function WasteInboundListPage() {
         filterKeys={['projectId', 'date', 'itemCode', 'vehicleNo', 'olbaro', 'dischargerName', 'transporterName', 'processorName']}
         onAdd={() => setOpen(true)}
         onDelete={remove}
+        editForm={(row, done) => (
+          <WasteInboundFormPage
+            embedded
+            record={row}
+            onSaved={() => {
+              done();
+              load();
+            }}
+          />
+        )}
         exportType="waste_inbound"
         exportName="폐기물입고현황"
         emptyText="등록된 폐기물 입고 내역이 없습니다."

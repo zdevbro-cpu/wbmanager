@@ -5,6 +5,10 @@ import { toISO } from '../lib/date.js';
 
 const router = Router();
 
+// 폼에서 온 값만 반영한다. 관계·시스템 컬럼은 덮어쓰지 않는다.
+const OMIT = ['id', 'createdAt', 'deletedAt', 'project', 'item', 'buyer', 'attachments'];
+const editable = (body) => Object.fromEntries(Object.entries(body).filter(([k]) => !OMIT.includes(k)));
+
 router.get('/', async (req, res) => {
   const {
     projectId,
@@ -117,17 +121,63 @@ router.delete('/:id', async (req, res) => {
   res.json(deleted);
 });
 
-// 올바로 신고 상태/인계일/비고 수정 (F-FZOGXB)
+// 올바로 신고 상태/인계일/비고를 포함한 등록 후 정정 (F-FZOGXB).
+// 중량·품목·프로젝트가 바뀌면 재고원장을 다시 계상한다.
 router.patch('/:id', async (req, res) => {
-  const { olbaroReported, handoverDate, memo } = req.body;
-  const updated = await prisma.wasteInbound.update({
-    where: { id: req.params.id },
-    data: {
-      ...(olbaroReported !== undefined ? { olbaroReported } : {}),
-      ...(handoverDate !== undefined ? { handoverDate: toISO(handoverDate) } : {}),
-      ...(memo !== undefined ? { memo } : {}),
-    },
+  const existing = await prisma.wasteInbound.findFirst({ where: { id: req.params.id, deletedAt: null } });
+  if (!existing) return res.status(404).json({ error: 'not found' });
+
+  const patch = editable(req.body);
+  const merged = { ...existing, ...patch };
+
+  if (Number(merged.grossWeight) < Number(merged.tareWeight)) {
+    return res.status(400).json({ error: '총중량은 공차중량보다 작을 수 없습니다.' });
+  }
+  const netWeight = Number(merged.grossWeight) - Number(merged.tareWeight) - Number(merged.lossWeight ?? 0);
+  if (netWeight < 0) {
+    return res.status(400).json({ error: '감량이 과다합니다. 입고량이 음수가 됩니다.' });
+  }
+
+  const num = (v) => (v === '' || v == null ? undefined : Number(v));
+  const actualWeight = num(patch.actualWeight) ?? Number(merged.grossWeight) - Number(merged.tareWeight);
+  const settledWeight = num(patch.settledWeight) ?? netWeight;
+  const unitPrice = num(merged.unitPrice);
+  const amount = num(patch.amount) ?? (unitPrice != null ? settledWeight * unitPrice : undefined);
+  const receiveDate = patch.receiveDate ? toISO(patch.receiveDate) : existing.receiveDate;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.wasteInbound.update({
+      where: { id: req.params.id },
+      data: {
+        ...patch,
+        netWeight,
+        actualWeight,
+        settledWeight,
+        ...(amount !== undefined ? { amount } : {}),
+        receiveDate,
+        ...(patch.handoverDate !== undefined
+          ? { handoverDate: patch.handoverDate ? toISO(patch.handoverDate) : null }
+          : {}),
+        ...(patch.transferDate !== undefined
+          ? { transferDate: patch.transferDate ? toISO(patch.transferDate) : null }
+          : {}),
+      },
+    });
+    await tx.inventoryLedger.deleteMany({ where: { refType: 'waste_inbound', refId: row.id } });
+    await postInboundLedger(
+      {
+        projectId: row.projectId,
+        itemCode: row.itemCode,
+        weight: netWeight,
+        ledgerDate: row.receiveDate,
+        refType: 'waste_inbound',
+        refId: row.id,
+      },
+      tx,
+    );
+    return row;
   });
+
   res.json(updated);
 });
 

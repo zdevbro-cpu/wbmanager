@@ -84,6 +84,8 @@ interface Props<T> {
   exportName?: string;
   /** 이 화면에서 쓸 검색 필터. 생략하면 프로젝트·기간·제품명·차종·차량번호·운전자. */
   filterKeys?: FilterKey[];
+  /** 상세에서 수정 폼을 띄운다. 저장이 끝나면 done()을 불러 상세로 돌아온다. */
+  editForm?: (row: T, done: () => void) => ReactNode;
   emptyText: string;
 }
 
@@ -104,6 +106,7 @@ export function TransactionListLayout<T>({
   exportType,
   exportName,
   filterKeys = DEFAULT_FILTER_KEYS,
+  editForm,
   emptyText,
 }: Props<T>) {
   const { projects } = useProjects();
@@ -111,6 +114,7 @@ export function TransactionListLayout<T>({
   const { vehicles } = useVehicles();
   const { employees } = useEmployees();
   const [detail, setDetail] = useState<T | null>(null);
+  const [detailEdit, setDetailEdit] = useState(false);
 
   const hasSum = columns.some((c) => c.sum);
   const tdBase = 'px-3 py-1.5 text-[13px] text-text';
@@ -341,7 +345,10 @@ export function TransactionListLayout<T>({
                     <button
                       type="button"
                       title="상세"
-                      onClick={() => setDetail(row)}
+                      onClick={() => {
+                        setDetailEdit(false);
+                        setDetail(row);
+                      }}
                       className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
                     >
                       <Eye size={15} />
@@ -394,17 +401,33 @@ export function TransactionListLayout<T>({
       </div>
 
       {detail && (
-        <EscOverlay onClose={() => setDetail(null)}>
-          <div className="w-full max-w-[620px] rounded-[14px] border border-border bg-card p-5">
+        <EscOverlay
+          onClose={() => {
+            setDetail(null);
+            setDetailEdit(false);
+          }}
+        >
+          <div className={`w-full ${detailEdit ? 'max-w-[860px]' : 'max-w-[620px]'} rounded-[14px] border border-border bg-card p-5`}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-[16px] font-extrabold text-text-strong">
-                <Icon size={17} className="text-primary" /> 상세
+                <Icon size={17} className="text-primary" /> {detailEdit ? '수정' : '상세'}
               </h2>
-              <button type="button" onClick={() => setDetail(null)} className="text-text-sub hover:text-text-strong">
+              <button
+                type="button"
+                onClick={() => {
+                  setDetail(null);
+                  setDetailEdit(false);
+                }}
+                className="text-text-sub hover:text-text-strong"
+              >
                 <X size={18} />
               </button>
             </div>
 
+            {detailEdit && editForm ? (
+              editForm(detail, () => setDetailEdit(false))
+            ) : (
+              <>
             <dl className="grid grid-cols-2 gap-x-5 gap-y-2">
               {detailFields(detail).map((f) => (
                 <div key={f.label} className="flex justify-between gap-3 border-b border-border pb-1.5">
@@ -436,6 +459,16 @@ export function TransactionListLayout<T>({
                 </ul>
               )}
             </div>
+
+            {editForm && (
+              <div className="mt-5 flex justify-end border-t border-border pt-3">
+                <button type="button" onClick={() => setDetailEdit(true)} className={primaryBtnCls}>
+                  수정
+                </button>
+              </div>
+            )}
+              </>
+            )}
           </div>
         </EscOverlay>
       )}

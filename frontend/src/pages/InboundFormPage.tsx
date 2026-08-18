@@ -16,7 +16,14 @@ import type { Inbound } from '../types';
 interface Props {
   embedded?: boolean;
   onCreated?: () => void;
+  /** 넘기면 수정 모드 — 값이 채워진 채로 열리고 저장 시 PATCH한다. */
+  record?: Inbound | null;
+  onSaved?: () => void;
 }
+
+// 수정 모드 초기값 — 날짜는 YYYY-MM-DD, 숫자는 문자열로 맞춰 넣는다.
+const initDate = (v?: string | null) => (v ? v.slice(0, 10) : '');
+const initNum = (v?: string | number | null) => (v == null ? '' : String(Number(v)));
 
 interface OcrFields {
   weighDate?: string;
@@ -42,23 +49,24 @@ const OCR_LABEL: Record<keyof OcrFields, string> = {
   siteName: '현장/하차지',
 };
 
-export function InboundFormPage({ embedded = false, onCreated }: Props = {}) {
+export function InboundFormPage({ embedded = false, onCreated, record = null, onSaved }: Props = {}) {
   const { projects } = useProjects();
   const { items, quickCreate: quickCreateItem } = useItemMasters();
+  const isEdit = !!record;
 
-  const [projectId, setProjectId] = useState('');
-  const [inboundDate, setInboundDate] = useState('');
-  const [unloadingPoint, setUnloadingPoint] = useState('');
-  const [vehicleType, setVehicleType] = useState('');
-  const [vehicleNo, setVehicleNo] = useState('');
-  const [driverName, setDriverName] = useState('');
-  const [driverPhone, setDriverPhone] = useState('');
-  const [itemCode, setItemCode] = useState('');
-  const [grossWeight, setGrossWeight] = useState('');
-  const [tareWeight, setTareWeight] = useState('');
-  const [lossWeight, setLossWeight] = useState('');
-  const [stockWeight, setStockWeight] = useState('');
-  const [memo, setMemo] = useState('');
+  const [projectId, setProjectId] = useState(record?.projectId ?? '');
+  const [inboundDate, setInboundDate] = useState(initDate(record?.inboundDate));
+  const [unloadingPoint, setUnloadingPoint] = useState(record?.unloadingPoint ?? '');
+  const [vehicleType, setVehicleType] = useState(record?.vehicleType ?? '');
+  const [vehicleNo, setVehicleNo] = useState(record?.vehicleNo ?? '');
+  const [driverName, setDriverName] = useState(record?.driverName ?? '');
+  const [driverPhone, setDriverPhone] = useState(record?.driverPhone ?? '');
+  const [itemCode, setItemCode] = useState(record?.itemCode ?? '');
+  const [grossWeight, setGrossWeight] = useState(initNum(record?.grossWeight));
+  const [tareWeight, setTareWeight] = useState(initNum(record?.tareWeight));
+  const [lossWeight, setLossWeight] = useState(initNum(record?.lossWeight));
+  const [stockWeight, setStockWeight] = useState(initNum(record?.stockWeight));
+  const [memo, setMemo] = useState(record?.memo ?? '');
   const [certFiles, setCertFiles] = useState<File[]>([]);
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [ocr, setOcr] = useState<OcrFields | null>(null);
@@ -152,7 +160,7 @@ export function InboundFormPage({ embedded = false, onCreated }: Props = {}) {
     setError('');
     setSubmitting(true);
     try {
-      const inbound = await api.post<Inbound>('/api/inbounds', {
+      const payload = {
         projectId,
         inboundDate,
         unloadingPoint: unloadingPoint || undefined,
@@ -166,8 +174,11 @@ export function InboundFormPage({ embedded = false, onCreated }: Props = {}) {
         lossWeight: lossWeight ? Number(lossWeight) : undefined,
         stockWeight: stockWeight ? Number(stockWeight) : undefined,
         memo: memo || undefined,
-      });
-      // 첨부는 부모 id가 있어야 붙일 수 있어 등록 성공 후 올린다.
+      };
+      const inbound = isEdit
+        ? await api.patch<Inbound>(`/api/inbounds/${record.id}`, payload)
+        : await api.post<Inbound>('/api/inbounds', payload);
+      // 첨부는 부모 id가 있어야 붙일 수 있어 저장 성공 후 올린다.
       await uploadStagedFiles(
         [
           { fileType: '계량증명서', files: certFiles },
@@ -176,12 +187,16 @@ export function InboundFormPage({ embedded = false, onCreated }: Props = {}) {
         'inbound',
         inbound.id,
       );
-      setCreated(inbound);
       setCertFiles([]);
       setRefFiles([]);
-      onCreated?.();
+      if (isEdit) {
+        onSaved?.();
+      } else {
+        setCreated(inbound);
+        onCreated?.();
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '등록 실패');
+      setError(err instanceof Error ? err.message : isEdit ? '수정 실패' : '등록 실패');
     } finally {
       setSubmitting(false);
     }
@@ -324,11 +339,11 @@ export function InboundFormPage({ embedded = false, onCreated }: Props = {}) {
         {error && <p className="text-[13px] text-danger">{error}</p>}
 
         <div className="flex justify-end gap-2 border-t border-border pt-3">
-          <button type="button" onClick={reset} className={outlineBtnCls}>
-            초기화
+          <button type="button" onClick={isEdit ? () => onSaved?.() : reset} className={outlineBtnCls}>
+            {isEdit ? '취소' : '초기화'}
           </button>
           <button type="submit" disabled={submitting} className={primaryBtnCls}>
-            {submitting ? '등록 중...' : '등록'}
+            {submitting ? '저장 중...' : isEdit ? '수정' : '등록'}
           </button>
         </div>
       </form>
