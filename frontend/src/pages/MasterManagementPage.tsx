@@ -633,6 +633,7 @@ function ItemSection({ items, reload }: { items: ItemMaster[]; reload: () => voi
         <table className="w-full border-collapse">
           <thead className="sticky top-0 z-[1] bg-card">
             <tr className="border-y border-border">
+              <th className={thCls}>No</th>
               <th className={thCls}>코드</th>
               <th className={thCls}>품목명</th>
               <th className={thCls}>기본단위</th>
@@ -641,8 +642,9 @@ function ItemSection({ items, reload }: { items: ItemMaster[]; reload: () => voi
             </tr>
           </thead>
           <tbody>
-            {rows.map((i) => (
+            {rows.map((i, idx) => (
               <tr key={i.id} className={trCls}>
+                <td className={`${tdCls} tabular whitespace-nowrap text-text-sub`}>{idx + 1}</td>
                 <td className={`${tdCls} tabular whitespace-nowrap`}>{i.itemCode}</td>
                 <td className={`${tdCls} font-semibold text-text-strong`}>
                   <span className="flex items-center gap-1.5">
@@ -689,7 +691,7 @@ function ItemSection({ items, reload }: { items: ItemMaster[]; reload: () => voi
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={6} className="py-10 text-center text-[13px] text-text-faint">
                   {items.length === 0 ? '등록된 품목이 없습니다.' : '검색 조건에 맞는 품목이 없습니다.'}
                 </td>
               </tr>
@@ -702,6 +704,7 @@ function ItemSection({ items, reload }: { items: ItemMaster[]; reload: () => voi
         <FormModal title="품목 신규등록" icon={Package} onClose={() => setOpen(false)}>
           <ItemForm
             item={null}
+            existing={items}
             onDone={() => {
               setOpen(false);
               reload();
@@ -768,10 +771,12 @@ function ItemDetail({ item: i, onEdit }: { item: ItemMaster; onEdit: () => void 
 // 재질·공제율 등 옛 상세 항목은 실제로 쓰이지 않아 입력에서 걷어냈다.
 function ItemForm({
   item,
+  existing = [],
   onDone,
   onCancel,
 }: {
   item: ItemMaster | null;
+  existing?: ItemMaster[];
   onDone: (saved: ItemMaster) => void;
   onCancel: () => void;
 }) {
@@ -797,6 +802,14 @@ function ItemForm({
     if (!item && !codeGroup) {
       setError('품목 분류를 선택하세요.');
       return;
+    }
+    // 같은 이름이 이미 있으면 알려만 주고, 그래도 등록하겠다면 진행한다.
+    // 같은 물건이 두 코드로 갈라지면 재고가 나뉘기 때문이다.
+    if (!item) {
+      const dup = existing.find((x) => x.itemName.trim().toLowerCase() === itemName.trim().toLowerCase());
+      if (dup && !window.confirm(`'${dup.itemName}'은(는) 이미 ${dup.itemCode}로 등록돼 있습니다. 그래도 새 코드로 등록할까요?`)) {
+        return;
+      }
     }
     setError('');
     setSubmitting(true);
