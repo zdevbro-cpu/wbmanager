@@ -192,7 +192,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
       )}
 
       <form onSubmit={handleSubmit} className={cardPadCls}>
-        <div className="grid grid-cols-3 gap-x-3 gap-y-3.5">
+        <div className="grid grid-cols-4 gap-x-3 gap-y-3.5">
           <div>
             <label className={labelCls}>프로젝트(차수)</label>
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required className={inputCls}>
@@ -284,7 +284,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
             />
           </div>
 
-          <div className="col-span-3">
+          <div className="col-span-4">
             <MasterSelect
               label="제품명(품목)"
               options={items.map((i) => ({ value: i.itemCode, label: `${i.itemName} (${i.itemCode})`, isTemporary: i.isTemporary }))}
@@ -350,7 +350,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
             />
           </div>
 
-          <p className="col-span-3 text-[12.5px] text-text-faint">
+          <p className="col-span-4 text-[12.5px] text-text-faint">
             실중량 = 총중량 − 공차중량 · 정산중량 = 거래처 감량 전 실중량(없으면 실중량 − 감량)
             <span className="tabular ml-1 font-bold text-text-strong">{formatNumber(settledNum)}</span> kg
             · 지출금액 = 정산중량 × 단가

@@ -407,7 +407,7 @@ export function TransactionListLayout<T>({
             setDetailEdit(false);
           }}
         >
-          <div className={`w-full ${detailEdit ? 'max-w-[860px]' : 'max-w-[620px]'} rounded-[14px] border border-border bg-card p-5`}>
+          <div className={`w-full ${detailEdit ? 'max-w-[1040px]' : 'max-w-[620px]'} rounded-[14px] border border-border bg-card p-5`}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-[16px] font-extrabold text-text-strong">
                 <Icon size={17} className="text-primary" /> {detailEdit ? '수정' : '상세'}

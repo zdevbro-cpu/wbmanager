@@ -103,7 +103,7 @@ export function OutboundListPage() {
       />
 
       {open && (
-        <FormModal title="출고(매각) 등록" icon={PackageMinus} onClose={() => setOpen(false)}>
+        <FormModal title="출고(매각) 등록" icon={PackageMinus} wide onClose={() => setOpen(false)}>
           <OutboundFormPage embedded onCreated={load} />
         </FormModal>
       )}

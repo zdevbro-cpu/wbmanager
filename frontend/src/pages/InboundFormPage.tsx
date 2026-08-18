@@ -215,7 +215,7 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
 
       <form onSubmit={handleSubmit} className={`${cardPadCls} space-y-4`}>
         {/* 3열 그리드 — 모달 폭은 그대로 두고 한 행에 세 항목씩 배치한다. */}
-        <div className="grid grid-cols-3 gap-x-3 gap-y-3.5">
+        <div className="grid grid-cols-4 gap-x-3 gap-y-3.5">
           <div>
             <label className={labelCls}>프로젝트(차수)</label>
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required className={inputCls}>
@@ -284,18 +284,18 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
             <NumberInput value={stockWeightValue} onChange={setStockWeight} decimals={3} />
           </div>
 
-          <p className="col-span-3 text-[13px] text-text-sub">
+          <p className="col-span-4 text-[13px] text-text-sub">
             입고량(자동계산): <span className="tabular font-bold text-text-strong">{netWeight}</span> kg
             <span className="ml-1 text-text-faint">= 총중량 − 공차중량 − 감량</span>
           </p>
 
           {stockMismatch && (
-            <p className="col-span-3 flex items-center gap-1 text-[12.5px] text-danger">
+            <p className="col-span-4 flex items-center gap-1 text-[12.5px] text-danger">
               <AlertTriangle size={13} /> 재고반영중량이 입고량({netWeight}kg)과 일치하지 않습니다. 확인 후 저장하세요.
             </p>
           )}
 
-          <div className="col-span-3">
+          <div className="col-span-4">
             <label className={labelCls}>비고</label>
             <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
           </div>
