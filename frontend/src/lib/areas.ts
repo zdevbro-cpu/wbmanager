@@ -86,18 +86,18 @@ export const AREAS: Area[] = [
     ready: true,
     groups: [
       {
-        label: '자산 / 인원',
-        items: [
-          { to: '/assets', label: '자산 관리 (차량·장비)', icon: Boxes },
-          { to: '/employees', label: '임직원 관리', icon: Users },
-        ],
-      },
-      {
         label: '현장 관리',
         items: [
           { to: '/projects', label: '프로젝트 관리', icon: Layers },
           { to: '/waste', label: '폐기물 / 올바로 관리', icon: ShieldAlert },
           { to: '/admin-alerts', label: '알림 현황', icon: BellRing },
+        ],
+      },
+      {
+        label: '자산 / 인원',
+        items: [
+          { to: '/assets', label: '자산 관리 (차량·장비)', icon: Boxes },
+          { to: '/employees', label: '임직원 관리', icon: Users },
         ],
       },
     ],
