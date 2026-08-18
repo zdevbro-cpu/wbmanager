@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { queryLedger, getLedgerDetail } from '../lib/ledgerQuery.js';
+import { buildWorkbook } from '../lib/ecountExport.js';
+import { prisma } from '../lib/prisma.js';
 
 const router = Router();
 
@@ -9,53 +11,64 @@ router.get('/', async (req, res) => {
   res.json(rows);
 });
 
-// CSV 내보내기 (필터 동일 + template=ecount 옵션)
+// 엑셀 내보내기 — 목록 화면들과 같은 .xlsx 양식으로 맞춘다. 필터는 조회와 동일.
+const LEDGER_COLUMNS = [
+  { header: '일자', key: 'date', width: 12 },
+  { header: '구분', key: 'typeLabel', width: 12 },
+  { header: '프로젝트', key: 'projectName', width: 22 },
+  { header: '현장', key: 'siteName', width: 14 },
+  { header: '거래처', key: 'vendorName', width: 18 },
+  { header: '품목코드', key: 'itemCode', width: 12 },
+  { header: '품목명', key: 'itemName', width: 16 },
+  { header: '중량(kg)', key: 'weight', width: 12 },
+  { header: '금액(원)', key: 'amount', width: 14 },
+];
+
+const TYPE_LABEL = {
+  inbound: '입고',
+  waste_inbound: '폐기물입고',
+  sorting: '선별',
+  outbound_sale: '매각(출고)',
+  waste_outbound: '폐기물반출',
+};
+
 router.get('/export', async (req, res) => {
-  const { template, ...filters } = req.query;
-  const rows = await queryLedger(filters);
+  try {
+    const filters = req.query;
+    const rows = await queryLedger(filters);
+    const project = filters.projectId
+      ? await prisma.project.findUnique({ where: { id: filters.projectId } })
+      : null;
 
-  const header =
-    template === 'ecount'
-      ? ['일자', '구분', '프로젝트', '거래처', '품목코드', '품목명', '중량', '금액']
-      : ['일자', '구분', '프로젝트', '거래처', '품목코드', '품목명', '중량(kg)', '금액'];
+    const wb = await buildWorkbook({
+      sheetName: '통합원장',
+      columns: LEDGER_COLUMNS,
+      rows: rows.map((r) => ({
+        date: new Date(r.date).toISOString().slice(0, 10),
+        typeLabel: TYPE_LABEL[r.type] ?? r.type,
+        projectName: r.projectName ?? '',
+        siteName: r.siteName ?? '',
+        vendorName: r.vendorName ?? '',
+        itemCode: r.itemCode ?? '',
+        itemName: r.itemName ?? '',
+        weight: r.weight == null ? '' : Number(r.weight),
+        amount: r.amount == null ? '' : Number(r.amount),
+      })),
+      filters: { from: filters.from, to: filters.to, projectName: project?.roundName ?? null },
+    });
 
-  const typeLabel = {
-    inbound: '입고',
-    sorting: '선별',
-    outbound_sale: '매각',
-    waste_outbound: '폐기물반출',
-  };
-
-  const escapeCsv = (v) => {
-    if (v == null) return '';
-    const s = String(v);
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-
-  const lines = [header.map(escapeCsv).join(',')];
-  for (const r of rows) {
-    lines.push(
-      [
-        new Date(r.date).toISOString().slice(0, 10),
-        typeLabel[r.type] ?? r.type,
-        r.projectName,
-        r.vendorName,
-        r.itemCode,
-        r.itemName,
-        r.weight,
-        r.amount,
-      ]
-        .map(escapeCsv)
-        .join(','),
+    const fileName = `통합원장_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="export.xlsx"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
     );
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('[ledger-export] 생성 실패:', err);
+    res.status(500).json({ error: '엑셀을 만들지 못했습니다.' });
   }
-
-  const csv = '﻿' + lines.join('\n'); // BOM: 엑셀에서 한글 깨짐 방지
-  const fileName = `wbmanager_ledger_${template === 'ecount' ? 'ecount_' : ''}${new Date().toISOString().slice(0, 10)}.csv`;
-
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-  res.send(csv);
 });
 
 // 원장 상세 (첨부파일 포함) — 원본 근거 추적 (S-XKNNIB)

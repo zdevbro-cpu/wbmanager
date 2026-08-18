@@ -60,10 +60,12 @@ export function LedgerPage() {
     api.get<LedgerRow[]>(`/api/ledger?${buildQuery()}`).then(setRows);
   };
 
+  // 조건을 고치면 바로 다시 조회한다. 날짜를 타이핑하는 중에 매번 부르지 않도록 잠깐 묶어 둔다.
   useEffect(() => {
-    search();
+    const timer = setTimeout(search, 300);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [from, to, projectId, vendorId, itemCode, type]);
 
   // 조회 결과 안에서 프로젝트·거래처·품목명을 훑는 검색. 서버 조건과 달리 즉시 반응한다.
   const visibleRows = useMemo(() => {
@@ -135,7 +137,7 @@ export function LedgerPage() {
       </div>
 
       {/* 검색 필터 — 가로 스크롤 없이 한 줄에 모두 들어가도록 트랙 폭을 고정한다. */}
-      <div className="mb-4 grid items-end gap-3 rounded-[14px] border border-border bg-card p-3 [grid-template-columns:270px_repeat(4,minmax(0,1fr))_minmax(0,1.2fr)_auto_auto_auto]">
+      <div className="mb-4 grid items-end gap-3 rounded-[14px] border border-border bg-card p-3 [grid-template-columns:270px_repeat(4,minmax(0,1fr))_minmax(0,1.2fr)_auto]">
         <DateRangeField label="기간" from={from} to={to} setFrom={setFrom} setTo={setTo} />
 
         <FilterField label="프로젝트">
@@ -186,15 +188,12 @@ export function LedgerPage() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="프로젝트 / 거래처 / 품목" className={inputCls} />
         </FilterField>
 
-        <button type="button" onClick={search} className={`${outlineBtnCls} whitespace-nowrap px-3`}>
-          조회
-        </button>
         <button
           type="button"
-          onClick={() => downloadFile(`/api/ledger/export?${buildQuery()}`, 'ledger.csv')}
+          onClick={() => downloadFile(`/api/ledger/export?${buildQuery()}`, '통합원장.xlsx')}
           className={`${outlineBtnCls} whitespace-nowrap px-3`}
         >
-          <Download size={15} /> 엑셀(CSV)
+          <Download size={15} /> 엑셀 다운로드
         </button>
       </div>
 
