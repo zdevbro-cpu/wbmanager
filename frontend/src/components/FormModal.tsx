@@ -18,7 +18,7 @@ export function FormModal({ title, icon: Icon, onClose, wide = false, children }
 
   return (
     <div className="fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-black/50 p-6">
-      <div className={`w-full ${wide ? 'max-w-[1040px]' : 'max-w-[760px]'} rounded-[14px] border border-border bg-card p-5`}>
+      <div className={`w-full ${wide ? 'max-w-[850px]' : 'max-w-[760px]'} rounded-[14px] border border-border bg-card p-5`}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-[16px] font-extrabold text-text-strong">
             <Icon size={17} className="text-primary" /> {title}
