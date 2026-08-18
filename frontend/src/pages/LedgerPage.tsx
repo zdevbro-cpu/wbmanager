@@ -16,7 +16,7 @@ const TYPE_LABEL: Record<LedgerType, string> = {
   inbound: '입고',
   waste_inbound: '폐기물입고',
   sorting: '선별',
-  outbound_sale: '매각',
+  outbound_sale: '매각(출고)',
   waste_outbound: '폐기물반출',
 };
 
@@ -73,6 +73,19 @@ export function LedgerPage() {
       [r.projectName, r.vendorName, r.itemName].filter(Boolean).join(' ').toLowerCase().includes(keyword),
     );
   }, [rows, q]);
+
+  // 조회 조건에 걸린 건들의 재고 요약 — 재고 = 입고 - 출고(갑지 기준).
+  // 선별은 품목을 바꿔 다는 재분류라 입출고 어느 쪽에도 넣지 않는다.
+  const summary = useMemo(() => {
+    const w = (v?: string | null) => (v == null ? 0 : Number(v));
+    let inbound = 0;
+    let outbound = 0;
+    for (const r of visibleRows) {
+      if (r.type === 'inbound' || r.type === 'waste_inbound') inbound += w(r.weight);
+      else if (r.type === 'outbound_sale' || r.type === 'waste_outbound') outbound += w(r.weight);
+    }
+    return { inbound, outbound, stock: inbound - outbound };
+  }, [visibleRows]);
 
   useEffect(() => {
     if (!selected) {
@@ -154,6 +167,13 @@ export function LedgerPage() {
         >
           <Download size={15} /> 엑셀(CSV)
         </button>
+      </div>
+
+      {/* 조회 조건 기준 재고 요약 — 목록은 그대로 두고 합계만 위에 얹는다. */}
+      <div className="mb-4 grid grid-cols-3 gap-3">
+        <SummaryCard label="입고 합계" value={summary.inbound} hint="입고 + 폐기물입고" />
+        <SummaryCard label="출고 합계" value={summary.outbound} hint="매각(출고) + 폐기물반출" />
+        <SummaryCard label="재고" value={summary.stock} hint="입고 합계 − 출고 합계" strong />
       </div>
 
       <div className={`${tableWrapCls} overflow-x-auto`}>
@@ -254,6 +274,29 @@ function EscPanel({ onClose, children }: { onClose: () => void; children: ReactN
   return (
     <div className="fixed top-0 right-0 h-screen w-[380px] overflow-y-auto border-l border-border bg-card p-5 shadow-[-8px_0_24px_rgba(0,0,0,0.35)]">
       {children}
+    </div>
+  );
+}
+
+// 재고 요약 카드 — 목록 위에서 조회 조건의 입고·출고·잔량을 한눈에 보여 준다.
+function SummaryCard({
+  label,
+  value,
+  hint,
+  strong = false,
+}: {
+  label: string;
+  value: number;
+  hint: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className="rounded-[14px] border border-border bg-card p-3">
+      <p className="text-[12.5px] text-text-sub">{label}</p>
+      <p className={`tabular text-[20px] font-extrabold ${strong ? 'text-primary' : 'text-text-strong'}`}>
+        {formatNumber(value)} <span className="text-[13px] font-semibold text-text-sub">kg</span>
+      </p>
+      <p className="mt-0.5 text-[12px] text-text-faint">{hint}</p>
     </div>
   );
 }
