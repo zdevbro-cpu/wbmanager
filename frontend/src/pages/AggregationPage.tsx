@@ -123,12 +123,13 @@ export function AggregationPage() {
             <ShareCard title="거래처 구성 (금액 상위 6)" groups={data.byVendor} metric="amount" color="#22c55e" />
           </div>
 
+          {/* 좌우 표는 줄 수를 맞춰 같은 높이로 세운다. 모자란 쪽은 빈 줄, 넘치는 쪽은 표 안에서 스크롤. */}
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
-            <GroupTable title="① 프로젝트별 소계" groups={data.byProject} />
-            <GroupTable title="② 거래처별 소계" groups={data.byVendor} />
-            <GroupTable title="③ 품목별 소계" groups={data.byItem} />
-            <GroupTable title="④ 구분별 소계" groups={data.byType} />
-            <GroupTable title="⑤ 월별 소계" groups={data.byMonth} />
+            <GroupTable title="① 프로젝트별 소계" groups={data.byProject} rowSlots={pairRows(data.byProject, data.byVendor)} />
+            <GroupTable title="② 거래처별 소계" groups={data.byVendor} rowSlots={pairRows(data.byProject, data.byVendor)} />
+            <GroupTable title="③ 품목별 소계" groups={data.byItem} rowSlots={pairRows(data.byItem, data.byType)} />
+            <GroupTable title="④ 구분별 소계" groups={data.byType} rowSlots={pairRows(data.byItem, data.byType)} />
+            <GroupTable title="⑤ 월별 소계" groups={data.byMonth} rowSlots={pairRows(data.byMonth)} />
           </div>
         </div>
       )}
@@ -264,16 +265,39 @@ function ShareCard({
   );
 }
 
-function GroupTable({ title, groups, emptyText }: { title: string; groups: AggregationGroup[]; emptyText?: string }) {
+// 한 줄 높이(px)와 한 화면에 보여 줄 최대 줄 수 — 이 수를 넘으면 표 안에서 스크롤한다.
+const ROW_HEIGHT = 30;
+const MAX_ROWS = 8;
+
+// 좌우 한 쌍이 같은 줄 수를 갖도록 큰 쪽에 맞춘다.
+function pairRows(...groups: (AggregationGroup[] | undefined)[]) {
+  const longest = Math.max(1, ...groups.map((g) => g?.length ?? 0));
+  return Math.min(longest, MAX_ROWS);
+}
+
+function GroupTable({
+  title,
+  groups,
+  emptyText,
+  rowSlots,
+}: {
+  title: string;
+  groups: AggregationGroup[];
+  emptyText?: string;
+  rowSlots?: number;
+}) {
   const rows = groups ?? [];
   const sum = (key: keyof AggregationGroup) => rows.reduce((acc, g) => acc + Number(g[key] ?? 0), 0);
+  // 자료가 모자라면 빈 줄로 채워 좌우 표의 높이를 맞춘다.
+  const blanks = rowSlots && rows.length > 0 ? Math.max(0, rowSlots - rows.length) : 0;
+  const bodyHeight = rowSlots ? ROW_HEIGHT * rowSlots + 66 : undefined;
 
   return (
     <div>
       <h2 className={`${sectionTitleCls} mb-2 text-[15px]`}>{title}</h2>
-      <div className={`${tableWrapCls} overflow-x-auto`}>
+      <div className={`${tableWrapCls} overflow-auto`} style={bodyHeight ? { maxHeight: bodyHeight } : undefined}>
         <table className="w-full border-collapse">
-          <thead>
+          <thead className="sticky top-0 z-[1] bg-card">
             <tr className="border-y border-border">
               <th className={thCls}>항목</th>
               <th className={`${thCls} text-right`}>입고</th>
@@ -298,6 +322,11 @@ function GroupTable({ title, groups, emptyText }: { title: string; groups: Aggre
                 <td className={`${tdCls} tabular text-right`}>{g.count}</td>
               </tr>
             ))}
+            {Array.from({ length: blanks }, (_, i) => (
+              <tr key={`blank-${i}`} className={trCls} style={{ height: ROW_HEIGHT }}>
+                <td className={tdCls} colSpan={8} />
+              </tr>
+            ))}
             {rows.length === 0 && (
               <tr>
                 <td colSpan={8} className="py-8 text-center text-[13px] text-text-faint">
@@ -307,7 +336,7 @@ function GroupTable({ title, groups, emptyText }: { title: string; groups: Aggre
             )}
           </tbody>
           {rows.length > 0 && (
-            <tfoot>
+            <tfoot className="sticky bottom-0 z-[1]">
               <tr className="border-t-2 border-border bg-hover">
                 <td className={`${tdCls} font-bold text-text-strong`}>합계</td>
                 {(['inbound', 'waste_inbound', 'sorting', 'outbound_sale', 'waste_outbound', 'amount', 'count'] as const).map(
