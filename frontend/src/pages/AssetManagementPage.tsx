@@ -7,6 +7,7 @@ import { FilterField } from '../components/FilterField';
 import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
 import { AssetMaintenanceForm } from '../components/AssetMaintenanceForm';
+import { MaintenancePage } from './MaintenancePage';
 import { uploadStagedFiles } from '../lib/uploadStaged';
 import { API_BASE_URL } from '../api/client';
 import { auth } from '../lib/firebase';
@@ -61,6 +62,29 @@ function daysLeft(due?: string | null) {
   return Math.round((target.getTime() - today.getTime()) / 86400000);
 }
 
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        '-mb-px border-b-2 px-4 py-2 text-[14px] font-bold transition-colors',
+        active ? 'border-primary text-text-strong' : 'border-transparent text-text-sub hover:text-text-strong',
+      ].join(' ')}
+    >
+      {children}
+    </button>
+  );
+}
+
 function DDay({ due, alertDaysBefore = 30 }: { due?: string | null; alertDaysBefore?: number }) {
   const left = daysLeft(due);
   if (left === null) return <span className="text-text-faint">-</span>;
@@ -71,6 +95,8 @@ function DDay({ due, alertDaysBefore = 30 }: { due?: string | null; alertDaysBef
 }
 
 export function AssetManagementPage() {
+  // 정비 이력은 자산에 딸린 정보라 같은 화면 안 탭으로 둔다.
+  const [tab, setTab] = useState<'assets' | 'maintenances'>('assets');
   const [assets, setAssets] = useState<Asset[]>([]);
   const [assetType, setAssetType] = useState('');
   const [status, setStatus] = useState('');
@@ -102,10 +128,26 @@ export function AssetManagementPage() {
 
   return (
     <div>
-      <div className="mb-5 flex items-center gap-2">
+      <div className="mb-4 flex items-center gap-2">
         <Boxes size={20} className="text-primary" />
         <h1 className={pageTitleCls}>자산 관리 (차량 · 장비)</h1>
-        <span className="ml-1 text-[13px] text-text-sub">{assets.length}건</span>
+      </div>
+
+      <div className="mb-5 flex gap-1 border-b border-border">
+        <TabButton active={tab === 'assets'} onClick={() => setTab('assets')}>
+          자산 목록
+        </TabButton>
+        <TabButton active={tab === 'maintenances'} onClick={() => setTab('maintenances')}>
+          정비 현황
+        </TabButton>
+      </div>
+
+      {tab === 'maintenances' ? (
+        <MaintenancePage embedded />
+      ) : (
+      <>
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-[13px] text-text-sub">{assets.length}건</span>
         <button type="button" onClick={() => setOpenForm(true)} className={`${primaryBtnCls} ml-auto`}>
           <Plus size={15} /> 자산 등록
         </button>
@@ -242,6 +284,8 @@ export function AssetManagementPage() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
 
       {openForm && (
         <FormModal title="자산 등록" icon={Boxes} onClose={() => setOpenForm(false)}>

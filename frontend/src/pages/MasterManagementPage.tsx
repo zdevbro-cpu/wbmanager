@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Settings, Building2, Package, Plus, Eye, Trash2, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
 import { useVendors, useItemMasters } from '../hooks/useMasters';

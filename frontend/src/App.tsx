@@ -9,10 +9,9 @@ import { WasteInboundListPage } from './pages/WasteInboundListPage';
 import { WasteOutboundListPage } from './pages/WasteOutboundListPage';
 import { AssetManagementPage } from './pages/AssetManagementPage';
 import { EmployeeManagementPage } from './pages/EmployeeManagementPage';
-import { MaintenancePage } from './pages/MaintenancePage';
 import { ProjectManagementPage } from './pages/ProjectManagementPage';
 import { SystemAdminPage } from './pages/SystemAdminPage';
-import { DmsPage } from './pages/DmsPage';
+import { EntryPage } from './pages/EntryPage';
 import { LedgerPage } from './pages/LedgerPage';
 import { AggregationPage } from './pages/AggregationPage';
 import { DailyReportPage } from './pages/DailyReportPage';
@@ -34,8 +33,9 @@ function Gate() {
 
   return (
     <Routes>
+      {/* 시작 화면은 사이드바 없이 카드만 띄운다. */}
+      <Route path="/" element={<EntryPage />} />
       <Route element={<Layout />}>
-        <Route index element={<Navigate to="/inbound" replace />} />
         <Route path="/inbound" element={<InboundListPage />} />
         <Route path="/outbound" element={<OutboundListPage />} />
         <Route path="/waste-inbound" element={<WasteInboundListPage />} />
@@ -49,15 +49,14 @@ function Gate() {
         <Route path="/waste" element={<WasteManagementPage />} />
         <Route path="/assets" element={<AssetManagementPage />} />
         <Route path="/projects" element={<ProjectManagementPage />} />
-        <Route path="/maintenances" element={<MaintenancePage />} />
+        <Route path="/maintenances" element={<Navigate to="/assets" replace />} />
         <Route path="/vehicles" element={<Navigate to="/assets" replace />} />
         <Route path="/employees" element={<EmployeeManagementPage />} />
         <Route path="/admin-alerts" element={<AdminAlertsPage />} />
-        <Route path="/dms" element={<DmsPage />} />
         <Route path="/system" element={<SystemAdminPage />} />
         <Route path="/masters" element={<Navigate to="/system" replace />} />
         <Route path="/users" element={<Navigate to="/system?tab=users" replace />} />
-        <Route path="*" element={<Navigate to="/inbound" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );

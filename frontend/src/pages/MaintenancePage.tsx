@@ -27,7 +27,8 @@ const show = (v?: string | number | null) => (v == null || v === '' ? '-' : Stri
 const date = (v?: string | null) => (v ? v.slice(0, 10) : '-');
 
 // 정비 현황 — 자산 구분 없이 정비 이력을 한 화면에서 보고 등록한다(설계문서 4.관리자 5).
-export function MaintenancePage() {
+// 자산 관리 화면 안 탭으로도 쓰기 때문에 제목줄을 감출 수 있게 한다.
+export function MaintenancePage({ embedded = false }: { embedded?: boolean } = {}) {
   const [rows, setRows] = useState<AssetMaintenance[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [status, setStatus] = useState('');
@@ -60,9 +61,13 @@ export function MaintenancePage() {
   return (
     <div>
       <div className="mb-5 flex items-center gap-2">
-        <Wrench size={20} className="text-primary" />
-        <h1 className={pageTitleCls}>정비 현황</h1>
-        <span className="ml-1 text-[13px] text-text-sub">{rows.length}건</span>
+        {!embedded && (
+          <>
+            <Wrench size={20} className="text-primary" />
+            <h1 className={pageTitleCls}>정비 현황</h1>
+          </>
+        )}
+        <span className={embedded ? 'text-[13px] text-text-sub' : 'ml-1 text-[13px] text-text-sub'}>{rows.length}건</span>
         <button type="button" onClick={() => setOpen(true)} className={`${primaryBtnCls} ml-auto`}>
           <Plus size={15} /> 정비 등록
         </button>

@@ -1,97 +1,17 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import {
-  FolderOpen,
-  Truck,
-  Recycle,
-  PackageMinus,
-  Trash2,
-  ListTree,
-  BarChart3,
-  FileText,
-  FileArchive,
-  Boxes,
-  Layers,
-  Wrench,
-  TrendingUp,
-  ShieldAlert,
-  BellRing,
-  Users,
-  Settings,
-  LogOut,
-  type LucideIcon,
-} from 'lucide-react';
+import { LogOut, Grid2x2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { AREAS, areaOfPath } from '../lib/areas';
 
-interface NavItem {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-interface NavGroup {
-  label: string;
-  items: NavItem[];
-}
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    label: '입출고',
-    items: [
-      { to: '/inbound', label: '입고 현황', icon: Truck },
-      { to: '/waste-inbound', label: '폐기물 입고 현황', icon: Recycle },
-      { to: '/outbound', label: '출고 현황', icon: PackageMinus },
-      { to: '/waste-outbound', label: '폐기물 반출 현황', icon: Trash2 },
-    ],
-  },
-  {
-    label: '보고 / 집계',
-    items: [
-      { to: '/ledger', label: '통합 원장 조회', icon: ListTree },
-      { to: '/aggregation', label: '자동집계 현황', icon: BarChart3 },
-      { to: '/daily-report', label: '일일 출고보고', icon: FileText },
-      { to: '/reports', label: '보고서 보관함', icon: FileArchive },
-    ],
-  },
-  {
-    label: '재고 / 손익',
-    items: [
-      { to: '/inventory', label: '재고 / 재고평가', icon: Boxes },
-      { to: '/pnl', label: '프로젝트 손익요약', icon: TrendingUp },
-    ],
-  },
-  // 스크랩 업무와 자산·인원 관리는 쓰는 사람도 주기도 달라 그룹을 나눈다.
-  {
-    label: '스크랩 업무',
-    items: [
-      { to: '/projects', label: '프로젝트 관리', icon: Layers },
-      { to: '/waste', label: '폐기물 / 올바로 관리', icon: ShieldAlert },
-      { to: '/admin-alerts', label: '알림 현황', icon: BellRing },
-    ],
-  },
-  {
-    label: '관리항목',
-    items: [
-      { to: '/assets', label: '자산 관리 (차량·장비)', icon: Boxes },
-      { to: '/maintenances', label: '정비 현황', icon: Wrench },
-      { to: '/employees', label: '임직원 관리', icon: Users },
-    ],
-  },
-  {
-    label: 'DMS',
-    items: [{ to: '/dms', label: '문서 관리', icon: FolderOpen }],
-  },
-  {
-    label: '시스템',
-    items: [{ to: '/system', label: '시스템 관리', icon: Settings }],
-  },
-];
 
 export function Layout() {
   const location = useLocation();
   const { appUser, logout } = useAuth();
   const isAdmin = appUser?.role === 'admin';
-  const navGroups = NAV_GROUPS;
-  const allItems = navGroups.flatMap((g) => g.items);
+  // 시작 화면에서 고른 영역의 메뉴만 띄운다. 경로로 되짚어 새로고침해도 유지된다.
+  const area = areaOfPath(location.pathname) ?? AREAS[0];
+  const navGroups = area.groups;
+  const allItems = AREAS.flatMap((a) => a.groups).flatMap((g) => g.items);
   const current = allItems.find((i) => i.to === location.pathname);
 
   return (
@@ -103,9 +23,17 @@ export function Layout() {
           </div>
           <div>
             <div className="text-[15px] font-extrabold text-text-strong">wbmanager</div>
-            <div className="text-[11px] text-[#5f7ba6]">원방 스크랩 업무지원</div>
+            <div className="text-[11px] text-[#5f7ba6]">{area.title}</div>
           </div>
         </div>
+
+        {/* 다른 영역으로 옮길 때는 시작 화면으로 돌아간다. */}
+        <NavLink
+          to="/"
+          className="mx-3 mb-3 flex items-center gap-2 rounded-[9px] border border-border-top px-2.5 py-2 text-[12.5px] font-semibold text-[#9fb3d1] no-underline hover:bg-nav-hover hover:text-text-strong"
+        >
+          <Grid2x2 size={15} /> 업무 영역 변경
+        </NavLink>
 
         <nav className="flex-1 overflow-y-auto px-3 pb-4">
           {navGroups.map((group) => (
