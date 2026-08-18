@@ -9,6 +9,18 @@ import { toISO } from '../lib/date.js';
 
 const router = Router();
 
+// from~to 사이의 날짜를 하루씩 늘어놓는다. 구간 보고서가 날짜별 블록을 만들 때 쓴다.
+function eachDate(from, to) {
+  const out = [];
+  const cur = new Date(`${from}T00:00:00Z`);
+  const last = new Date(`${to}T00:00:00Z`);
+  while (cur <= last) {
+    out.push(cur.toISOString().slice(0, 10));
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+  return out;
+}
+
 // 갑지 자동 집계 — 기간/프로젝트/거래처/품목 기준 소계 (F-SDUKJY, S-TCUYZO)
 router.get('/aggregation', async (req, res) => {
   const rows = await queryLedger(req.query);
@@ -85,7 +97,7 @@ router.get('/daily/export', async (req, res) => {
 // ── 보고서 발행·보관 ──────────────────────────────────────────
 // 화면에서 매번 텍스트를 뽑던 것을 발행 시점 그대로 저장해 목록에서 다시 열람·전달한다.
 router.post('/publish', async (req, res) => {
-  const { reportType, projectId, date } = req.body;
+  const { reportType, projectId, date, from, to } = req.body;
   if (!reportType) return res.status(400).json({ error: 'reportType은 필수입니다.' });
 
   if (reportType === 'pnl') {
@@ -112,41 +124,91 @@ router.post('/publish', async (req, res) => {
   }
 
   if (reportType === 'daily') {
-    if (!date) return res.status(400).json({ error: '일일보고는 date가 필요합니다.' });
+    // 하루만 낼 때는 date, 구간으로 낼 때는 from~to를 받는다.
+    const start = from ?? date;
+    const end = to ?? date ?? from;
+    if (!start) return res.status(400).json({ error: '일일보고는 date 또는 from~to가 필요합니다.' });
+    if (start > end) return res.status(400).json({ error: '시작일이 종료일보다 늦습니다.' });
 
-    const rows = await queryLedger({ from: date, to: date, projectId });
-    const outboundRows = rows.filter((r) => r.type === 'outbound_sale' || r.type === 'waste_outbound');
+    const buildDay = async (d) => {
+      const rows = await queryLedger({ from: d, to: d, projectId });
+      const outboundRows = rows.filter((r) => r.type === 'outbound_sale' || r.type === 'waste_outbound');
 
-    // 그날 출고가 있었는지와 무관하게 진행 중인 프로젝트를 모두 싣는다.
-    const projects = await prisma.project.findMany({
-      where: { ...(projectId ? { id: projectId } : { status: '진행' }) },
-      orderBy: { roundName: 'asc' },
-    });
-    // 종료된 차수라도 그날 출고가 있으면 빠뜨리지 않는다.
-    const extraIds = [...new Set(outboundRows.map((r) => r.projectId))].filter(
-      (id) => id && !projects.some((p) => p.id === id),
+      // 그날 출고가 있었는지와 무관하게 진행 중인 프로젝트를 모두 싣는다.
+      const projects = await prisma.project.findMany({
+        where: { ...(projectId ? { id: projectId } : { status: '진행' }) },
+        orderBy: { roundName: 'asc' },
+      });
+      // 종료된 차수라도 그날 출고가 있으면 빠뜨리지 않는다.
+      const extraIds = [...new Set(outboundRows.map((r) => r.projectId))].filter(
+        (id) => id && !projects.some((p) => p.id === id),
+      );
+      const extras = extraIds.length ? await prisma.project.findMany({ where: { id: { in: extraIds } } }) : [];
+
+      return {
+        date: d,
+        groups: [...projects, ...extras].map((p) => ({
+          projectId: p.id,
+          projectName: p.roundName,
+          siteName: p.siteName ?? null,
+          rows: outboundRows.filter((r) => r.projectId === p.id),
+        })),
+      };
+    };
+
+    const days = [];
+    for (const d of eachDate(start, end)) days.push(await buildDay(d));
+
+    const isRange = start !== end;
+    if (!isRange) {
+      const built = buildDailyReport(days[0]);
+      const saved = await prisma.report.create({
+        data: {
+          reportType,
+          projectId: projectId || null,
+          reportDate: toISO(start),
+          title: built.title,
+          content: built.content,
+          summary: built.summary,
+          payload: { date: start, groups: days[0].groups, summary: built.summary },
+        },
+        include: { project: true },
+      });
+      return res.status(201).json(saved);
+    }
+
+    // 구간 보고서 — 날짜별 보고서를 이어 붙이고, 엑셀은 날짜별 블록으로 찍는다.
+    const parts = days.map((d) => buildDailyReport(d));
+    const summary = parts.reduce(
+      (acc, p) => ({
+        count: acc.count + p.summary.count,
+        totalWeight: acc.totalWeight + p.summary.totalWeight,
+        totalAmount: acc.totalAmount + p.summary.totalAmount,
+        projectCount: Math.max(acc.projectCount, p.summary.projectCount),
+        activeProjectCount: Math.max(acc.activeProjectCount, p.summary.activeProjectCount),
+        dayCount: acc.dayCount + (p.summary.count > 0 ? 1 : 0),
+      }),
+      { count: 0, totalWeight: 0, totalAmount: 0, projectCount: 0, activeProjectCount: 0, dayCount: 0 },
     );
-    const extras = extraIds.length
-      ? await prisma.project.findMany({ where: { id: { in: extraIds } } })
-      : [];
+    const title = `${start} ~ ${end} 출고보고`;
+    const content = [
+      `[${title}]`,
+      '',
+      `- 출고일 ${summary.dayCount}일 / 총 ${summary.count}건`,
+      `- ${Math.round(summary.totalWeight).toLocaleString()}kg / ${Math.round(summary.totalAmount).toLocaleString()}원`,
+      '',
+      ...parts.map((p) => p.content),
+    ].join('\n');
 
-    const groups = [...projects, ...extras].map((p) => ({
-      projectId: p.id,
-      projectName: p.roundName,
-      siteName: p.siteName ?? null,
-      rows: outboundRows.filter((r) => r.projectId === p.id),
-    }));
-
-    const built = buildDailyReport({ date, groups });
     const saved = await prisma.report.create({
       data: {
         reportType,
         projectId: projectId || null,
-        reportDate: toISO(date),
-        title: built.title,
-        content: built.content,
-        summary: built.summary,
-        payload: { date, groups, summary: built.summary },
+        reportDate: toISO(end),
+        title,
+        content,
+        summary,
+        payload: { from: start, to: end, days, summary },
       },
       include: { project: true },
     });
