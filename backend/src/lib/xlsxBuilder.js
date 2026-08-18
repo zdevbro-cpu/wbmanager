@@ -3,6 +3,9 @@
 import ExcelJS from 'exceljs';
 
 const HEADER_FILL = 'FFEFEFEF';
+// 계근 공유방 보고 양식 색 — 스크랩은 파랑, 폐기물은 황색 머리글에 흰 글씨.
+const SCRAP_HEADER_FILL = 'FF2E9BD6';
+const WASTE_HEADER_FILL = 'FFFFC000';
 
 const n = (v) => Math.round(Number(v ?? 0));
 const pct = (v) => `${Number(v ?? 0).toFixed(1)}%`;
@@ -38,23 +41,28 @@ function addSection(ws, text, span) {
 }
 
 // numberCols에 든 열은 숫자 서식(#,##0)으로 둔다 — 받는 쪽에서 바로 재집계할 수 있어야 한다.
-function addTable(ws, headers, rows, { numberCols = [], lastRowBold = false } = {}) {
+// centerCols에 든 열은 가운데 정렬한다(숫자 열보다 우선). headerFill/headerFontColor로 머리글 색을 바꾼다.
+function addTable(
+  ws,
+  headers,
+  rows,
+  { numberCols = [], lastRowBold = false, headerFill = HEADER_FILL, headerFontColor = null, centerCols = [] } = {},
+) {
   const headerRow = ws.addRow(headers);
-  headerRow.font = { bold: true };
+  headerRow.font = headerFontColor ? { bold: true, color: { argb: headerFontColor } } : { bold: true };
   headerRow.eachCell((cell) => {
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEADER_FILL } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerFill } };
     cell.border = { bottom: { style: 'thin' }, top: { style: 'thin' } };
-    cell.alignment = { horizontal: 'center' };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
   });
 
   rows.forEach((r, idx) => {
     const row = ws.addRow(r);
-    row.eachCell((cell, col) => {
+    row.eachCell({ includeEmpty: true }, (cell, col) => {
       cell.border = { bottom: { style: 'hair', color: { argb: 'FFDDDDDD' } } };
-      if (numberCols.includes(col)) {
-        cell.numFmt = '#,##0';
-        cell.alignment = { horizontal: 'right' };
-      }
+      if (numberCols.includes(col)) cell.numFmt = '#,##0';
+      if (centerCols.includes(col)) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      else if (numberCols.includes(col)) cell.alignment = { horizontal: 'right' };
     });
     if (lastRowBold && idx === rows.length - 1) row.font = { bold: true };
   });
@@ -231,8 +239,9 @@ function listTitle(ws, text, dateText, lastCol) {
 }
 
 // 표 한 줄 — A열을 비우고 B열부터 채운다.
+// 계근 공유방 양식과 맞추려고 leftCols(특이사항 등)만 좌측, 나머지는 가운데로 둔다.
 function listRow(ws, values, opts) {
-  const { bold = false, numberCols = [] } = opts || {};
+  const { bold = false, numberCols = [], leftCols = [], centerRest = false } = opts || {};
   const row = ws.addRow(['', ...values]);
   row.eachCell({ includeEmpty: true }, (cell, col) => {
     if (col === 1) return;
@@ -243,22 +252,32 @@ function listRow(ws, values, opts) {
       right: { style: 'hair', color: { argb: 'FFBFBFBF' } },
     };
     cell.font = bold ? { size: 10, bold: true } : { size: 10 };
-    if (numberCols.includes(col)) {
-      cell.numFmt = '#,##0';
-      cell.alignment = { horizontal: 'right' };
-    }
+    if (numberCols.includes(col)) cell.numFmt = '#,##0';
+    if (leftCols.includes(col)) cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+    else if (centerRest) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    else if (numberCols.includes(col)) cell.alignment = { horizontal: 'right' };
   });
   return row;
 }
 
-function listHeader(ws, values) {
+function listHeader(ws, values, opts) {
+  const { fill = 'FFDCE6F1', fontColor = null } = opts || {};
   const row = listRow(ws, values, { bold: true });
   row.eachCell({ includeEmpty: true }, (cell, col) => {
     if (col === 1) return;
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE6F1' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
+    if (fontColor) cell.font = { size: 10, bold: true, color: { argb: fontColor } };
     cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
   });
   return row;
+}
+
+// 합계 줄 아래를 굵게 그어 보고서 경계를 만든다.
+function closeList(row, lastCol) {
+  for (let col = 2; col <= lastCol; col += 1) {
+    const cell = row.getCell(col);
+    cell.border = { ...cell.border, bottom: { style: 'medium' } };
+  }
 }
 
 export async function buildDailyXlsx(payload) {
@@ -280,10 +299,12 @@ export async function buildDailyXlsx(payload) {
   const t1 = ws.addRow(['계근 공유방 보고 자료']);
   ws.mergeCells(t1.number, 1, t1.number, 5);
   t1.font = { bold: true, size: 14 };
+  t1.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
   t1.height = 22;
   ws.addRow([]);
 
-  const block = (title, rows) => {
+  // 스크랩은 파랑, 폐기물은 황색 머리글. 비고를 뺀 나머지는 가운데 정렬한다.
+  const block = (title, rows, tone) => {
     const head = ws.addRow([]);
     head.getCell(1).value = 'ㅁ ' + title;
     head.getCell(1).font = { bold: true, size: 11 };
@@ -299,8 +320,22 @@ export async function buildDailyXlsx(payload) {
         ...rows.map((r, i) => [i + 1, r.vendorName ?? '', r.itemName ?? '', n(weightOf(r)), r.memo ?? '']),
         ['반출합계', '', '', n(sum(rows, weightOf)), ''],
       ],
-      { numberCols: [4], lastRowBold: true },
+      {
+        numberCols: [4],
+        lastRowBold: true,
+        headerFill: tone === 'waste' ? WASTE_HEADER_FILL : SCRAP_HEADER_FILL,
+        headerFontColor: 'FFFFFFFF',
+        centerCols: [1, 2, 3, 4],
+      },
     );
+
+    // 반출합계 — 구분·거래처명·제품명을 한 칸으로 묶어 가운데 정렬하고, 보고서 경계를 굵게 긋는다.
+    const totalRow = ws.lastRow;
+    ws.mergeCells(totalRow.number, 1, totalRow.number, 3);
+    totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    for (let col = 1; col <= 5; col += 1) {
+      totalRow.getCell(col).border = { bottom: { style: 'medium' } };
+    }
     ws.addRow([]);
   };
 
@@ -311,8 +346,8 @@ export async function buildDailyXlsx(payload) {
       const name = g.projectName ?? '-';
       const scrap = g.rows.filter((r) => r.type === 'outbound_sale');
       const waste = g.rows.filter((r) => r.type === 'waste_outbound');
-      if (scrap.length) block(name + ' 스크랩 출고현황', scrap);
-      if (waste.length) block(name + ' 폐기물 출고현황', waste);
+      if (scrap.length) block(name + ' 스크랩 출고현황', scrap, 'scrap');
+      if (waste.length) block(name + ' 폐기물 출고현황', waste, 'waste');
     });
   }
 
@@ -321,14 +356,19 @@ export async function buildDailyXlsx(payload) {
   setWidths(s2, [2, 5, 5, 13, 11, 8, 13, 15, 13, 8, 13, 12, 8, 7, 11, 7, 11, 11, 11, 10, 10, 8, 15, 9, 49]);
   listTitle(s2, '□ 원방 스크랩 반출보고', date + ' 기준', 25);
 
-  const h2 = listHeader(s2, [
+  const h2 = listHeader(
+    s2,
+    [
     'No', 'No(2)', '프로잭트명', '반출날짜', '상차지', '차량번호', '운전자', '연락처', '차량타입',
     '거래처', '상차제품', '단가', '계 근 내 역', '', '', '',
-    '스크랩중량', '스크랩중량(원방)', '정산 감량', '정산 중량', '계근차', '결제금액', '입금여부', '운송중 특이사항 기록',
-  ]);
+      '스크랩중량', '스크랩중량(원방)', '정산 감량', '정산 중량', '계근차', '결제금액', '입금여부', '운송중 특이사항 기록',
+    ],
+    { fill: SCRAP_HEADER_FILL, fontColor: 'FFFFFFFF' },
+  );
   s2.mergeCells(h2.number, 14, h2.number, 17);
 
   const s2Num = [13, 15, 17, 18, 19, 20, 21, 23];
+  const s2Left = [25]; // 운송중 특이사항 기록
   scrapAll.forEach((r, i) => {
     listRow(
       s2,
@@ -338,7 +378,7 @@ export async function buildDailyXlsx(payload) {
         '', n(r.grossWeight), '', n(r.tareWeight),
         n(weightOf(r)), '', n(r.lossWeight), n(r.weight), '', n(r.amount), r.paidDate ? 'O' : 'X', r.memo ?? '',
       ],
-      { numberCols: s2Num },
+      { numberCols: s2Num, leftCols: s2Left, centerRest: true },
     );
   });
   const f2 = listRow(
@@ -348,21 +388,27 @@ export async function buildDailyXlsx(payload) {
       n(sum(scrapAll, weightOf)), '', n(sum(scrapAll, (r) => r.lossWeight)), n(sum(scrapAll, (r) => r.weight)),
       '', n(sum(scrapAll, (r) => r.amount)), '', '',
     ],
-    { bold: true, numberCols: s2Num },
+    { bold: true, numberCols: s2Num, leftCols: s2Left, centerRest: true },
   );
   s2.mergeCells(f2.number, 2, f2.number, 13);
+  closeList(f2, 25);
 
   /* 시트3 폐기물반출List */
   const s3 = wb.addWorksheet('폐기물반출List');
   setWidths(s3, [2, 5, 5, 12, 12, 8, 9, 9, 13, 12, 9, 11, 6, 8, 10, 9, 49]);
   listTitle(s3, '□ 원방 폐기물 반출보고', date + ' 기준', 17);
 
-  listHeader(s3, [
-    'No', 'No(2)', '프로잭트명', '반출날짜', '상차지', '배출자', '운반자', '처리자', '상차제품',
-    '단가', '스크랩중량', '루베', '운반비', '처리비', '결제금액', '운송중 특이사항 기록',
-  ]);
+  listHeader(
+    s3,
+    [
+      'No', 'No(2)', '프로잭트명', '반출날짜', '상차지', '배출자', '운반자', '처리자', '상차제품',
+      '단가', '스크랩중량', '루베', '운반비', '처리비', '결제금액', '운송중 특이사항 기록',
+    ],
+    { fill: WASTE_HEADER_FILL, fontColor: 'FFFFFFFF' },
+  );
 
   const s3Num = [11, 12, 13, 14, 15, 16];
+  const s3Left = [17]; // 운송중 특이사항 기록
   wasteAll.forEach((r, i) => {
     listRow(
       s3,
@@ -371,7 +417,7 @@ export async function buildDailyXlsx(payload) {
         r.transporterName ?? '', r.vendorName ?? '', r.itemName ?? '',
         n(r.unitPrice), n(weightOf(r)), n(r.cubicMeter), '', '', n(r.amount), r.memo ?? '',
       ],
-      { numberCols: s3Num },
+      { numberCols: s3Num, leftCols: s3Left, centerRest: true },
     );
   });
   const f3 = listRow(
@@ -380,9 +426,10 @@ export async function buildDailyXlsx(payload) {
       '합 계', '', '', '', '', '', '', '', '', '',
       n(sum(wasteAll, weightOf)), n(sum(wasteAll, (r) => r.cubicMeter)), '', '', n(sum(wasteAll, (r) => r.amount)), '',
     ],
-    { bold: true, numberCols: s3Num },
+    { bold: true, numberCols: s3Num, leftCols: s3Left, centerRest: true },
   );
   s3.mergeCells(f3.number, 2, f3.number, 11);
+  closeList(f3, 17);
 
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
