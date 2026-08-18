@@ -214,10 +214,53 @@ export async function buildPnlXlsx(payload) {
 const TYPE_LABEL = { outbound_sale: '매각', waste_outbound: '폐기물반출' };
 
 // ── 일일 출고보고 ──────────────────────────────────────────
-// 사무실에서 돌리던 "스크랩 및 폐기물 반출 보고자료" 통합문서를 그대로 옮긴다.
-//   시트1 계근공유방 보고자료 — 프로젝트·구분별 블록, 반출합계로 닫는다
-//   시트2 스크랩반출List     — 계근·정산·입금여부까지 담은 한 줄 대장
-//   시트3 폐기물반출List     — 배출자·운반자·처리자와 루베·비용
+// 사무실에서 돌리는 "스크랩 및 폐기물 반출 보고자료" 통합문서를 그대로 만든다.
+// 시트 구성·컬럼·표기(원본의 '프로잭트명' 표기 포함)를 맞추고, A열은 원본처럼 여백으로 둔다.
+const TITLE_COLOR = 'FF0000FF';
+
+function listTitle(ws, text, dateText, lastCol) {
+  const row = ws.addRow([]);
+  row.getCell(2).value = text;
+  row.getCell(2).font = { bold: true, size: 16, color: { argb: TITLE_COLOR } };
+  ws.mergeCells(row.number, 2, row.number, lastCol - 3);
+  row.getCell(lastCol).value = dateText;
+  row.getCell(lastCol).font = { size: 10, color: { argb: 'FF666666' } };
+  row.getCell(lastCol).alignment = { horizontal: 'right' };
+  row.height = 22;
+  return row;
+}
+
+// 표 한 줄 — A열을 비우고 B열부터 채운다.
+function listRow(ws, values, opts) {
+  const { bold = false, numberCols = [] } = opts || {};
+  const row = ws.addRow(['', ...values]);
+  row.eachCell({ includeEmpty: true }, (cell, col) => {
+    if (col === 1) return;
+    cell.border = {
+      top: { style: 'hair', color: { argb: 'FFBFBFBF' } },
+      bottom: { style: 'hair', color: { argb: 'FFBFBFBF' } },
+      left: { style: 'hair', color: { argb: 'FFBFBFBF' } },
+      right: { style: 'hair', color: { argb: 'FFBFBFBF' } },
+    };
+    cell.font = bold ? { size: 10, bold: true } : { size: 10 };
+    if (numberCols.includes(col)) {
+      cell.numFmt = '#,##0';
+      cell.alignment = { horizontal: 'right' };
+    }
+  });
+  return row;
+}
+
+function listHeader(ws, values) {
+  const row = listRow(ws, values, { bold: true });
+  row.eachCell({ includeEmpty: true }, (cell, col) => {
+    if (col === 1) return;
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCE6F1' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  });
+  return row;
+}
+
 export async function buildDailyXlsx(payload) {
   const date = payload?.date ?? new Date().toISOString().slice(0, 10);
   const groups = (payload?.groups ?? []).map((g) => ({ ...g, rows: g.rows ?? [] }));
@@ -227,30 +270,34 @@ export async function buildDailyXlsx(payload) {
   // 실중량이 없으면 정산중량을 쓴다 — 계근 항목이 비어 있는 예전 등록건 대비.
   const weightOf = (r) => Number(r.actualWeight ?? r.weight ?? 0);
   const day = (v) => (v ? String(v).slice(0, 10) : '');
+  const sum = (rows, pick) => rows.reduce((acc, r) => acc + Number(pick(r) ?? 0), 0);
 
   const wb = newBook();
 
-  /* ── 시트1 계근공유방 보고자료 ── */
+  /* 시트1 계근공유방 보고자료 */
   const ws = wb.addWorksheet('계근공유방 보고자료');
-  setWidths(ws, [8, 22, 22, 14, 40]);
-  addTitle(ws, '계근 공유방 보고 자료', 5);
+  setWidths(ws, [6, 15, 16, 13, 37]);
+  const t1 = ws.addRow(['계근 공유방 보고 자료']);
+  ws.mergeCells(t1.number, 1, t1.number, 5);
+  t1.font = { bold: true, size: 14 };
+  t1.height = 22;
   ws.addRow([]);
 
   const block = (title, rows) => {
     const head = ws.addRow([]);
-    head.getCell(1).value = `ㅁ ${title}`;
+    head.getCell(1).value = 'ㅁ ' + title;
     head.getCell(1).font = { bold: true, size: 11 };
     ws.mergeCells(head.number, 1, head.number, 4);
     head.getCell(5).value = date;
-    head.getCell(5).font = { size: 9, color: { argb: 'FF666666' } };
+    head.getCell(5).font = { size: 10 };
     head.getCell(5).alignment = { horizontal: 'right' };
 
     addTable(
       ws,
       ['구분', '거래처명', '제품명', '실중량(kg)', '비고'],
       [
-        ...rows.map((r, i) => [i + 1, r.vendorName ?? '-', r.itemName ?? '-', n(weightOf(r)), r.memo ?? '']),
-        ['반출합계', '', '', n(rows.reduce((acc, r) => acc + weightOf(r), 0)), ''],
+        ...rows.map((r, i) => [i + 1, r.vendorName ?? '', r.itemName ?? '', n(weightOf(r)), r.memo ?? '']),
+        ['반출합계', '', '', n(sum(rows, weightOf)), ''],
       ],
       { numberCols: [4], lastRowBold: true },
     );
@@ -264,67 +311,78 @@ export async function buildDailyXlsx(payload) {
       const name = g.projectName ?? '-';
       const scrap = g.rows.filter((r) => r.type === 'outbound_sale');
       const waste = g.rows.filter((r) => r.type === 'waste_outbound');
-      if (scrap.length) block(`${name} 스크랩 출고현황`, scrap);
-      if (waste.length) block(`${name} 폐기물 출고현황`, waste);
+      if (scrap.length) block(name + ' 스크랩 출고현황', scrap);
+      if (waste.length) block(name + ' 폐기물 출고현황', waste);
     });
   }
 
-  /* ── 시트2 스크랩반출List ── */
+  /* 시트2 스크랩반출List */
   const s2 = wb.addWorksheet('스크랩반출List');
-  setWidths(s2, [6, 18, 12, 14, 12, 10, 14, 10, 14, 12, 12, 12, 12, 12, 14, 8, 34]);
-  addTitleWithDate(s2, '□ 원방 스크랩 반출보고', `${date} 기준`, 17);
-  addTable(
+  setWidths(s2, [2, 5, 5, 13, 11, 8, 13, 15, 13, 8, 13, 12, 8, 7, 11, 7, 11, 11, 11, 10, 10, 8, 15, 9, 49]);
+  listTitle(s2, '□ 원방 스크랩 반출보고', date + ' 기준', 25);
+
+  const h2 = listHeader(s2, [
+    'No', 'No(2)', '프로잭트명', '반출날짜', '상차지', '차량번호', '운전자', '연락처', '차량타입',
+    '거래처', '상차제품', '단가', '계 근 내 역', '', '', '',
+    '스크랩중량', '스크랩중량(원방)', '정산 감량', '정산 중량', '계근차', '결제금액', '입금여부', '운송중 특이사항 기록',
+  ]);
+  s2.mergeCells(h2.number, 14, h2.number, 17);
+
+  const s2Num = [13, 15, 17, 18, 19, 20, 21, 23];
+  scrapAll.forEach((r, i) => {
+    listRow(
+      s2,
+      [
+        i + 1, i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.vehicleNo ?? '', r.driverName ?? '',
+        r.driverPhone ?? '', r.vehicleType ?? '', r.vendorName ?? '', r.itemName ?? '', n(r.unitPrice),
+        '', n(r.grossWeight), '', n(r.tareWeight),
+        n(weightOf(r)), '', n(r.lossWeight), n(r.weight), '', n(r.amount), r.paidDate ? 'O' : 'X', r.memo ?? '',
+      ],
+      { numberCols: s2Num },
+    );
+  });
+  const f2 = listRow(
     s2,
     [
-      'No', '프로젝트명', '반출날짜', '상차지', '차량번호', '운전자', '연락처', '차량타입',
-      '거래처', '상차제품', '단가', '실중량', '정산 감량', '정산 중량', '결제금액', '입금여부', '운송중 특이사항 기록',
+      '합 계', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+      n(sum(scrapAll, weightOf)), '', n(sum(scrapAll, (r) => r.lossWeight)), n(sum(scrapAll, (r) => r.weight)),
+      '', n(sum(scrapAll, (r) => r.amount)), '', '',
     ],
-    [
-      ...scrapAll.map((r, i) => [
-        i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.vehicleNo ?? '', r.driverName ?? '',
-        r.driverPhone ?? '', r.vehicleType ?? '', r.vendorName ?? '', r.itemName ?? '',
-        n(r.unitPrice), n(weightOf(r)), n(r.lossWeight), n(r.weight), n(r.amount), r.paidDate ? 'O' : 'X', r.memo ?? '',
-      ]),
-      [
-        '합 계', '', '', '', '', '', '', '', '', '', '',
-        n(scrapAll.reduce((a, r) => a + weightOf(r), 0)), '',
-        n(scrapAll.reduce((a, r) => a + Number(r.weight ?? 0), 0)),
-        n(scrapAll.reduce((a, r) => a + Number(r.amount ?? 0), 0)), '', '',
-      ],
-    ],
-    { numberCols: [11, 12, 13, 14, 15], lastRowBold: true },
+    { bold: true, numberCols: s2Num },
   );
+  s2.mergeCells(f2.number, 2, f2.number, 13);
 
-  /* ── 시트3 폐기물반출List ── */
+  /* 시트3 폐기물반출List */
   const s3 = wb.addWorksheet('폐기물반출List');
-  setWidths(s3, [6, 18, 12, 14, 14, 14, 14, 18, 12, 12, 10, 12, 12, 14, 34]);
-  addTitleWithDate(s3, '□ 원방 폐기물 반출보고', `${date} 기준`, 15);
-  addTable(
-    s3,
-    [
-      'No', '프로젝트명', '반출날짜', '상차지', '배출자', '운반자', '처리자', '상차제품',
-      '단가', '중량(kg)', '루베', '운반비', '처리비', '결제금액', '운송중 특이사항 기록',
-    ],
-    [
-      ...wasteAll.map((r, i) => [
-        i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.dischargerName ?? '',
+  setWidths(s3, [2, 5, 5, 12, 12, 8, 9, 9, 13, 12, 9, 11, 6, 8, 10, 9, 49]);
+  listTitle(s3, '□ 원방 폐기물 반출보고', date + ' 기준', 17);
+
+  listHeader(s3, [
+    'No', 'No(2)', '프로잭트명', '반출날짜', '상차지', '배출자', '운반자', '처리자', '상차제품',
+    '단가', '스크랩중량', '루베', '운반비', '처리비', '결제금액', '운송중 특이사항 기록',
+  ]);
+
+  const s3Num = [11, 12, 13, 14, 15, 16];
+  wasteAll.forEach((r, i) => {
+    listRow(
+      s3,
+      [
+        i + 1, i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.dischargerName ?? '',
         r.transporterName ?? '', r.vendorName ?? '', r.itemName ?? '',
         n(r.unitPrice), n(weightOf(r)), n(r.cubicMeter), '', '', n(r.amount), r.memo ?? '',
-      ]),
-      [
-        '합 계', '', '', '', '', '', '', '', '',
-        n(wasteAll.reduce((a, r) => a + weightOf(r), 0)),
-        n(wasteAll.reduce((a, r) => a + Number(r.cubicMeter ?? 0), 0)),
-        '', '', n(wasteAll.reduce((a, r) => a + Number(r.amount ?? 0), 0)), '',
       ],
+      { numberCols: s3Num },
+    );
+  });
+  const f3 = listRow(
+    s3,
+    [
+      '합 계', '', '', '', '', '', '', '', '', '',
+      n(sum(wasteAll, weightOf)), n(sum(wasteAll, (r) => r.cubicMeter)), '', '', n(sum(wasteAll, (r) => r.amount)), '',
     ],
-    { numberCols: [9, 10, 11, 12, 13, 14], lastRowBold: true },
+    { bold: true, numberCols: s3Num },
   );
-  // 운반비·처리비는 시스템에 따로 담는 칸이 없어 비워 둔다. 필요하면 등록 항목부터 늘려야 한다.
-  s3.addRow([]);
-  const note3 = s3.addRow(['※ 운반비·처리비는 현재 등록 항목에 없어 비어 있습니다. 결제금액은 정산중량 × 단가입니다.']);
-  s3.mergeCells(note3.number, 1, note3.number, 15);
-  note3.font = { size: 9, color: { argb: 'FF666666' } };
+  s3.mergeCells(f3.number, 2, f3.number, 11);
 
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
