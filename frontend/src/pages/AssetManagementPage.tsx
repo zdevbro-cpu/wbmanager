@@ -288,7 +288,7 @@ export function AssetManagementPage() {
       )}
 
       {openForm && (
-        <FormModal title="자산 등록" icon={Boxes} onClose={() => setOpenForm(false)}>
+        <FormModal title="자산 등록" icon={Boxes} wide onClose={() => setOpenForm(false)}>
           <AssetForm
             categories={categories}
             onCreated={() => {
@@ -470,7 +470,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="grid grid-cols-3 gap-x-3 gap-y-3.5">
+      <div className="grid grid-cols-4 gap-x-3 gap-y-3.5">
         <div>
           <label className={labelCls}>자산유형</label>
           <select
@@ -578,7 +578,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
           <NumberInput value={form.usefulLifeMonth} onChange={(v) => set({ usefulLifeMonth: v })} />
         </div>
 
-        <p className="col-span-3 border-t border-border pt-3 text-[13px] font-bold text-text-strong">
+        <p className="col-span-4 border-t border-border pt-3 text-[13px] font-bold text-text-strong">
           {assetType === 'VEHICLE' ? '차량 상세' : '장비 상세'}
           <span className="ml-1 text-[12px] font-normal text-text-faint">
             — 입력한 만료·점검일은 자산 일정으로 등록되어 만료 알림에 표시됩니다.
@@ -768,12 +768,12 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
           </>
         )}
 
-        <div className="col-span-3">
+        <div className="col-span-4">
           <label className={labelCls}>비고</label>
           <input value={form.memo} onChange={(e) => set({ memo: e.target.value })} className={inputCls} />
         </div>
 
-        <p className="col-span-3 border-t border-border pt-3 text-[13px] font-bold text-text-strong">
+        <p className="col-span-4 border-t border-border pt-3 text-[13px] font-bold text-text-strong">
           첨부 서류
           {assetType === 'VEHICLE' && (
             <span className="ml-1 text-[12px] font-normal text-text-faint">
@@ -799,7 +799,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
         />
 
         {ocrNote && (
-          <p className="col-span-3 flex items-center gap-1.5 text-[12.5px] text-primary">
+          <p className="col-span-4 flex items-center gap-1.5 text-[12.5px] text-primary">
             <ScanLine size={14} /> {ocrNote}
           </p>
         )}
