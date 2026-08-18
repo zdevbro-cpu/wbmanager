@@ -98,8 +98,19 @@ export function WasteOutboundListPage() {
         detailFields={DETAIL_FIELDS}
         filter={filter}
         setFilter={setFilter}
+        filterKeys={['projectId', 'date', 'itemCode', 'vehicleNo', 'olbaro', 'dischargerName', 'transporterName', 'processorName']}
         onAdd={() => setOpen(true)}
         onDelete={remove}
+        editForm={(row, done) => (
+          <WasteOutboundFormPage
+            embedded
+            record={row}
+            onSaved={() => {
+              done();
+              load();
+            }}
+          />
+        )}
         exportType="waste_outbound"
         exportName="폐기물반출현황"
         emptyText="등록된 폐기물 반출 내역이 없습니다."

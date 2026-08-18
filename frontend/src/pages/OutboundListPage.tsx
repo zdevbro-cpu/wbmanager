@@ -87,6 +87,16 @@ export function OutboundListPage() {
         setFilter={setFilter}
         onAdd={() => setOpen(true)}
         onDelete={remove}
+        editForm={(row, done) => (
+          <OutboundFormPage
+            embedded
+            record={row}
+            onSaved={() => {
+              done();
+              load();
+            }}
+          />
+        )}
         exportType="outbound_sale"
         exportName="출고현황"
         emptyText="등록된 출고 내역이 없습니다."

@@ -18,32 +18,41 @@ const CATEGORIES = ['출고', '보류', '기타'];
 interface Props {
   embedded?: boolean;
   onCreated?: () => void;
+  /** 넘기면 수정 모드 — 값이 채워진 채로 열리고 저장 시 PATCH한다. */
+  record?: OutboundSale | null;
+  onSaved?: () => void;
 }
 
-export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
+// 수정 모드 초기값 — 날짜는 YYYY-MM-DD, 숫자는 문자열로 맞춰 넣는다.
+const initDate = (v?: string | null) => (v ? v.slice(0, 10) : '');
+const initNum = (v?: string | number | null) => (v == null ? '' : String(Number(v)));
+
+export function OutboundFormPage({ embedded = false, onCreated, record = null, onSaved }: Props = {}) {
   const { projects } = useProjects();
   const { vendors, quickCreate: quickCreateVendor } = useVendors();
   const { items, quickCreate: quickCreateItem } = useItemMasters();
 
-  const [projectId, setProjectId] = useState('');
-  const [itemCode, setItemCode] = useState('');
-  const [buyerId, setBuyerId] = useState('');
-  const [outboundDate, setOutboundDate] = useState('');
-  const [loadingPoint, setLoadingPoint] = useState('');
-  const [vehicleType, setVehicleType] = useState('');
-  const [vehicleNo, setVehicleNo] = useState('');
-  const [driverName, setDriverName] = useState('');
-  const [driverPhone, setDriverPhone] = useState('');
-  const [grossWeight, setGrossWeight] = useState('');
-  const [tareWeight, setTareWeight] = useState('');
-  const [preLossWeight, setPreLossWeight] = useState('');
-  const [lossWeight, setLossWeight] = useState('');
-  const [stockWeight, setStockWeight] = useState('');
-  const [unitPrice, setUnitPrice] = useState('');
-  const [category, setCategory] = useState('');
-  const [isSubsidiary, setIsSubsidiary] = useState(false);
-  const [memo, setMemo] = useState('');
-  const [paidDate, setPaidDate] = useState('');
+  const isEdit = !!record;
+
+  const [projectId, setProjectId] = useState(record?.projectId ?? '');
+  const [itemCode, setItemCode] = useState(record?.itemCode ?? '');
+  const [buyerId, setBuyerId] = useState(record?.buyerId ?? '');
+  const [outboundDate, setOutboundDate] = useState(initDate(record?.outboundDate));
+  const [loadingPoint, setLoadingPoint] = useState(record?.loadingPoint ?? '');
+  const [vehicleType, setVehicleType] = useState(record?.vehicleType ?? '');
+  const [vehicleNo, setVehicleNo] = useState(record?.vehicleNo ?? '');
+  const [driverName, setDriverName] = useState(record?.driverName ?? '');
+  const [driverPhone, setDriverPhone] = useState(record?.driverPhone ?? '');
+  const [grossWeight, setGrossWeight] = useState(initNum(record?.grossWeight));
+  const [tareWeight, setTareWeight] = useState(initNum(record?.tareWeight));
+  const [preLossWeight, setPreLossWeight] = useState(initNum(record?.preLossWeight));
+  const [lossWeight, setLossWeight] = useState(initNum(record?.lossWeight));
+  const [stockWeight, setStockWeight] = useState(initNum(record?.stockWeight));
+  const [unitPrice, setUnitPrice] = useState(initNum(record?.unitPrice));
+  const [category, setCategory] = useState(record?.category ?? '');
+  const [isSubsidiary, setIsSubsidiary] = useState(record?.isSubsidiary ?? false);
+  const [memo, setMemo] = useState(record?.memo ?? '');
+  const [paidDate, setPaidDate] = useState(initDate(record?.paidDate));
   const [certFiles, setCertFiles] = useState<File[]>([]);
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [created, setCreated] = useState<OutboundSale | null>(null);
@@ -103,7 +112,7 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
     setError('');
     setSubmitting(true);
     try {
-      const outbound = await api.post<OutboundSale>('/api/outbounds', {
+      const payload = {
         projectId,
         itemCode,
         buyerId: buyerId || undefined,
@@ -123,7 +132,10 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
         isSubsidiary,
         memo: memo || undefined,
         paidDate: paidDate || undefined,
-      });
+      };
+      const outbound = isEdit
+        ? await api.patch<OutboundSale>(`/api/outbounds/${record.id}`, payload)
+        : await api.post<OutboundSale>('/api/outbounds', payload);
       await uploadStagedFiles(
         [
           { fileType: '계량증명서', files: certFiles },
@@ -132,12 +144,16 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
         'outbound_sale',
         outbound.id,
       );
-      setCreated(outbound);
       setCertFiles([]);
       setRefFiles([]);
-      onCreated?.();
+      if (isEdit) {
+        onSaved?.();
+      } else {
+        setCreated(outbound);
+        onCreated?.();
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '등록 실패');
+      setError(err instanceof Error ? err.message : isEdit ? '수정 실패' : '등록 실패');
     } finally {
       setSubmitting(false);
     }
@@ -308,11 +324,11 @@ export function OutboundFormPage({ embedded = false, onCreated }: Props = {}) {
         {error && <p className="text-[13px] text-danger">{error}</p>}
 
         <div className="flex justify-end gap-2 border-t border-border pt-3">
-          <button type="button" onClick={reset} className={outlineBtnCls}>
-            초기화
+          <button type="button" onClick={isEdit ? () => onSaved?.() : reset} className={outlineBtnCls}>
+            {isEdit ? '취소' : '초기화'}
           </button>
           <button type="submit" disabled={submitting} className={primaryBtnCls}>
-            {submitting ? '등록 중...' : '등록'}
+            {submitting ? '저장 중...' : isEdit ? '수정' : '등록'}
           </button>
         </div>
       </form>

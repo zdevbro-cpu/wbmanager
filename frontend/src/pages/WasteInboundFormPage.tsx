@@ -15,42 +15,51 @@ import type { WasteInbound } from '../types';
 interface Props {
   embedded?: boolean;
   onCreated?: () => void;
+  /** 넘기면 수정 모드 — 값이 채워진 채로 열리고 저장 시 PATCH한다. */
+  record?: WasteInbound | null;
+  onSaved?: () => void;
 }
 
-export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}) {
+// 수정 모드 초기값 — 날짜는 YYYY-MM-DD, 숫자는 문자열로 맞춰 넣는다.
+const initDate = (v?: string | null) => (v ? v.slice(0, 10) : '');
+const initNum = (v?: string | number | null) => (v == null ? '' : String(Number(v)));
+
+export function WasteInboundFormPage({ embedded = false, onCreated, record = null, onSaved }: Props = {}) {
   const { projects } = useProjects();
   const { items, quickCreate: quickCreateItem } = useItemMasters();
   // 반복 입력값은 공통코드 관리에서 유지한다.
   const { labels: dischargerOptions } = useCommonCodes('배출자');
   const { labels: unloadingPointOptions } = useCommonCodes('하차지');
 
-  const [projectId, setProjectId] = useState('');
-  const [receiveDate, setReceiveDate] = useState('');
-  const [handoverDate, setHandoverDate] = useState('');
-  const [olbaroReported, setOlbaroReported] = useState(false);
-  const [dischargerName, setDischargerName] = useState('');
-  const [unloadingPoint, setUnloadingPoint] = useState('');
-  const [vehicleType, setVehicleType] = useState('');
-  const [vehicleNo, setVehicleNo] = useState('');
-  const [driverName, setDriverName] = useState('');
-  const [driverPhone, setDriverPhone] = useState('');
-  const [itemCode, setItemCode] = useState('');
-  const [grossWeight, setGrossWeight] = useState('');
-  const [tareWeight, setTareWeight] = useState('');
-  const [lossWeight, setLossWeight] = useState('');
-  const [transporterName, setTransporterName] = useState('');
-  const [processorName, setProcessorName] = useState('');
-  const [actualWeight, setActualWeight] = useState('');
-  const [settledWeight, setSettledWeight] = useState('');
-  const [cubicMeter, setCubicMeter] = useState('');
-  const [unitPrice, setUnitPrice] = useState('');
-  const [transferDate, setTransferDate] = useState('');
-  const [memo, setMemo] = useState('');
+  const [projectId, setProjectId] = useState(record?.projectId ?? '');
+  const [receiveDate, setReceiveDate] = useState(initDate(record?.receiveDate));
+  const [handoverDate, setHandoverDate] = useState(initDate(record?.handoverDate));
+  const [olbaroReported, setOlbaroReported] = useState(record?.olbaroReported ?? false);
+  const [dischargerName, setDischargerName] = useState(record?.dischargerName ?? '');
+  const [unloadingPoint, setUnloadingPoint] = useState(record?.unloadingPoint ?? '');
+  const [vehicleType, setVehicleType] = useState(record?.vehicleType ?? '');
+  const [vehicleNo, setVehicleNo] = useState(record?.vehicleNo ?? '');
+  const [driverName, setDriverName] = useState(record?.driverName ?? '');
+  const [driverPhone, setDriverPhone] = useState(record?.driverPhone ?? '');
+  const [itemCode, setItemCode] = useState(record?.itemCode ?? '');
+  const [grossWeight, setGrossWeight] = useState(initNum(record?.grossWeight));
+  const [tareWeight, setTareWeight] = useState(initNum(record?.tareWeight));
+  const [lossWeight, setLossWeight] = useState(initNum(record?.lossWeight));
+  const [transporterName, setTransporterName] = useState(record?.transporterName ?? '');
+  const [processorName, setProcessorName] = useState(record?.processorName ?? '');
+  const [actualWeight, setActualWeight] = useState(initNum(record?.actualWeight));
+  const [settledWeight, setSettledWeight] = useState(initNum(record?.settledWeight));
+  const [cubicMeter, setCubicMeter] = useState(initNum(record?.cubicMeter));
+  const [unitPrice, setUnitPrice] = useState(initNum(record?.unitPrice));
+  const [transferDate, setTransferDate] = useState(initDate(record?.transferDate));
+  const [memo, setMemo] = useState(record?.memo ?? '');
   const [certFiles, setCertFiles] = useState<File[]>([]);
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [created, setCreated] = useState<WasteInbound | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const isEdit = !!record;
 
   const reset = () => {
     setProjectId('');
@@ -100,7 +109,7 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
     setError('');
     setSubmitting(true);
     try {
-      const wasteInbound = await api.post<WasteInbound>('/api/waste-inbounds', {
+      const payload = {
         projectId,
         receiveDate,
         handoverDate: handoverDate || undefined,
@@ -124,7 +133,10 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
         amount: amountNum ?? undefined,
         transferDate: transferDate || undefined,
         memo: memo || undefined,
-      });
+      };
+      const wasteInbound = isEdit
+        ? await api.patch<WasteInbound>(`/api/waste-inbounds/${record.id}`, payload)
+        : await api.post<WasteInbound>('/api/waste-inbounds', payload);
       await uploadStagedFiles(
         [
           { fileType: '계량증명서', files: certFiles },
@@ -133,12 +145,16 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
         'waste_inbound',
         wasteInbound.id,
       );
-      setCreated(wasteInbound);
       setCertFiles([]);
       setRefFiles([]);
-      onCreated?.();
+      if (isEdit) {
+        onSaved?.();
+      } else {
+        setCreated(wasteInbound);
+        onCreated?.();
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '등록 실패');
+      setError(err instanceof Error ? err.message : isEdit ? '수정 실패' : '등록 실패');
     } finally {
       setSubmitting(false);
     }
@@ -327,11 +343,11 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
         <div className="mt-4 flex justify-end gap-2 border-t border-border pt-3">
-          <button type="button" onClick={reset} className={outlineBtnCls}>
-            초기화
+          <button type="button" onClick={isEdit ? () => onSaved?.() : reset} className={outlineBtnCls}>
+            {isEdit ? '취소' : '초기화'}
           </button>
           <button type="submit" disabled={submitting} className={primaryBtnCls}>
-            {submitting ? '등록 중...' : '등록'}
+            {submitting ? '저장 중...' : isEdit ? '수정' : '등록'}
           </button>
         </div>
       </form>

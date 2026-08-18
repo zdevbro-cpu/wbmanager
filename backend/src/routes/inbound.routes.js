@@ -5,6 +5,10 @@ import { toISO } from '../lib/date.js';
 
 const router = Router();
 
+// 폼에서 온 값만 반영한다. 관계·시스템 컬럼은 덮어쓰지 않는다.
+const OMIT = ['id', 'createdAt', 'deletedAt', 'project', 'item', 'buyer', 'attachments'];
+const editable = (body) => Object.fromEntries(Object.entries(body).filter(([k]) => !OMIT.includes(k)));
+
 router.get('/', async (req, res) => {
   const { projectId, from, to, vehicleType, vehicleNo, driverName, itemCode } = req.query;
   const range = {};
@@ -78,6 +82,51 @@ router.post('/', async (req, res) => {
   });
 
   res.status(201).json(inbound);
+});
+
+// 등록 후 정정. 중량·품목·프로젝트가 바뀌면 재고원장을 다시 계상한다.
+router.patch('/:id', async (req, res) => {
+  const existing = await prisma.inbound.findFirst({ where: { id: req.params.id, deletedAt: null } });
+  if (!existing) return res.status(404).json({ error: 'not found' });
+
+  const patch = editable(req.body);
+  const merged = { ...existing, ...patch };
+
+  if (Number(merged.grossWeight) < 0 || Number(merged.tareWeight) < 0 || Number(merged.lossWeight ?? 0) < 0) {
+    return res.status(400).json({ error: '중량은 0 이상이어야 합니다.' });
+  }
+  if (Number(merged.grossWeight) < Number(merged.tareWeight)) {
+    return res.status(400).json({ error: '만차중량은 공차중량보다 작을 수 없습니다.' });
+  }
+
+  const netWeight = Number(merged.grossWeight) - Number(merged.tareWeight) - Number(merged.lossWeight ?? 0);
+  if (netWeight < 0) {
+    return res.status(400).json({ error: '감량이 과다합니다. 입고량이 음수가 됩니다.' });
+  }
+  const stock = patch.stockWeight ?? netWeight;
+  const inboundDate = patch.inboundDate ? toISO(patch.inboundDate) : existing.inboundDate;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.inbound.update({
+      where: { id: req.params.id },
+      data: { ...patch, netWeight, stockWeight: stock, inboundDate },
+    });
+    await tx.inventoryLedger.deleteMany({ where: { refType: 'inbound', refId: row.id } });
+    await postInboundLedger(
+      {
+        projectId: row.projectId,
+        itemCode: row.itemCode,
+        weight: stock,
+        ledgerDate: row.inboundDate,
+        refType: 'inbound',
+        refId: row.id,
+      },
+      tx,
+    );
+    return row;
+  });
+
+  res.json(updated);
 });
 
 export default router;
