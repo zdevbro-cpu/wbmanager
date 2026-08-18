@@ -52,6 +52,37 @@ router.get('/:id', async (req, res) => {
 const num = (v) => (v === '' || v == null ? undefined : Number(v));
 
 // 유형 선택에 따라 상세 폼이 분기되므로 vehicle/equipment는 해당 유형일 때만 만든다.
+// 입출고 등록에서 목록에 없는 차량번호를 직접 적었을 때 쓰는 빠른 등록.
+// 자산번호를 사람이 정할 일이 아니라서 차량번호에서 만들어 준다. 나머지는 자산 관리에서 채운다.
+router.post('/quick-vehicle', async (req, res) => {
+  const plateNo = String(req.body?.plateNo ?? '').trim();
+  const vehicleType = req.body?.vehicleType ? String(req.body.vehicleType).trim() : null;
+  if (!plateNo) return res.status(400).json({ error: '차량번호는 필수입니다.' });
+
+  const existing = await prisma.asset.findFirst({
+    where: { assetType: 'VEHICLE', vehicle: { plateNo } },
+    include: { vehicle: true },
+  });
+  if (existing) return res.json(existing);
+
+  const assetNo = `V-${plateNo}`;
+  const dup = await prisma.asset.findUnique({ where: { assetNo } });
+  if (dup) return res.json(dup);
+
+  const created = await prisma.asset.create({
+    data: {
+      assetNo,
+      assetType: 'VEHICLE',
+      name: plateNo,
+      category: vehicleType,
+      status: '가용',
+      vehicle: { create: { plateNo, vehicleType } },
+    },
+    include: { vehicle: true },
+  });
+  res.status(201).json(created);
+});
+
 router.post('/', async (req, res) => {
   const { assetNo, assetType, name, vehicle, equipment, schedules, ...rest } = req.body;
 

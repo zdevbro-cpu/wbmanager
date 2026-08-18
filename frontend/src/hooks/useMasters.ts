@@ -91,7 +91,17 @@ export function useVehicles() {
     reload();
   }, [reload]);
 
-  return { vehicles, reload };
+  // 목록에 없는 차량번호를 입출고 등록에서 바로 만들 수 있게 한다. 자산 관리에도 함께 잡힌다.
+  const quickCreate = useCallback(
+    async (plateNo: string, vehicleType?: string) => {
+      await api.post('/api/assets/quick-vehicle', { plateNo, vehicleType });
+      reload();
+      return plateNo;
+    },
+    [reload],
+  );
+
+  return { vehicles, reload, quickCreate };
 }
 
 // 공통코드 — 배출자/운반자/상차지/차종 등 반복 입력값 목록.

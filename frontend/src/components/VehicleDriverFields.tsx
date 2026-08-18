@@ -28,7 +28,7 @@ export function VehicleDriverFields({
   driverPhone,
   setDriverPhone,
 }: Props) {
-  const { vehicles } = useVehicles();
+  const { vehicles, quickCreate } = useVehicles();
   const { employees } = useEmployees();
   const { labels: codeVehicleTypes } = useCommonCodes('차종');
   const vehicleTypes = codeVehicleTypes.length > 0 ? codeVehicleTypes : DEFAULT_VEHICLE_TYPES;
@@ -37,6 +37,17 @@ export function VehicleDriverFields({
     setVehicleNo(no);
     const vehicle = vehicles.find((v) => v.vehicleNo === no);
     if (vehicle?.vehicleType) setVehicleType(vehicle.vehicleType);
+  };
+
+  // 목록에 없는 번호를 적고 칸을 벗어나면 차량으로 등록해 다음부터 목록에 뜨게 한다.
+  const registerIfNew = async () => {
+    const no = vehicleNo.trim();
+    if (!no || vehicles.some((v) => v.vehicleNo === no)) return;
+    try {
+      await quickCreate(no, vehicleType || undefined);
+    } catch {
+      // 등록에 실패해도 입력값은 그대로 두어 저장을 막지 않는다.
+    }
   };
 
   const handleDriverChange = (name: string) => {
@@ -50,18 +61,22 @@ export function VehicleDriverFields({
     <>
       <div>
         <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">차량번호</label>
-        <select value={vehicleNo} onChange={(e) => handleVehicleChange(e.target.value)} className={inputCls}>
-          <option value="">선택</option>
+        {/* 목록에서 고르거나 직접 적는다. 새 번호는 칸을 벗어날 때 차량으로 등록된다. */}
+        <input
+          list="vehicle-plate-options"
+          value={vehicleNo}
+          onChange={(e) => handleVehicleChange(e.target.value)}
+          onBlur={registerIfNew}
+          placeholder="선택하거나 직접 입력"
+          className={inputCls}
+        />
+        <datalist id="vehicle-plate-options">
           {vehicles.map((v) => (
             <option key={v.id} value={v.vehicleNo}>
-              {v.vehicleNo}
-              {v.vehicleType ? ` (${v.vehicleType})` : ''}
+              {v.vehicleType ?? ''}
             </option>
           ))}
-        </select>
-        {vehicles.length === 0 && (
-          <p className="mt-1 text-[12px] text-text-faint">관리 &gt; 자산 관리에서 먼저 등록하세요.</p>
-        )}
+        </datalist>
       </div>
 
       <div>
