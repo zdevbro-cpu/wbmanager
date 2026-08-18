@@ -635,9 +635,8 @@ function ItemSection({ items, reload }: { items: ItemMaster[]; reload: () => voi
             <tr className="border-y border-border">
               <th className={thCls}>코드</th>
               <th className={thCls}>품목명</th>
-              <th className={thCls}>현장 호칭</th>
-              <th className={thCls}>분류</th>
-              <th className={thCls}>용도</th>
+              <th className={thCls}>기본단위</th>
+              <th className={thCls}>비고</th>
               <th className={thCls}>관리</th>
             </tr>
           </thead>
@@ -652,9 +651,8 @@ function ItemSection({ items, reload }: { items: ItemMaster[]; reload: () => voi
                     {i.isActive === false && <Badge tone="slate">미사용</Badge>}
                   </span>
                 </td>
-                <td className={tdCls}>{show(i.aliasNames)}</td>
-                <td className={tdCls}>{[i.category, i.subCategory, i.minorCategory].filter(Boolean).join(' / ')}</td>
-                <td className={tdCls}>{show(i.usageType)}</td>
+                <td className={tdCls}>{show(i.baseUnit)}</td>
+                <td className={tdCls}>{show(i.memo)}</td>
                 <td className={`${tdCls} whitespace-nowrap`}>
                   <div className="flex items-center gap-1.5">
                     <button
@@ -691,7 +689,7 @@ function ItemSection({ items, reload }: { items: ItemMaster[]; reload: () => voi
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={5} className="py-10 text-center text-[13px] text-text-faint">
                   {items.length === 0 ? '등록된 품목이 없습니다.' : '검색 조건에 맞는 품목이 없습니다.'}
                 </td>
               </tr>
