@@ -38,6 +38,13 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
   const [grossWeight, setGrossWeight] = useState('');
   const [tareWeight, setTareWeight] = useState('');
   const [lossWeight, setLossWeight] = useState('');
+  const [transporterName, setTransporterName] = useState('');
+  const [processorName, setProcessorName] = useState('');
+  const [actualWeight, setActualWeight] = useState('');
+  const [settledWeight, setSettledWeight] = useState('');
+  const [cubicMeter, setCubicMeter] = useState('');
+  const [unitPrice, setUnitPrice] = useState('');
+  const [transferDate, setTransferDate] = useState('');
   const [memo, setMemo] = useState('');
   const [certFiles, setCertFiles] = useState<File[]>([]);
   const [refFiles, setRefFiles] = useState<File[]>([]);
@@ -60,6 +67,13 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
     setGrossWeight('');
     setTareWeight('');
     setLossWeight('');
+    setTransporterName('');
+    setProcessorName('');
+    setActualWeight('');
+    setSettledWeight('');
+    setCubicMeter('');
+    setUnitPrice('');
+    setTransferDate('');
     setMemo('');
     setCertFiles([]);
     setRefFiles([]);
@@ -73,6 +87,13 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
       ? Number(grossWeight) - Number(tareWeight) - Number(lossWeight || 0)
       : null;
   const netWeight = formatNumber(netWeightNum);
+
+  // 실중량·정산중량은 비워 두면 계근값이 그대로 저장된다. 금액은 정산중량 × 단가.
+  const actualWeightNum =
+    actualWeight !== '' ? Number(actualWeight) : grossWeight && tareWeight ? Number(grossWeight) - Number(tareWeight) : null;
+  const settledWeightNum = settledWeight !== '' ? Number(settledWeight) : netWeightNum;
+  const amountNum = settledWeightNum !== null && unitPrice ? settledWeightNum * Number(unitPrice) : null;
+  const amount = formatNumber(amountNum);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +115,14 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
         grossWeight: Number(grossWeight),
         tareWeight: Number(tareWeight),
         lossWeight: lossWeight ? Number(lossWeight) : undefined,
+        transporterName: transporterName || undefined,
+        processorName: processorName || undefined,
+        actualWeight: actualWeightNum ?? undefined,
+        settledWeight: settledWeightNum ?? undefined,
+        cubicMeter: cubicMeter ? Number(cubicMeter) : undefined,
+        unitPrice: unitPrice ? Number(unitPrice) : undefined,
+        amount: amountNum ?? undefined,
+        transferDate: transferDate || undefined,
         memo: memo || undefined,
       });
       await uploadStagedFiles(
@@ -142,7 +171,7 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
           </div>
 
           <div>
-            <label className={labelCls}>인수일</label>
+            <label className={labelCls}>상차일</label>
             <input type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} required className={inputCls} />
           </div>
 
@@ -165,6 +194,26 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
                 <option key={o} value={o} />
               ))}
             </datalist>
+          </div>
+
+          <div>
+            <label className={labelCls}>운반자</label>
+            <input
+              value={transporterName}
+              onChange={(e) => setTransporterName(e.target.value)}
+              placeholder="운반 업체"
+              className={inputCls}
+            />
+          </div>
+
+          <div>
+            <label className={labelCls}>처리자</label>
+            <input
+              value={processorName}
+              onChange={(e) => setProcessorName(e.target.value)}
+              placeholder="처리 업체"
+              className={inputCls}
+            />
           </div>
 
           <div>
@@ -232,6 +281,38 @@ export function WasteInboundFormPage({ embedded = false, onCreated }: Props = {}
           <p className="col-span-3 text-[13px] text-text-sub">
             입고량(자동계산): <span className="tabular font-bold text-text-strong">{netWeight}</span> kg
             <span className="ml-1 text-text-faint">= 총중량 − 공차중량 − 감량</span>
+          </p>
+
+          <div>
+            <label className={labelCls}>실중량(kg)</label>
+            <NumberInput value={actualWeight} onChange={setActualWeight} decimals={3} />
+            <p className="mt-1 text-[12px] text-text-faint">비우면 총중량 − 공차중량</p>
+          </div>
+
+          <div>
+            <label className={labelCls}>정산중량(kg)</label>
+            <NumberInput value={settledWeight} onChange={setSettledWeight} decimals={3} />
+            <p className="mt-1 text-[12px] text-text-faint">비우면 입고량</p>
+          </div>
+
+          <div>
+            <label className={labelCls}>루베 적용(㎥)</label>
+            <NumberInput value={cubicMeter} onChange={setCubicMeter} decimals={3} />
+          </div>
+
+          <div>
+            <label className={labelCls}>단가(원)</label>
+            <NumberInput value={unitPrice} onChange={setUnitPrice} />
+          </div>
+
+          <div>
+            <label className={labelCls}>이체일</label>
+            <input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} className={inputCls} />
+          </div>
+
+          <p className="self-end pb-2 text-[13px] text-text-sub">
+            금액(자동계산): <span className="tabular font-bold text-text-strong">{amount}</span> 원
+            <span className="ml-1 text-text-faint">= 정산중량 × 단가</span>
           </p>
 
           <div className="col-span-3">

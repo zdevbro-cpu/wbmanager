@@ -25,6 +25,17 @@ function commonWhere({ projectId, vehicleType, vehicleNo, driverName, itemCode }
   };
 }
 
+// 폐기물 입고 화면에만 있는 필터 — 올바로/배출자/운반자/처리자. 자유 입력은 부분 일치로 찾는다.
+function wasteInboundWhere({ olbaro, dischargerName, transporterName, processorName }) {
+  const like = (v) => ({ contains: v, mode: 'insensitive' });
+  return {
+    ...(olbaro ? { olbaroReported: olbaro === 'O' } : {}),
+    ...(dischargerName ? { dischargerName: like(dischargerName) } : {}),
+    ...(transporterName ? { transporterName: like(transporterName) } : {}),
+    ...(processorName ? { processorName: like(processorName) } : {}),
+  };
+}
+
 const INBOUND_COLUMNS = [
   { header: '상차일', key: 'inboundDate', width: 12 },
   { header: '프로젝트명', key: 'projectName', width: 22 },
@@ -157,6 +168,7 @@ const BUILDERS = {
       const rows = await prisma.wasteInbound.findMany({
         where: {
           ...commonWhere(q),
+          ...wasteInboundWhere(q),
           ...(range ? { receiveDate: range } : {}),
           ...(q.unreported === 'true' ? { OR: [{ olbaroReported: false }, { handoverDate: null }] } : {}),
         },
