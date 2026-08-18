@@ -16,7 +16,7 @@ import {
   outlineBtnCls,
   inputCls,
 } from '../components/ui/classes';
-import type { DiaryDay, DiaryResponse, SavedReport } from '../types';
+import type { DiaryDay, DiaryResponse } from '../types';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -34,7 +34,6 @@ export function DailyReportPage() {
   const [days, setDays] = useState<DiaryDay[]>([]);
   const [publishDate, setPublishDate] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [viewing, setViewing] = useState<SavedReport | null>(null);
 
   const load = useCallback(() => {
     const params = new URLSearchParams({ month });
@@ -58,11 +57,6 @@ export function DailyReportPage() {
     [...activeDays].pop() ??
     days[0] ??
     null;
-
-  const openReport = async (id: string) => {
-    const report = await api.get<SavedReport>(`/api/reports/published/${id}`);
-    setViewing(report);
-  };
 
   return (
     <div>
@@ -103,11 +97,7 @@ export function DailyReportPage() {
       ) : (
         <div className="grid grid-cols-[minmax(0,1fr)_360px] gap-4">
           <MonthCalendar days={days} selected={selectedDay?.date ?? null} onSelect={setSelected} />
-          <DayPanel
-            day={selectedDay}
-            onPublish={() => selectedDay && setPublishDate(selectedDay.date)}
-            onOpenReport={openReport}
-          />
+          <DayPanel day={selectedDay} onPublish={() => selectedDay && setPublishDate(selectedDay.date)} />
         </div>
       )}
 
@@ -124,24 +114,6 @@ export function DailyReportPage() {
         </FormModal>
       )}
 
-      {viewing && (
-        <FormModal title={viewing.title} icon={FileText} onClose={() => setViewing(null)}>
-          <div className="space-y-3">
-            <pre className="max-h-[60vh] overflow-y-auto rounded-[10px] border border-border bg-input p-4 text-[12.5px] leading-relaxed whitespace-pre-wrap text-text">
-              {viewing.content}
-            </pre>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => downloadFile(`/api/reports/published/${viewing.id}/xlsx`, `${viewing.title}.xlsx`)}
-                className={primaryBtnCls}
-              >
-                <FileSpreadsheet size={15} /> 엑셀(xlsx)
-              </button>
-            </div>
-          </div>
-        </FormModal>
-      )}
     </div>
   );
 }
@@ -240,15 +212,7 @@ function CalendarCell({
 }
 
 // 고른 날의 상세 — 예전 목록 카드에 있던 내용을 그대로 옮겼다.
-function DayPanel({
-  day,
-  onPublish,
-  onOpenReport,
-}: {
-  day: DiaryDay | null;
-  onPublish: () => void;
-  onOpenReport: (id: string) => void;
-}) {
+function DayPanel({ day, onPublish }: { day: DiaryDay | null; onPublish: () => void }) {
   if (!day) return <div className={`${cardPadCls} text-[13px] text-text-faint`}>날짜를 고르세요.</div>;
 
   return (
@@ -307,24 +271,16 @@ function DayPanel({
         ) : (
           <div className="mb-2 space-y-1.5">
             {day.reports.map((rep) => (
-              <div key={rep.id} className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => onOpenReport(rep.id)}
-                  className="min-w-0 flex-1 truncate text-left text-[12.5px] font-semibold text-primary hover:underline"
-                  title={rep.title}
-                >
-                  {rep.title}
-                </button>
-                <button
-                  type="button"
-                  title="엑셀 내려받기"
-                  onClick={() => downloadFile(`/api/reports/published/${rep.id}/xlsx`, `${rep.title}.xlsx`)}
-                  className="shrink-0 rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
-                >
-                  <FileSpreadsheet size={14} />
-                </button>
-              </div>
+              <button
+                key={rep.id}
+                type="button"
+                onClick={() => downloadFile(`/api/reports/published/${rep.id}/xlsx`, `${rep.title}.xlsx`)}
+                className="flex w-full items-center gap-1.5 text-left text-[12.5px] font-semibold text-primary hover:underline"
+                title="엑셀로 내려받기"
+              >
+                <FileSpreadsheet size={14} className="shrink-0" />
+                <span className="min-w-0 truncate">{rep.title}</span>
+              </button>
             ))}
           </div>
         )}
@@ -337,14 +293,21 @@ function DayPanel({
 }
 
 function PublishDialog({ date, onDone, onCancel }: { date: string; onDone: () => void; onCancel: () => void }) {
+  // 하루만 낼 때는 두 칸을 같은 날로 두고, 구간으로 낼 때는 종료일을 뒤로 민다.
+  const [from, setFrom] = useState(date);
+  const [to, setTo] = useState(date);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const publish = async () => {
+    if (from > to) {
+      setError('시작일이 종료일보다 늦습니다.');
+      return;
+    }
     setError('');
     setSubmitting(true);
     try {
-      await api.post('/api/reports/publish', { reportType: 'daily', date });
+      await api.post('/api/reports/publish', { reportType: 'daily', from, to });
       onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : '발행 실패');
@@ -355,7 +318,24 @@ function PublishDialog({ date, onDone, onCancel }: { date: string; onDone: () =>
 
   return (
     <div className="space-y-3">
-      <h3 className={`${sectionTitleCls} text-[15px]`}>{date} 일일 출고보고</h3>
+      <h3 className={`${sectionTitleCls} text-[15px]`}>
+        {from === to ? `${from} 일일 출고보고` : `${from} ~ ${to} 출고보고`}
+      </h3>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">시작일</label>
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputCls} />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">종료일</label>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputCls} />
+        </div>
+      </div>
+
+      <p className="text-[12.5px] text-text-faint">
+        구간으로 내면 계근공유방·스크랩반출List·폐기물반출List 세 탭 모두 날짜별 블록으로 나뉘어 작성됩니다.
+      </p>
       <p className="text-[13px] text-text-sub">
         앞단에 그날 전체 요약을 두고, 진행 중인 프로젝트를 하나씩 담아 한 장으로 만듭니다. 출고가 없던 프로젝트는 &quot;출고
         없음&quot;으로 표기됩니다. 발행 후 엑셀(xlsx)로 내려받을 수 있습니다.

@@ -285,9 +285,15 @@ function closeList(row, lastCol) {
 }
 
 export async function buildDailyXlsx(payload) {
-  const date = payload?.date ?? new Date().toISOString().slice(0, 10);
-  const groups = (payload?.groups ?? []).map((g) => ({ ...g, rows: g.rows ?? [] }));
-  const all = groups.flatMap((g) => g.rows.map((r) => ({ ...r, projectName: g.projectName ?? '-' })));
+  // 하루치는 {date, groups}, 구간은 {from, to, days:[{date, groups}]}로 들어온다.
+  const days = (payload?.days ?? [{ date: payload?.date, groups: payload?.groups }]).map((d) => ({
+    date: d?.date ?? new Date().toISOString().slice(0, 10),
+    groups: (d?.groups ?? []).map((g) => ({ ...g, rows: g.rows ?? [] })),
+  }));
+  const date = payload?.to ?? payload?.date ?? days[days.length - 1].date;
+  const rangeLabel = payload?.from && payload?.to ? `${payload.from} ~ ${payload.to}` : date;
+  const rowsOf = (d) => d.groups.flatMap((g) => g.rows.map((r) => ({ ...r, projectName: g.projectName ?? '-' })));
+  const all = days.flatMap(rowsOf);
   const scrapAll = all.filter((r) => r.type === 'outbound_sale');
   const wasteAll = all.filter((r) => r.type === 'waste_outbound');
   // 실중량이 없으면 정산중량을 쓴다 — 계근 항목이 비어 있는 예전 등록건 대비.
@@ -300,7 +306,7 @@ export async function buildDailyXlsx(payload) {
   /* 시트1 계근공유방 보고자료 */
   const ws = wb.addWorksheet('계근공유방 보고자료');
   setWidths(ws, [6, 15, 16, 13, 37]);
-  const t1 = ws.addRow(['계근 공유방 보고 자료']);
+  const t1 = ws.addRow([days.length > 1 ? `계근 공유방 보고 자료 (${rangeLabel})` : '계근 공유방 보고 자료']);
   ws.mergeCells(t1.number, 1, t1.number, 5);
   t1.font = { bold: true, size: 14 };
   t1.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
@@ -308,12 +314,12 @@ export async function buildDailyXlsx(payload) {
   ws.addRow([]);
 
   // 스크랩은 파랑, 폐기물은 황색 머리글. 비고를 뺀 나머지는 가운데 정렬한다.
-  const block = (title, rows, tone) => {
+  const block = (title, rows, tone, blockDate) => {
     const head = ws.addRow([]);
     head.getCell(1).value = 'ㅁ ' + title;
     head.getCell(1).font = { bold: true, size: 11 };
     ws.mergeCells(head.number, 1, head.number, 4);
-    head.getCell(5).value = date;
+    head.getCell(5).value = blockDate;
     head.getCell(5).font = { size: 10 };
     head.getCell(5).alignment = { horizontal: 'right' };
 
@@ -344,103 +350,126 @@ export async function buildDailyXlsx(payload) {
   };
 
   if (!scrapAll.length && !wasteAll.length) {
-    ws.addRow(['그날 반출 내역이 없습니다.']);
+    ws.addRow(['해당 구간 반출 내역이 없습니다.']);
   } else {
-    groups.forEach((g) => {
-      const name = g.projectName ?? '-';
-      const scrap = g.rows.filter((r) => r.type === 'outbound_sale');
-      const waste = g.rows.filter((r) => r.type === 'waste_outbound');
-      if (scrap.length) block(name + ' 스크랩 출고현황', scrap, 'scrap');
-      if (waste.length) block(name + ' 폐기물 출고현황', waste, 'waste');
+    days.forEach((d) => {
+      d.groups.forEach((g) => {
+        const name = g.projectName ?? '-';
+        const scrap = g.rows.filter((r) => r.type === 'outbound_sale');
+        const waste = g.rows.filter((r) => r.type === 'waste_outbound');
+        if (scrap.length) block(name + ' 스크랩 출고현황', scrap, 'scrap', d.date);
+        if (waste.length) block(name + ' 폐기물 출고현황', waste, 'waste', d.date);
+      });
     });
   }
 
-  /* 시트2 스크랩반출List — 보고 양식 그대로 10개 항목만 찍는다. */
+  /* 시트2 스크랩반출List — 보고 양식 그대로 10개 항목. 날짜별로 블록을 나눠 찍는다. */
   const s2 = wb.addWorksheet('스크랩반출List');
   setWidths(s2, [2, 5, 15, 12, 11, 13, 13, 8, 12, 14, 8]);
-  listTitle(s2, '□ 원방 스크랩 반출보고', date + ' 기준', 11);
-
-  listHeader(s2, [
-    'No', '프로잭트명', '반출날짜', '상차지', '거래처', '상차제품', '단가', '스크랩중량', '결제금액', '입금여부',
-  ]);
 
   const s2Num = [8, 9, 10]; // 단가·스크랩중량·결제금액
   const s2Money = 10;       // 결제금액 — 양식과 같이 연녹색 배경
-  scrapAll.forEach((r, i) => {
-    const row = listRow(
+  days.forEach((d) => {
+    const rows = rowsOf(d).filter((r) => r.type === 'outbound_sale');
+    if (!rows.length) return;
+
+    listTitle(s2, '□ 원방 스크랩 반출보고', d.date + ' 기준', 11);
+    listHeader(s2, [
+      'No', '프로잭트명', '반출날짜', '상차지', '거래처', '상차제품', '단가', '스크랩중량', '결제금액', '입금여부',
+    ]);
+
+    rows.forEach((r, i) => {
+      const row = listRow(
+        s2,
+        [
+          i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.vendorName ?? '', r.itemName ?? '',
+          n(r.unitPrice), n(weightOf(r)), n(r.amount), r.paidDate ? 'O' : 'X',
+        ],
+        { numberCols: s2Num, centerRest: true },
+      );
+      row.getCell(s2Money).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MONEY_FILL } };
+    });
+
+    const f2 = listRow(
       s2,
-      [
-        i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.vendorName ?? '', r.itemName ?? '',
-        n(r.unitPrice), n(weightOf(r)), n(r.amount), r.paidDate ? 'O' : 'X',
-      ],
-      { numberCols: s2Num, centerRest: true },
+      ['합 계', '', '', '', '', '', '', n(sum(rows, weightOf)), n(sum(rows, (r) => r.amount)), ''],
+      { bold: true, numberCols: s2Num, centerRest: true },
     );
-    row.getCell(s2Money).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MONEY_FILL } };
+    s2.mergeCells(f2.number, 2, f2.number, 8);
+    f2.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+    f2.getCell(s2Money).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MONEY_FILL } };
+    closeList(f2, 11);
+    s2.addRow([]);
   });
+  if (!scrapAll.length) {
+    listTitle(s2, '□ 원방 스크랩 반출보고', rangeLabel + ' 기준', 11);
+    s2.addRow(['', '해당 구간 스크랩 반출 내역이 없습니다.']);
+  }
 
-  const f2 = listRow(
-    s2,
-    ['합 계', '', '', '', '', '', '', n(sum(scrapAll, weightOf)), n(sum(scrapAll, (r) => r.amount)), ''],
-    { bold: true, numberCols: s2Num, centerRest: true },
-  );
-  s2.mergeCells(f2.number, 2, f2.number, 8);
-  f2.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
-  f2.getCell(s2Money).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MONEY_FILL } };
-  closeList(f2, 11);
-
-  /* 시트3 폐기물반출List — 보고 양식 그대로 14개 항목. 운반비는 아직 받는 칸이 없어 비워 둔다. */
+  /* 시트3 폐기물반출List — 보고 양식 그대로 14개 항목. 날짜별로 블록을 나눠 찍는다. */
   const s3 = wb.addWorksheet('폐기물반출List');
   setWidths(s3, [2, 5, 15, 12, 11, 12, 11, 14, 16, 8, 11, 7, 12, 12, 12]);
-  listTitle(s3, '□ 원방 폐기물 반출보고', date + ' 기준', 15);
-
-  listHeader(
-    s3,
-    [
-      'No', '프로젝트명', '반출날짜', '상차지', '배출자', '운반자', '처리자', '상차제품',
-      '단가', '스크랩중량', '루베', '운반비', '처리비', '합계',
-    ],
-    { fill: WASTE_LIST_HEADER_FILL },
-  );
 
   const s3Num = [10, 11, 12, 13, 14, 15]; // 단가·스크랩중량·루베·운반비·처리비·합계
   const s3Money = [13, 14, 15];           // 운반비·처리비·합계 — 양식과 같이 연녹색 배경
   const carryOf = (r) => Number(r.transportCost ?? 0);
   const treatOf = (r) => Number(r.amount ?? 0);
-  wasteAll.forEach((r, i) => {
-    const carry = carryOf(r);
-    const treat = treatOf(r);
-    const row = listRow(
+
+  days.forEach((d) => {
+    const rows = rowsOf(d).filter((r) => r.type === 'waste_outbound');
+    if (!rows.length) return;
+
+    listTitle(s3, '□ 원방 폐기물 반출보고', d.date + ' 기준', 15);
+    listHeader(
       s3,
       [
-        i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.dischargerName ?? '',
-        r.transporterName ?? '', r.vendorName ?? '', r.itemName ?? '',
-        n(r.unitPrice), n(weightOf(r)), r.cubicMeter == null ? '-' : n(r.cubicMeter),
-        n(carry), n(treat), n(carry + treat),
+        'No', '프로젝트명', '반출날짜', '상차지', '배출자', '운반자', '처리자', '상차제품',
+        '단가', '스크랩중량', '루베', '운반비', '처리비', '합계',
       ],
-      { numberCols: s3Num, centerRest: true },
+      { fill: WASTE_LIST_HEADER_FILL },
     );
-    s3Money.forEach((col) => {
-      row.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MONEY_FILL } };
-    });
-  });
 
-  const carryTotal = sum(wasteAll, carryOf);
-  const treatTotal = sum(wasteAll, treatOf);
-  const f3 = listRow(
-    s3,
-    [
-      '합 계', '', '', '', '', '', '', '', '',
-      n(sum(wasteAll, weightOf)), n(sum(wasteAll, (r) => r.cubicMeter)),
-      n(carryTotal), n(treatTotal), n(carryTotal + treatTotal),
-    ],
-    { bold: true, numberCols: s3Num, centerRest: true },
-  );
-  s3.mergeCells(f3.number, 2, f3.number, 10);
-  f3.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
-  s3Money.forEach((col) => {
-    f3.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MONEY_FILL } };
+    rows.forEach((r, i) => {
+      const carry = carryOf(r);
+      const treat = treatOf(r);
+      const row = listRow(
+        s3,
+        [
+          i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.dischargerName ?? '',
+          r.transporterName ?? '', r.vendorName ?? '', r.itemName ?? '',
+          n(r.unitPrice), n(weightOf(r)), r.cubicMeter == null ? '-' : n(r.cubicMeter),
+          n(carry), n(treat), n(carry + treat),
+        ],
+        { numberCols: s3Num, centerRest: true },
+      );
+      s3Money.forEach((col) => {
+        row.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MONEY_FILL } };
+      });
+    });
+
+    const carryTotal = sum(rows, carryOf);
+    const treatTotal = sum(rows, treatOf);
+    const f3 = listRow(
+      s3,
+      [
+        '합 계', '', '', '', '', '', '', '', '',
+        n(sum(rows, weightOf)), n(sum(rows, (r) => r.cubicMeter)),
+        n(carryTotal), n(treatTotal), n(carryTotal + treatTotal),
+      ],
+      { bold: true, numberCols: s3Num, centerRest: true },
+    );
+    s3.mergeCells(f3.number, 2, f3.number, 10);
+    f3.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+    s3Money.forEach((col) => {
+      f3.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MONEY_FILL } };
+    });
+    closeList(f3, 15);
+    s3.addRow([]);
   });
-  closeList(f3, 15);
+  if (!wasteAll.length) {
+    listTitle(s3, '□ 원방 폐기물 반출보고', rangeLabel + ' 기준', 15);
+    s3.addRow(['', '해당 구간 폐기물 반출 내역이 없습니다.']);
+  }
 
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
