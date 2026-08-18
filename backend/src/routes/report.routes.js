@@ -4,7 +4,7 @@ import { buildAggregation } from '../lib/aggregation.js';
 import { prisma } from '../lib/prisma.js';
 import { getProjectPnl } from '../lib/pnl.js';
 import { buildPnlReport, buildDailyReport } from '../lib/reportBuilder.js';
-import { buildPnlDocx, buildDailyDocx } from '../lib/docxBuilder.js';
+import { buildPnlXlsx, buildDailyXlsx } from '../lib/xlsxBuilder.js';
 import { toISO } from '../lib/date.js';
 
 const router = Router();
@@ -190,8 +190,8 @@ router.get('/published/:id/export', async (req, res) => {
   res.send(report.content);
 });
 
-// 워드 문서 — 대표이사 보고 양식으로 내려받는다.
-router.get('/published/:id/docx', async (req, res) => {
+// 엑셀 문서 — 대표이사 보고 양식으로 내려받는다. 표를 그대로 편집·재집계할 수 있다.
+router.get('/published/:id/xlsx', async (req, res) => {
   const report = await prisma.report.findUnique({ where: { id: req.params.id } });
   if (!report) return res.status(404).json({ error: 'not found' });
 
@@ -203,20 +203,20 @@ router.get('/published/:id/docx', async (req, res) => {
       payload = pnl ? { ...pnl, reportDate: report.reportDate.toISOString().slice(0, 10) } : null;
     }
     if (!payload) {
-      return res.status(409).json({ error: '이 보고서는 워드 양식 데이터 없이 발행되어 다시 발행해야 합니다.' });
+      return res.status(409).json({ error: '이 보고서는 양식 데이터 없이 발행되어 다시 발행해야 합니다.' });
     }
 
-    const buffer = report.reportType === 'pnl' ? await buildPnlDocx(payload) : await buildDailyDocx(payload);
+    const buffer = report.reportType === 'pnl' ? await buildPnlXlsx(payload) : await buildDailyXlsx(payload);
 
-    const encodedName = encodeURIComponent(`${report.title}.docx`);
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="report.docx"; filename*=UTF-8''${encodedName}`);
+    const encodedName = encodeURIComponent(`${report.title}.xlsx`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="report.xlsx"; filename*=UTF-8''${encodedName}`);
     res.setHeader('Content-Length', String(buffer.length));
     // Express의 본문 변환을 거치지 않도록 바이너리를 그대로 내보낸다.
     res.end(buffer);
   } catch (err) {
-    console.error('[report] 워드 생성 실패:', err);
-    res.status(500).json({ error: '워드 문서를 만들지 못했습니다. 보고서를 다시 발행해 주세요.' });
+    console.error('[report] 엑셀 생성 실패:', err);
+    res.status(500).json({ error: '엑셀 문서를 만들지 못했습니다. 보고서를 다시 발행해 주세요.' });
   }
 });
 

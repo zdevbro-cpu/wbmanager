@@ -310,6 +310,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
   });
   const [regFiles, setRegFiles] = useState<File[]>([]);
   const [contractFiles, setContractFiles] = useState<File[]>([]);
+  const [insuranceFiles, setInsuranceFiles] = useState<File[]>([]);
   const [ocrBusy, setOcrBusy] = useState(false);
   const [ocrNote, setOcrNote] = useState('');
   const [requiresLicense, setRequiresLicense] = useState(false);
@@ -410,6 +411,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
         [
           { fileType: '차량등록증', files: regFiles },
           { fileType: '계약서', files: contractFiles },
+          { fileType: '보험증권', files: insuranceFiles },
         ],
         'asset',
         asset.id,
@@ -745,6 +747,12 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
           hint={assetType === 'VEHICLE' ? '올리면 차량 정보를 자동 인식합니다' : undefined}
         />
         <StagedFileUpload label="계약서" files={contractFiles} setFiles={setContractFiles} hint="리스·렌트·매매 계약서" />
+        <StagedFileUpload
+          label="보험증권"
+          files={insuranceFiles}
+          setFiles={setInsuranceFiles}
+          hint="만료일은 자산 일정에 등록하면 알림에 잡힙니다"
+        />
 
         {ocrNote && (
           <p className="col-span-3 flex items-center gap-1.5 text-[12.5px] text-primary">

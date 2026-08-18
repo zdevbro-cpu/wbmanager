@@ -60,7 +60,9 @@ export function WasteManagementPage() {
             <tr className="border-y border-border">
               <th className={thCls}>반출일</th>
               <th className={thCls}>프로젝트</th>
-              <th className={thCls}>거래처</th>
+              <th className={thCls}>배출자</th>
+              <th className={thCls}>운반자</th>
+              <th className={thCls}>처리자</th>
               <th className={thNumCls}>중량(kg)</th>
               <th className={thCls}>올바로 신고</th>
               <th className={thCls}>인계일</th>
@@ -72,6 +74,8 @@ export function WasteManagementPage() {
               <tr key={r.id} className={trCls}>
                 <td className={`${tdCls} tabular`}>{new Date(r.outboundDate).toISOString().slice(0, 10)}</td>
                 <td className={tdCls}>{r.project?.roundName}</td>
+                <td className={tdCls}>{r.dischargerName ?? '-'}</td>
+                <td className={tdCls}>{r.transporterName ?? '-'}</td>
                 <td className={tdCls}>{r.buyer?.name ?? '-'}</td>
                 <td className={tdNumCls}>{formatNumber(r.weight)}</td>
                 <td className={tdCls}>
@@ -108,7 +112,7 @@ export function WasteManagementPage() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={9} className="py-10 text-center text-[13px] text-text-faint">
                   데이터가 없습니다.
                 </td>
               </tr>

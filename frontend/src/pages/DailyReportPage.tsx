@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarDays, FileText, FileType2, Download, Plus, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
+import { CalendarDays, FileText, FileSpreadsheet, Download, Plus, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 import { api } from '../api/client';
 import { downloadFile } from '../lib/download';
 import { kstToday, kstThisMonth } from '../lib/datetime';
@@ -160,10 +160,10 @@ export function DailyReportPage() {
               </button>
               <button
                 type="button"
-                onClick={() => downloadFile(`/api/reports/published/${viewing.id}/docx`, `${viewing.title}.docx`)}
+                onClick={() => downloadFile(`/api/reports/published/${viewing.id}/xlsx`, `${viewing.title}.xlsx`)}
                 className={primaryBtnCls}
               >
-                <FileType2 size={15} /> 워드(docx)
+                <FileSpreadsheet size={15} /> 엑셀(xlsx)
               </button>
             </div>
           </div>
@@ -259,11 +259,11 @@ function DiaryEntry({
                 </button>
                 <button
                   type="button"
-                  title="워드 내려받기"
-                  onClick={() => downloadFile(`/api/reports/published/${rep.id}/docx`, `${rep.title}.docx`)}
+                  title="엑셀 내려받기"
+                  onClick={() => downloadFile(`/api/reports/published/${rep.id}/xlsx`, `${rep.title}.xlsx`)}
                   className="shrink-0 rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
                 >
-                  <FileType2 size={14} />
+                  <FileSpreadsheet size={14} />
                 </button>
               </div>
             ))}
@@ -303,7 +303,7 @@ function PublishDialog({ date, onDone, onCancel }: { date: string; onDone: () =>
       <h3 className={`${sectionTitleCls} text-[15px]`}>{date} 일일 출고보고</h3>
       <p className="text-[13px] text-text-sub">
         앞단에 그날 전체 요약을 두고, 진행 중인 프로젝트를 하나씩 담아 한 장으로 만듭니다. 출고가 없던 프로젝트는 &quot;출고
-        없음&quot;으로 표기됩니다. 발행 후 워드(docx)로 내려받을 수 있습니다.
+        없음&quot;으로 표기됩니다. 발행 후 엑셀(xlsx)로 내려받을 수 있습니다.
       </p>
       {error && <p className="text-[13px] text-danger">{error}</p>}
       <div className="flex justify-end gap-2 border-t border-border pt-3">

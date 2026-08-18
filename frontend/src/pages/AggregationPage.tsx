@@ -98,7 +98,7 @@ export function AggregationPage() {
           </select>
         </FilterField>
         <p className="pb-2 text-[12.5px] text-text-faint">
-          월을 비우면 전체 기간이 집계됩니다. 원본 갑지의 월별·현장별·거래처별 피벗을 대신합니다.
+          월을 비우면 전체 기간이 집계됩니다. 원본 갑지의 월별·거래처별 피벗을 대신합니다.
         </p>
       </div>
 
@@ -118,8 +118,6 @@ export function AggregationPage() {
             <MonthlyTrend groups={data.byMonth} />
           </div>
 
-          <DensityStrip groups={data.byDay} month={month} />
-
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
             <ShareCard title="품목 구성 (중량 상위 6)" groups={data.byItem} metric="weight" color="#60a5fa" />
             <ShareCard title="거래처 구성 (금액 상위 6)" groups={data.byVendor} metric="amount" color="#22c55e" />
@@ -127,11 +125,10 @@ export function AggregationPage() {
 
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
             <GroupTable title="① 프로젝트별 소계" groups={data.byProject} />
-            <GroupTable title="② 현장별 소계" groups={data.bySite} emptyText="프로젝트에 현장명이 없습니다." />
-            <GroupTable title="③ 거래처별 소계" groups={data.byVendor} />
-            <GroupTable title="④ 품목별 소계" groups={data.byItem} />
-            <GroupTable title="⑤ 구분별 소계" groups={data.byType} />
-            <GroupTable title="⑥ 월별 소계" groups={data.byMonth} />
+            <GroupTable title="② 거래처별 소계" groups={data.byVendor} />
+            <GroupTable title="③ 품목별 소계" groups={data.byItem} />
+            <GroupTable title="④ 구분별 소계" groups={data.byType} />
+            <GroupTable title="⑤ 월별 소계" groups={data.byMonth} />
           </div>
         </div>
       )}
@@ -329,91 +326,3 @@ function GroupTable({ title, groups, emptyText }: { title: string; groups: Aggre
   );
 }
 
-// 일자별 물량 농도 — 값을 색상 stop으로 깔아 칸 경계 없이 이어지게 그린다.
-// 짙을수록 그날 처리량이 많다. 값이 없는 날은 배경색으로 자연스럽게 흐려진다.
-function DensityStrip({ groups, month }: { groups: AggregationGroup[]; month: string }) {
-  const total = (g: AggregationGroup) => g.inbound + g.waste_inbound + g.outbound_sale + g.waste_outbound;
-
-  // 표시 구간: 기준 월이 있으면 그 달, 없으면 데이터가 있는 전체 구간
-  const days = useMemo(() => {
-    const list = groups ?? [];
-    const map = new Map(list.map((g) => [g.key, total(g)]));
-    const keys = list.map((g) => g.key).sort();
-    if (!keys.length) return [] as { date: string; value: number }[];
-
-    const start = month ? `${month}-01` : keys[0];
-    const end = month ? monthRange(month).to : keys[keys.length - 1];
-
-    const out: { date: string; value: number }[] = [];
-    const cur = new Date(start);
-    const last = new Date(end);
-    // 구간이 지나치게 길면(2년 초과) 마지막 730일만 그린다.
-    if ((last.getTime() - cur.getTime()) / 86400000 > 730) cur.setTime(last.getTime() - 730 * 86400000);
-    while (cur <= last) {
-      const key = cur.toISOString().slice(0, 10);
-      out.push({ date: key, value: map.get(key) ?? 0 });
-      cur.setDate(cur.getDate() + 1);
-    }
-    return out;
-  }, [groups, month]);
-
-  const max = Math.max(1, ...days.map((d) => d.value));
-
-  // 각 날짜를 구간 중앙에 배치하면 이웃 값끼리 보간되어 경계가 남지 않는다.
-  const gradient = useMemo(() => {
-    if (!days.length) return 'transparent';
-    const stops = days.map((d, i) => {
-      const pos = ((i + 0.5) / days.length) * 100;
-      const alpha = d.value === 0 ? 0.04 : 0.12 + (d.value / max) * 0.88;
-      return `rgba(56, 132, 255, ${alpha.toFixed(3)}) ${pos.toFixed(2)}%`;
-    });
-    return `linear-gradient(90deg, ${stops.join(', ')})`;
-  }, [days, max]);
-
-  const peak = days.reduce((best, d) => (d.value > (best?.value ?? 0) ? d : best), days[0]);
-  const activeDays = days.filter((d) => d.value > 0).length;
-
-  return (
-    <div className={cardPadCls}>
-      <div className="mb-3 flex items-end justify-between">
-        <h2 className={`${sectionTitleCls} text-[15px]`}>일자별 물량 농도</h2>
-        <span className="text-[12px] text-text-faint">
-          {days.length > 0 ? `${days[0].date} ~ ${days[days.length - 1].date}` : '-'}
-        </span>
-      </div>
-
-      {days.length === 0 ? (
-        <p className="py-8 text-center text-[13px] text-text-faint">집계할 데이터가 없습니다.</p>
-      ) : (
-        <>
-          <div className="h-14 w-full rounded-[10px] border border-border" style={{ background: gradient }} />
-
-          <div className="mt-1.5 flex justify-between text-[11px] text-text-faint">
-            <span className="tabular">{days[0].date}</span>
-            <span className="tabular">{days[Math.floor(days.length / 2)].date}</span>
-            <span className="tabular">{days[days.length - 1].date}</span>
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-text-sub">
-            <span className="flex items-center gap-2">
-              연함
-              <i
-                className="h-2.5 w-[120px] rounded-full"
-                style={{ background: 'linear-gradient(90deg, rgba(56,132,255,0.08), rgba(56,132,255,1))' }}
-              />
-              짙음
-            </span>
-            <span>
-              작업일 <b className="tabular text-text-strong">{activeDays}일</b> / {days.length}일
-            </span>
-            {peak && peak.value > 0 && (
-              <span>
-                최다 <b className="tabular text-text-strong">{peak.date}</b> {kg(peak.value)}
-              </span>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}

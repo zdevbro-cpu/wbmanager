@@ -10,7 +10,8 @@ import type { WasteInbound } from '../types';
 const num = (v?: string | null) => (v == null ? null : Number(v));
 const show = (v?: string | null) => (v == null || v === '' ? '-' : v);
 
-// 원본 `폐기물 입고` 시트와 같은 컬럼 구성
+// 목록에는 핵심 항목만 둔다. 나머지 계근 항목은 행을 클릭해 상세에서 확인한다.
+// 운반자·처리자·정산중량·루베·단가·금액·이체일은 폐기물 입고 데이터에 없는 항목이라 반출 목록에만 있다.
 const COLUMNS: Column<WasteInbound>[] = [
   { header: '인수일', nowrap: true, render: (r) => r.receiveDate.slice(0, 10) },
   { header: '인계일', nowrap: true, render: (r) => (r.handoverDate ? r.handoverDate.slice(0, 10) : '-') },
@@ -20,17 +21,9 @@ const COLUMNS: Column<WasteInbound>[] = [
   },
   { header: '프로젝트명', render: (r) => show(r.project?.roundName) },
   { header: '배출자', render: (r) => show(r.dischargerName) },
-  { header: '하차지', render: (r) => show(r.unloadingPoint) },
-  { header: '차종', render: (r) => show(r.vehicleType) },
   { header: '차량번호', nowrap: true, render: (r) => show(r.vehicleNo) },
-  { header: '운전자', render: (r) => show(r.driverName) },
-  { header: '연락처', nowrap: true, render: (r) => show(r.driverPhone) },
   { header: '제품명', render: (r) => show(r.item?.itemName ?? r.itemName) },
-  { header: '총중량(kg)', align: 'right', render: (r) => num(r.grossWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.grossWeight) },
-  { header: '공차중량(kg)', align: 'right', render: (r) => num(r.tareWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.tareWeight) },
-  { header: '감량(kg)', align: 'right', render: (r) => num(r.lossWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.lossWeight) },
   { header: '입고량(kg)', align: 'right', render: (r) => num(r.netWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.netWeight) },
-  { header: '비고', render: (r) => show(r.memo) },
 ];
 
 const DETAIL_FIELDS = (r: WasteInbound) => [

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FileText, Eye, Download, Trash2, Plus, RotateCcw, Copy, FileType2 } from 'lucide-react';
+import { FileText, Eye, Trash2, Plus, RotateCcw, Copy, FileSpreadsheet } from 'lucide-react';
 import { api } from '../api/client';
 import { downloadFile } from '../lib/download';
 import { useProjects } from '../hooks/useMasters';
@@ -144,19 +144,11 @@ export function ReportArchivePage() {
                     </button>
                     <button
                       type="button"
-                      title="워드(docx) 내려받기"
-                      onClick={() => downloadFile(`/api/reports/published/${r.id}/docx`, `${r.title}.docx`)}
+                      title="엑셀(xlsx) 내려받기"
+                      onClick={() => downloadFile(`/api/reports/published/${r.id}/xlsx`, `${r.title}.xlsx`)}
                       className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
                     >
-                      <FileType2 size={15} />
-                    </button>
-                    <button
-                      type="button"
-                      title="텍스트 저장"
-                      onClick={() => downloadFile(`/api/reports/published/${r.id}/export`, `${r.title}.txt`)}
-                      className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
-                    >
-                      <Download size={15} />
+                      <FileSpreadsheet size={15} />
                     </button>
                     <button
                       type="button"
@@ -210,17 +202,10 @@ export function ReportArchivePage() {
               </button>
               <button
                 type="button"
-                onClick={() => downloadFile(`/api/reports/published/${detail.id}/export`, `${detail.title}.txt`)}
-                className={outlineBtnCls}
-              >
-                <Download size={15} /> 텍스트 저장
-              </button>
-              <button
-                type="button"
-                onClick={() => downloadFile(`/api/reports/published/${detail.id}/docx`, `${detail.title}.docx`)}
+                onClick={() => downloadFile(`/api/reports/published/${detail.id}/xlsx`, `${detail.title}.xlsx`)}
                 className={primaryBtnCls}
               >
-                <FileType2 size={15} /> 워드(docx)
+                <FileSpreadsheet size={15} /> 엑셀(xlsx)
               </button>
             </div>
           </div>
