@@ -9,34 +9,17 @@ import type { OutboundSale } from '../types';
 const num = (v?: string | null) => (v == null ? null : Number(v));
 const show = (v?: string | null) => (v == null || v === '' ? '-' : v);
 
-// 원본 `스크랩출고량`/거래처별 시트와 같은 컬럼 구성
+// 목록에는 핵심 항목만 둔다. 나머지 계근·정산 항목은 행을 클릭해 상세에서 확인한다.
 const COLUMNS: Column<OutboundSale>[] = [
-  { header: '계량일', nowrap: true, render: (r) => r.outboundDate.slice(0, 10) },
+  { header: '상차일', nowrap: true, render: (r) => r.outboundDate.slice(0, 10) },
   { header: '프로젝트명', render: (r) => show(r.project?.roundName) },
   { header: '상차지', render: (r) => show(r.loadingPoint) },
-  { header: '차종', render: (r) => show(r.vehicleType) },
   { header: '차량번호', nowrap: true, render: (r) => show(r.vehicleNo) },
-  { header: '운전자', render: (r) => show(r.driverName) },
-  { header: '연락처', nowrap: true, render: (r) => show(r.driverPhone) },
-  { header: '거래처명', render: (r) => show(r.buyer?.name) },
   { header: '제품명', render: (r) => show(r.item?.itemName) },
-  { header: '공차중량(kg)', align: 'right', render: (r) => num(r.tareWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.tareWeight) },
-  { header: '총중량(kg)', align: 'right', render: (r) => num(r.grossWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.grossWeight) },
-  { header: '실중량(kg)', align: 'right', render: (r) => num(r.actualWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.actualWeight) },
-  {
-    header: '거래처 감량 전 실중량(kg)',
-    align: 'right',
-    render: (r) => num(r.preLossWeight)?.toLocaleString() ?? '-',
-    sum: (r) => num(r.preLossWeight),
-  },
-  { header: '감량(kg)', align: 'right', render: (r) => num(r.lossWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.lossWeight) },
   { header: '정산중량(kg)', align: 'right', render: (r) => num(r.settledWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.settledWeight) },
   { header: '단가(원)', align: 'right', render: (r) => num(r.unitPrice)?.toLocaleString() ?? '-' },
   { header: '금액(원)', align: 'right', render: (r) => num(r.amount)?.toLocaleString() ?? '-', sum: (r) => num(r.amount) },
-  { header: '구분', render: (r) => show(r.category) },
-  { header: '자회사', render: (r) => (r.isSubsidiary ? 'O' : '-') },
   { header: '입금일', nowrap: true, render: (r) => (r.paidDate ? r.paidDate.slice(0, 10) : '-') },
-  { header: '비고', render: (r) => show(r.memo) },
 ];
 
 const DETAIL_FIELDS = (r: OutboundSale) => [

@@ -12,7 +12,7 @@ import { EmployeeManagementPage } from './pages/EmployeeManagementPage';
 import { MaintenancePage } from './pages/MaintenancePage';
 import { ProjectManagementPage } from './pages/ProjectManagementPage';
 import { SystemAdminPage } from './pages/SystemAdminPage';
-import { EcountExportPage } from './pages/EcountExportPage';
+import { DmsPage } from './pages/DmsPage';
 import { LedgerPage } from './pages/LedgerPage';
 import { AggregationPage } from './pages/AggregationPage';
 import { DailyReportPage } from './pages/DailyReportPage';
@@ -44,7 +44,6 @@ function Gate() {
         <Route path="/aggregation" element={<AggregationPage />} />
         <Route path="/daily-report" element={<DailyReportPage />} />
         <Route path="/reports" element={<ReportArchivePage />} />
-        <Route path="/ecount-export" element={<EcountExportPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/pnl" element={<PnlPage />} />
         <Route path="/waste" element={<WasteManagementPage />} />
@@ -54,6 +53,7 @@ function Gate() {
         <Route path="/vehicles" element={<Navigate to="/assets" replace />} />
         <Route path="/employees" element={<EmployeeManagementPage />} />
         <Route path="/admin-alerts" element={<AdminAlertsPage />} />
+        <Route path="/dms" element={<DmsPage />} />
         <Route path="/system" element={<SystemAdminPage />} />
         <Route path="/masters" element={<Navigate to="/system" replace />} />
         <Route path="/users" element={<Navigate to="/system?tab=users" replace />} />

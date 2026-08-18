@@ -125,7 +125,10 @@ export async function queryLedger(filters = {}) {
         itemCode: r.itemCode,
         itemName: r.item?.itemName ?? null,
         weight: r.settledWeight,
+        actualWeight: r.actualWeight,
         amount: r.amount,
+        paidDate: r.paidDate,
+        memo: r.memo,
         attachmentCount: r.attachments.length,
       })),
     );
@@ -155,7 +158,10 @@ export async function queryLedger(filters = {}) {
         itemCode: r.itemCode,
         itemName: r.item?.itemName ?? r.itemName,
         weight: r.weight,
+        actualWeight: r.actualWeight,
         amount: r.amount,
+        paidDate: r.transferDate,
+        memo: r.memo,
         attachmentCount: r.attachments.length,
       })),
     );

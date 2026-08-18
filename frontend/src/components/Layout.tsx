@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
+  FolderOpen,
   Truck,
   Recycle,
   PackageMinus,
@@ -8,7 +9,6 @@ import {
   BarChart3,
   FileText,
   FileArchive,
-  FileSpreadsheet,
   Boxes,
   Layers,
   Wrench,
@@ -50,7 +50,6 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/aggregation', label: '자동집계 현황', icon: BarChart3 },
       { to: '/daily-report', label: '일일 출고보고', icon: FileText },
       { to: '/reports', label: '보고서 보관함', icon: FileArchive },
-      { to: '/ecount-export', label: 'ecount 내보내기', icon: FileSpreadsheet },
     ],
   },
   {
@@ -60,16 +59,26 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/pnl', label: '프로젝트 손익요약', icon: TrendingUp },
     ],
   },
+  // 스크랩 업무와 자산·인원 관리는 쓰는 사람도 주기도 달라 그룹을 나눈다.
   {
-    label: '관리',
+    label: '스크랩 업무',
     items: [
       { to: '/projects', label: '프로젝트 관리', icon: Layers },
       { to: '/waste', label: '폐기물 / 올바로 관리', icon: ShieldAlert },
+      { to: '/admin-alerts', label: '알림 현황', icon: BellRing },
+    ],
+  },
+  {
+    label: '관리항목',
+    items: [
       { to: '/assets', label: '자산 관리 (차량·장비)', icon: Boxes },
       { to: '/maintenances', label: '정비 현황', icon: Wrench },
       { to: '/employees', label: '임직원 관리', icon: Users },
-      { to: '/admin-alerts', label: '알림 현황', icon: BellRing },
     ],
+  },
+  {
+    label: 'DMS',
+    items: [{ to: '/dms', label: '문서 관리', icon: FolderOpen }],
   },
   {
     label: '시스템',

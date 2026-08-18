@@ -22,7 +22,6 @@ import commonCodeRoutes from './routes/commonCode.routes.js';
 import assetRoutes from './routes/asset.routes.js';
 import assetMaintenanceRoutes from './routes/assetMaintenance.routes.js';
 import alertRoutes from './routes/alert.routes.js';
-import exportRoutes from './routes/export.routes.js';
 import listExportRoutes from './routes/listExport.routes.js';
 import ocrRoutes from './routes/ocr.routes.js';
 import authRoutes from './routes/auth.routes.js';
@@ -67,7 +66,6 @@ app.use('/api/assets', assetRoutes);
 app.use('/api/asset-maintenances', assetMaintenanceRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/audit-logs', auditRoutes);
-app.use('/api/exports', exportRoutes);
 app.use('/api/list-exports', listExportRoutes);
 app.use('/api/ocr', ocrRoutes);
 

@@ -74,6 +74,7 @@ model ItemMaster {
   itemName    String   @map("item_name")
   basePrice   Decimal? @map("base_price") @db.Decimal(14, 2)
   isTemporary Boolean  @default(false) @map("is_temporary")
+  memo        String?  @map("memo")          // 비고 — 등록 화면에서 자유 입력
   createdAt   DateTime @default(now()) @map("created_at")
 
   // 식별·분류 — 계근표·일보의 현장 호칭이 제각각이라 별칭 매핑이 없으면 ETL에서 미매칭이 난다.
@@ -475,6 +476,7 @@ model Employee {
   name      String   @map("name")
   phone     String?  @map("phone")        // 연락처 — 입출고 등록 시 운전자 선택하면 자동 채움
   position  String?  @map("position")
+  companyName String? @map("company_name")   // 소속 회사 — 원방 현장에 있으나 소속이 다른 인원이 있다
   department String? @map("department")
   hireDate  DateTime? @map("hire_date")
   createdAt DateTime @default(now()) @map("created_at")

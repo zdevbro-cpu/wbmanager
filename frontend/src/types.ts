@@ -19,6 +19,7 @@ export interface Vendor {
 }
 
 export interface ItemMaster {
+  memo?: string | null;
   id: string;
   itemCode: string;
   category: string;
@@ -365,6 +366,7 @@ export interface Employee {
   name: string;
   phone?: string | null;
   position?: string | null;
+  companyName?: string | null;
   department?: string | null;
   hireDate?: string | null;
   certifications?: EmployeeCertification[];

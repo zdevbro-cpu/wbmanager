@@ -11,7 +11,7 @@ const num = (v?: string | null) => (v == null ? null : Number(v));
 const show = (v?: string | null) => (v == null || v === '' ? '-' : v);
 const date = (v?: string | null) => (v ? v.slice(0, 10) : '-');
 
-// 원본 `폐기물출고량` 시트와 같은 컬럼 구성
+// 목록에는 핵심 항목만 둔다. 나머지 계근·정산 항목은 행을 클릭해 상세에서 확인한다.
 const COLUMNS: Column<WasteOutbound>[] = [
   { header: '상차일', nowrap: true, render: (r) => date(r.outboundDate) },
   { header: '인계일', nowrap: true, render: (r) => date(r.handoverDate) },
@@ -22,31 +22,15 @@ const COLUMNS: Column<WasteOutbound>[] = [
   { header: '프로젝트명', render: (r) => show(r.project?.roundName) },
   { header: '배출자', render: (r) => show(r.dischargerName) },
   { header: '운반자', render: (r) => show(r.transporterName) },
-  { header: '상차지', render: (r) => show(r.loadingPoint) },
-  { header: '차종', render: (r) => show(r.vehicleType) },
   { header: '차량번호', nowrap: true, render: (r) => show(r.vehicleNo) },
-  { header: '운전자', render: (r) => show(r.driverName) },
-  { header: '연락처', nowrap: true, render: (r) => show(r.driverPhone) },
   { header: '처리자', render: (r) => show(r.buyer?.name) },
   { header: '제품명', render: (r) => show(r.item?.itemName ?? r.itemName) },
-  { header: '공차중량(kg)', align: 'right', render: (r) => num(r.tareWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.tareWeight) },
-  { header: '총중량(kg)', align: 'right', render: (r) => num(r.grossWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.grossWeight) },
   { header: '실중량(kg)', align: 'right', render: (r) => num(r.actualWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.actualWeight) },
-  {
-    header: '거래처 감량 전 실중량(kg)',
-    align: 'right',
-    render: (r) => num(r.preLossWeight)?.toLocaleString() ?? '-',
-    sum: (r) => num(r.preLossWeight),
-  },
-  { header: '감량(kg)', align: 'right', render: (r) => num(r.lossWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.lossWeight) },
   { header: '정산 중량(kg)', align: 'right', render: (r) => num(r.weight)?.toLocaleString() ?? '-', sum: (r) => num(r.weight) },
   { header: '루베 적용', align: 'right', render: (r) => num(r.cubicMeter)?.toLocaleString() ?? '-' },
   { header: '단가(원)', align: 'right', render: (r) => num(r.unitPrice)?.toLocaleString() ?? '-' },
   { header: '금액(원)', align: 'right', render: (r) => num(r.amount)?.toLocaleString() ?? '-', sum: (r) => num(r.amount) },
-  { header: '구분', render: (r) => show(r.category) },
-  { header: '자회사 출고', render: (r) => (r.isSubsidiary ? 'O' : '-') },
   { header: '이체일', nowrap: true, render: (r) => date(r.transferDate) },
-  { header: '비고', render: (r) => show(r.memo) },
 ];
 
 const DETAIL_FIELDS = (r: WasteOutbound) => [

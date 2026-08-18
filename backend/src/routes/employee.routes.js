@@ -96,7 +96,7 @@ router.post('/', async (req, res) => {
 // 기본정보 수정. 사번(empCode)은 근태 QR 식별자로 쓰이므로 바꾸지 않는다.
 // 보낸 항목만 반영해, 일부만 고쳐도 나머지가 지워지지 않게 한다.
 router.patch('/:id', async (req, res) => {
-  const { name, phone, department, position, hireDate } = req.body;
+  const { name, phone, companyName, department, position, hireDate } = req.body;
   if (name !== undefined && !String(name).trim()) {
     return res.status(400).json({ error: '성명은 비울 수 없습니다.' });
   }
@@ -106,6 +106,7 @@ router.patch('/:id', async (req, res) => {
     data: {
       ...(name !== undefined ? { name } : {}),
       ...(phone !== undefined ? { phone: phone || null } : {}),
+      ...(companyName !== undefined ? { companyName: companyName || null } : {}),
       ...(department !== undefined ? { department: department || null } : {}),
       ...(position !== undefined ? { position: position || null } : {}),
       ...(hireDate !== undefined ? { hireDate: toISO(hireDate) } : {}),

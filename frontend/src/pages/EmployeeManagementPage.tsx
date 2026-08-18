@@ -132,6 +132,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
               <th className={thCls}>사번</th>
               <th className={thCls}>성명</th>
               <th className={thCls}>연락처</th>
+              <th className={thCls}>회사명</th>
               <th className={thCls}>부서/직급</th>
               <th className={thCls}>입사일</th>
               <th className={thCls}>자격사항(만료일)</th>
@@ -145,6 +146,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                 <td className={`${tdCls} tabular whitespace-nowrap`}>{emp.empCode ?? '-'}</td>
                 <td className={tdCls}>{emp.name}</td>
                 <td className={`${tdCls} tabular`}>{emp.phone ?? '-'}</td>
+                <td className={tdCls}>{emp.companyName ?? '-'}</td>
                 <td className={tdCls}>{[emp.department, emp.position].filter(Boolean).join(' / ') || '-'}</td>
                 <td className={`${tdCls} tabular`}>{emp.hireDate ? emp.hireDate.slice(0, 10) : '-'}</td>
                 <td className={`${tdCls} whitespace-nowrap`}>
@@ -209,7 +211,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
             ))}
             {employees.length === 0 && (
               <tr>
-                <td className={`${tdCls} text-text-faint`} colSpan={8}>
+                <td className={`${tdCls} text-text-faint`} colSpan={9}>
                   등록된 임직원이 없습니다.
                 </td>
               </tr>
@@ -247,6 +249,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [department, setDepartment] = useState('');
   const [position, setPosition] = useState('');
   const [hireDate, setHireDate] = useState('');
@@ -274,6 +277,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
       const employee = await api.post<Employee>('/api/employees', {
         name,
         phone: phone || undefined,
+        companyName: companyName || undefined,
         department: department || undefined,
         position: position || undefined,
         hireDate: hireDate || undefined,
@@ -330,6 +334,16 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
           </div>
 
           <div className="flex gap-3">
+            <div className="flex-1">
+              {/* 원방 현장에 있어도 소속이 다른 인원이 있어 회사명을 따로 받는다. */}
+              <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">회사명</label>
+              <input
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="원방 / 크로스특수 등"
+                className={inputCls}
+              />
+            </div>
             <div className="flex-1">
               <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">부서</label>
               <input list="emp-departments" value={department} onChange={(e) => setDepartment(e.target.value)} className={inputCls} />

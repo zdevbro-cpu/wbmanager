@@ -18,14 +18,17 @@ import {
 } from '../components/ui/classes';
 import type { Vendor, ItemMaster } from '../types';
 
+interface CodeGroup {
+  value: string;
+  label: string;
+  nextCode: string;
+}
+
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
 const show = (v?: string | null) => (v == null || v === '' ? '-' : v);
-const yn = (v?: boolean) => (v ? '예' : '아니오');
 
 const VENDOR_TYPES = ['매입처', '매각처', '자회사', '폐기물업체'];
 const USAGE_TYPES = ['공용', '매입전용', '매출전용'];
-const TAX_TYPES = ['과세', '면세', '영세'];
-const BASE_UNITS = ['kg', 'ton'];
 
 const iconBtnCls = 'rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong';
 
@@ -688,34 +691,11 @@ function ItemSection({ items, reload }: { items: ItemMaster[]; reload: () => voi
 function ItemDetail({ item: i, onEdit }: { item: ItemMaster; onEdit: () => void }) {
   const fields = [
     { label: '품목코드', value: i.itemCode },
-    { label: '품목명(정식)', value: i.itemName },
-    { label: '현장 호칭(별칭)', value: show(i.aliasNames) },
-    { label: '대분류', value: show(i.category) },
-    { label: '중분류', value: show(i.subCategory) },
-    { label: '소분류', value: show(i.minorCategory) },
-    { label: '재질', value: show(i.material) },
-    { label: '등급', value: show(i.grade) },
+    { label: '품목명', value: i.itemName },
     { label: '기본단위', value: show(i.baseUnit) },
-    { label: '계근단위', value: show(i.weighUnit) },
-    { label: '매입단위', value: show(i.purchaseUnit) },
-    { label: '매출단위', value: show(i.salesUnit) },
-    { label: '환산계수', value: show(i.unitFactor) },
-    { label: '수량관리 대상', value: yn(i.qtyManaged) },
-    { label: '용도구분', value: show(i.usageType) },
-    { label: '전환 후 품목코드', value: show(i.convertToItemCode) },
-    { label: '예상수율(%)', value: show(i.expectedYield) },
-    { label: '불순물 공제율(%)', value: show(i.deductImpurity) },
-    { label: '토사 공제율(%)', value: show(i.deductSoil) },
-    { label: '함수 공제율(%)', value: show(i.deductMoisture) },
-    { label: '기본 야적장 zone', value: show(i.zoneCode) },
-    { label: '시세연동', value: yn(i.priceLinked) },
-    { label: '기준시세 코드', value: show(i.priceRefCode) },
-    { label: '과세구분', value: show(i.taxType) },
-    { label: '의제매입세액공제', value: yn(i.recycleDeductible) },
-    { label: 'ecount 품목코드', value: show(i.ecountItemCode) },
-    { label: '세무사랑 계정과목', value: show(i.accountCode) },
-    { label: '사용여부', value: i.isActive === false ? '미사용' : '사용' },
+    { label: '비고', value: show(i.memo) },
   ];
+
 
   return (
     <div className="space-y-4">
@@ -733,8 +713,8 @@ function ItemDetail({ item: i, onEdit }: { item: ItemMaster; onEdit: () => void 
   );
 }
 
-// data/품목마스터_설계.md 의 1~5장을 그대로 입력 항목으로 옮겼다.
-// 단가·거래처별 별칭·공제 실적값은 설계상 마스터에서 분리하는 항목이라 여기에 두지 않는다.
+// 품목 등록 — 코드는 분류를 고르면 자동 채번되고, 사람이 채우는 항목은 넷뿐이다.
+// 재질·공제율 등 옛 상세 항목은 실제로 쓰이지 않아 입력에서 걷어냈다.
 function ItemForm({
   item,
   onDone,
@@ -744,51 +724,35 @@ function ItemForm({
   onDone: (saved: ItemMaster) => void;
   onCancel: () => void;
 }) {
-  const [f, setF] = useState({
-    itemCode: item?.itemCode ?? '',
-    itemName: item?.itemName ?? '',
-    aliasNames: item?.aliasNames ?? '',
-    category: item?.category ?? '',
-    subCategory: item?.subCategory ?? '',
-    minorCategory: item?.minorCategory ?? '',
-    material: item?.material ?? '',
-    grade: item?.grade ?? '',
-    baseUnit: item?.baseUnit ?? 'kg',
-    weighUnit: item?.weighUnit ?? '',
-    purchaseUnit: item?.purchaseUnit ?? '',
-    salesUnit: item?.salesUnit ?? '',
-    unitFactor: item?.unitFactor ?? '',
-    usageType: item?.usageType ?? '공용',
-    convertToItemCode: item?.convertToItemCode ?? '',
-    expectedYield: item?.expectedYield ?? '',
-    deductImpurity: item?.deductImpurity ?? '',
-    deductSoil: item?.deductSoil ?? '',
-    deductMoisture: item?.deductMoisture ?? '',
-    zoneCode: item?.zoneCode ?? '',
-    priceRefCode: item?.priceRefCode ?? '',
-    taxType: item?.taxType ?? '과세',
-    ecountItemCode: item?.ecountItemCode ?? '',
-    accountCode: item?.accountCode ?? '',
-  });
-  const [qtyManaged, setQtyManaged] = useState(item?.qtyManaged ?? false);
-  const [priceLinked, setPriceLinked] = useState(item?.priceLinked ?? false);
-  const [recycleDeductible, setRecycleDeductible] = useState(item?.recycleDeductible ?? false);
-  const [isActive, setIsActive] = useState(item?.isActive ?? true);
+  const [groups, setGroups] = useState<CodeGroup[]>([]);
+  const [codeGroup, setCodeGroup] = useState('');
+  const [itemName, setItemName] = useState(item?.itemName ?? '');
+  const [baseUnit, setBaseUnit] = useState(item?.baseUnit ?? 'kg');
+  const [memo, setMemo] = useState(item?.memo ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const set = (patch: Partial<typeof f>) => setF({ ...f, ...patch });
+  // 분류별 다음 코드를 서버에서 받아 미리 보여준다.
+  useEffect(() => {
+    if (item) return;
+    api.get<CodeGroup[]>('/api/item-masters/code-groups').then(setGroups);
+  }, [item]);
+
+  const nextCode = groups.find((g) => g.value === codeGroup)?.nextCode ?? '';
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!f.itemCode.trim() || !f.itemName.trim() || !f.category.trim()) return;
+    if (!itemName.trim()) return;
+    if (!item && !codeGroup) {
+      setError('품목 분류를 선택하세요.');
+      return;
+    }
     setError('');
     setSubmitting(true);
     try {
-      const payload = { ...f, qtyManaged, priceLinked, recycleDeductible, isActive };
       const saved = item
-        ? await api.patch<ItemMaster>(`/api/item-masters/${item.itemCode}`, payload)
-        : await api.post<ItemMaster>('/api/item-masters', payload);
+        ? await api.patch<ItemMaster>(`/api/item-masters/${item.itemCode}`, { itemName, baseUnit, memo })
+        : await api.post<ItemMaster>('/api/item-masters', { codeGroup, itemName, baseUnit, memo });
       onDone(saved);
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 실패');
@@ -799,267 +763,50 @@ function ItemForm({
 
   return (
     <form onSubmit={submit}>
-      <FormSection title="식별 · 분류" />
-      <div className="grid grid-cols-3 gap-x-3 gap-y-3.5">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-3.5">
         <div>
-          <label className={labelCls}>품목코드</label>
-          {/* 입출고·재고가 품목코드로 참조하므로 등록 후에는 바꾸지 않는다. */}
-          <input
-            value={f.itemCode}
-            onChange={(e) => set({ itemCode: e.target.value })}
-            required
-            disabled={!!item}
-            className={`${inputCls} disabled:opacity-60`}
-          />
-        </div>
-        <div className="col-span-2">
-          <label className={labelCls}>품목명(정식)</label>
-          <input
-            value={f.itemName}
-            onChange={(e) => set({ itemName: e.target.value })}
-            required
-            placeholder="세금계산서·전표 출력용"
-            className={inputCls}
-          />
+          <label className={labelCls}>코드명(분류)</label>
+          {item ? (
+            <input value={item.itemCode} disabled className={`${inputCls} disabled:opacity-60`} />
+          ) : (
+            <select value={codeGroup} onChange={(e) => setCodeGroup(e.target.value)} required className={inputCls}>
+              <option value="">선택</option>
+              {groups.map((g) => (
+                <option key={g.value} value={g.value}>
+                  {g.label} ({g.value})
+                </option>
+              ))}
+            </select>
+          )}
+          {!item && (
+            <p className="mt-1 text-[12px] text-text-faint">
+              {nextCode ? `부여될 코드: ${nextCode}` : '분류를 고르면 코드가 자동으로 부여됩니다.'}
+            </p>
+          )}
         </div>
 
-        <div className="col-span-3">
-          <label className={labelCls}>현장 호칭(별칭)</label>
-          <input
-            value={f.aliasNames}
-            onChange={(e) => set({ aliasNames: e.target.value })}
-            placeholder="쉼표로 구분 — 예: 혼합철, 잡철, 고철"
-            className={inputCls}
-          />
-        </div>
-
-        <div>
-          <label className={labelCls}>대분류</label>
-          <input
-            value={f.category}
-            onChange={(e) => set({ category: e.target.value })}
-            required
-            placeholder="철스크랩 / 비철 / 기타"
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>중분류</label>
-          <input value={f.subCategory} onChange={(e) => set({ subCategory: e.target.value })} className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>소분류</label>
-          <input value={f.minorCategory} onChange={(e) => set({ minorCategory: e.target.value })} className={inputCls} />
-        </div>
-
-        <div>
-          <label className={labelCls}>재질</label>
-          <input
-            value={f.material}
-            onChange={(e) => set({ material: e.target.value })}
-            placeholder="철 / 스테인리스 / 알루미늄 / 동"
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>등급</label>
-          <input
-            value={f.grade}
-            onChange={(e) => set({ grade: e.target.value })}
-            placeholder="생철 / 중량 / 경량 / 선반설"
-            className={inputCls}
-          />
-        </div>
-      </div>
-
-      <FormSection title="단위 · 수량" />
-      <div className="grid grid-cols-3 gap-x-3 gap-y-3.5">
         <div>
           <label className={labelCls}>기본단위</label>
-          <select value={f.baseUnit} onChange={(e) => set({ baseUnit: e.target.value })} className={inputCls}>
-            {BASE_UNITS.map((u) => (
-              <option key={u} value={u}>
-                {u}
-              </option>
-            ))}
+          <select value={baseUnit} onChange={(e) => setBaseUnit(e.target.value)} className={inputCls}>
+            <option value="kg">kg</option>
+            <option value="EA">EA</option>
           </select>
         </div>
-        <div>
-          <label className={labelCls}>계근단위</label>
-          <input value={f.weighUnit} onChange={(e) => set({ weighUnit: e.target.value })} className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>환산계수</label>
+
+        <div className="col-span-2">
+          <label className={labelCls}>품목명</label>
           <input
-            type="number"
-            step="0.000001"
-            value={f.unitFactor}
-            onChange={(e) => set({ unitFactor: e.target.value })}
+            value={itemName}
+            onChange={(e) => setItemName(e.target.value)}
+            required
+            placeholder="세금계산서·전표 출력용 정식 명칭"
             className={inputCls}
           />
         </div>
 
-        <div>
-          <label className={labelCls}>매입단위</label>
-          <input value={f.purchaseUnit} onChange={(e) => set({ purchaseUnit: e.target.value })} className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>매출단위</label>
-          <input value={f.salesUnit} onChange={(e) => set({ salesUnit: e.target.value })} className={inputCls} />
-        </div>
-        <div className="flex items-end pb-2">
-          <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
-            <input
-              type="checkbox"
-              checked={qtyManaged}
-              onChange={(e) => setQtyManaged(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            수량관리 대상(톤백 등)
-          </label>
-        </div>
-      </div>
-
-      <FormSection title="스크랩 특수 항목" />
-      <div className="grid grid-cols-3 gap-x-3 gap-y-3.5">
-        <div>
-          <label className={labelCls}>용도구분</label>
-          <select value={f.usageType} onChange={(e) => set({ usageType: e.target.value })} className={inputCls}>
-            {USAGE_TYPES.map((u) => (
-              <option key={u} value={u}>
-                {u}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={labelCls}>전환 후 품목코드</label>
-          <input
-            value={f.convertToItemCode}
-            onChange={(e) => set({ convertToItemCode: e.target.value })}
-            placeholder="선별 후 품목"
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>예상수율(%)</label>
-          <input
-            type="number"
-            step="0.001"
-            value={f.expectedYield}
-            onChange={(e) => set({ expectedYield: e.target.value })}
-            className={inputCls}
-          />
-        </div>
-
-        <div>
-          <label className={labelCls}>불순물 공제율(%)</label>
-          <input
-            type="number"
-            step="0.001"
-            value={f.deductImpurity}
-            onChange={(e) => set({ deductImpurity: e.target.value })}
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>토사 공제율(%)</label>
-          <input
-            type="number"
-            step="0.001"
-            value={f.deductSoil}
-            onChange={(e) => set({ deductSoil: e.target.value })}
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>함수 공제율(%)</label>
-          <input
-            type="number"
-            step="0.001"
-            value={f.deductMoisture}
-            onChange={(e) => set({ deductMoisture: e.target.value })}
-            className={inputCls}
-          />
-        </div>
-
-        <div>
-          <label className={labelCls}>기본 야적장 zone</label>
-          <input
-            value={f.zoneCode}
-            onChange={(e) => set({ zoneCode: e.target.value })}
-            placeholder="구역 표지·QR과 동일 코드"
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>기준시세 코드</label>
-          <input
-            value={f.priceRefCode}
-            onChange={(e) => set({ priceRefCode: e.target.value })}
-            placeholder="고철시세 / LME"
-            className={inputCls}
-          />
-        </div>
-        <div className="flex items-end pb-2">
-          <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
-            <input
-              type="checkbox"
-              checked={priceLinked}
-              onChange={(e) => setPriceLinked(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            시세연동 품목
-          </label>
-        </div>
-      </div>
-
-      <FormSection title="세무 · 회계 / 상태" />
-      <div className="grid grid-cols-3 gap-x-3 gap-y-3.5">
-        <div>
-          <label className={labelCls}>과세구분</label>
-          <select value={f.taxType} onChange={(e) => set({ taxType: e.target.value })} className={inputCls}>
-            {TAX_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={labelCls}>ecount 품목코드</label>
-          <input
-            value={f.ecountItemCode}
-            onChange={(e) => set({ ecountItemCode: e.target.value })}
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>세무사랑 계정과목</label>
-          <input value={f.accountCode} onChange={(e) => set({ accountCode: e.target.value })} className={inputCls} />
-        </div>
-
-        <div className="col-span-2 flex items-end pb-2">
-          <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
-            <input
-              type="checkbox"
-              checked={recycleDeductible}
-              onChange={(e) => setRecycleDeductible(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            재활용폐자원 의제매입세액공제 대상
-          </label>
-        </div>
-        <div className="flex items-end pb-2">
-          <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
-            <input
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            사용
-          </label>
+        <div className="col-span-2">
+          <label className={labelCls}>비고</label>
+          <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
         </div>
       </div>
 
@@ -1074,13 +821,5 @@ function ItemForm({
         </button>
       </div>
     </form>
-  );
-}
-
-function FormSection({ title }: { title: string }) {
-  return (
-    <h3 className="mt-5 mb-3 border-b border-border pb-1.5 text-[14px] font-extrabold text-text-strong first:mt-0">
-      {title}
-    </h3>
   );
 }

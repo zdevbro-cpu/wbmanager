@@ -154,13 +154,6 @@ export function LedgerPage() {
         >
           <Download size={15} /> 엑셀(CSV)
         </button>
-        <button
-          type="button"
-          onClick={() => downloadFile(`/api/ledger/export?${buildQuery()}&template=ecount`, 'ledger_ecount.csv')}
-          className={`${outlineBtnCls} whitespace-nowrap px-3`}
-        >
-          <Download size={15} /> ecount용
-        </button>
       </div>
 
       <div className={`${tableWrapCls} overflow-x-auto`}>
