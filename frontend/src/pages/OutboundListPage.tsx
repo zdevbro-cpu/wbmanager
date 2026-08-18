@@ -16,6 +16,8 @@ const COLUMNS: Column<OutboundSale>[] = [
   { header: '상차지', render: (r) => show(r.loadingPoint) },
   { header: '차량번호', nowrap: true, render: (r) => show(r.vehicleNo) },
   { header: '제품명', render: (r) => show(r.item?.itemName) },
+  // 출고량은 감량 전 무게 — 실중량(총중량 - 공차중량)이다. 정산중량은 여기서 감량을 뺀 값.
+  { header: '출고량(kg)', align: 'right', render: (r) => num(r.actualWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.actualWeight) },
   { header: '정산중량(kg)', align: 'right', render: (r) => num(r.settledWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.settledWeight) },
   { header: '단가(원)', align: 'right', render: (r) => num(r.unitPrice)?.toLocaleString() ?? '-' },
   { header: '금액(원)', align: 'right', render: (r) => num(r.amount)?.toLocaleString() ?? '-', sum: (r) => num(r.amount) },
