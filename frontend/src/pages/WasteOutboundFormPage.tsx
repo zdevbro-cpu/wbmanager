@@ -377,8 +377,9 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
             <input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} className={inputCls} />
           </div>
 
-          <div className="flex items-end gap-4 pb-2">
-            <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
+          {/* 두 항목을 한 줄에 나란히 둔다 — 좁은 칸에서 글자가 접히지 않게 두 칸을 쓴다. */}
+          <div className="col-span-2 flex items-end gap-5 pb-2">
+            <label className="flex items-center gap-2 whitespace-nowrap text-[13px] font-semibold text-text-mid">
               <input
                 type="checkbox"
                 checked={olbaroReported}
@@ -387,7 +388,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
               />
               올바로 신고(O)
             </label>
-            <label className="flex items-center gap-2 text-[13px] font-semibold text-text-mid">
+            <label className="flex items-center gap-2 whitespace-nowrap text-[13px] font-semibold text-text-mid">
               <input
                 type="checkbox"
                 checked={isSubsidiary}
@@ -396,11 +397,6 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
               />
               자회사 출고
             </label>
-          </div>
-
-          <div>
-            <label className={labelCls}>비고</label>
-            <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
           </div>
 
           <div className="col-span-2">
