@@ -6,6 +6,10 @@ const HEADER_FILL = 'FFEFEFEF';
 // 계근 공유방 보고 양식 색 — 스크랩은 파랑, 폐기물은 황색 머리글에 흰 글씨.
 const SCRAP_HEADER_FILL = 'FF2E9BD6';
 const WASTE_HEADER_FILL = 'FFFFC000';
+// 반출 List 시트 — 스크랩은 연파랑, 폐기물은 연노랑 머리글. 금액 열은 연녹색(보고 양식과 동일).
+const LIST_HEADER_FILL = 'FF2E75B6';
+const WASTE_LIST_HEADER_FILL = 'FFD98C00';
+const MONEY_FILL = 'FFE2EFDA';
 
 const n = (v) => Math.round(Number(v ?? 0));
 const pct = (v) => `${Number(v ?? 0).toFixed(1)}%`;
@@ -261,7 +265,7 @@ function listRow(ws, values, opts) {
 }
 
 function listHeader(ws, values, opts) {
-  const { fill = 'FFDCE6F1', fontColor = null } = opts || {};
+  const { fill = LIST_HEADER_FILL, fontColor = 'FFFFFFFF' } = opts || {};
   const row = listRow(ws, values, { bold: true });
   row.eachCell({ includeEmpty: true }, (cell, col) => {
     if (col === 1) return;
@@ -351,85 +355,88 @@ export async function buildDailyXlsx(payload) {
     });
   }
 
-  /* 시트2 스크랩반출List */
+  /* 시트2 스크랩반출List — 보고 양식 그대로 10개 항목만 찍는다. */
   const s2 = wb.addWorksheet('스크랩반출List');
-  setWidths(s2, [2, 5, 5, 13, 11, 8, 13, 15, 13, 8, 13, 12, 8, 7, 11, 7, 11, 11, 11, 10, 10, 8, 15, 9, 49]);
-  listTitle(s2, '□ 원방 스크랩 반출보고', date + ' 기준', 25);
+  setWidths(s2, [2, 5, 15, 12, 11, 13, 13, 8, 12, 14, 8]);
+  listTitle(s2, '□ 원방 스크랩 반출보고', date + ' 기준', 11);
 
-  const h2 = listHeader(
-    s2,
-    [
-    'No', 'No(2)', '프로잭트명', '반출날짜', '상차지', '차량번호', '운전자', '연락처', '차량타입',
-    '거래처', '상차제품', '단가', '계 근 내 역', '', '', '',
-      '스크랩중량', '스크랩중량(원방)', '정산 감량', '정산 중량', '계근차', '결제금액', '입금여부', '운송중 특이사항 기록',
-    ],
-    { fill: SCRAP_HEADER_FILL, fontColor: 'FFFFFFFF' },
-  );
-  s2.mergeCells(h2.number, 14, h2.number, 17);
+  listHeader(s2, [
+    'No', '프로잭트명', '반출날짜', '상차지', '거래처', '상차제품', '단가', '스크랩중량', '결제금액', '입금여부',
+  ]);
 
-  const s2Num = [13, 15, 17, 18, 19, 20, 21, 23];
-  const s2Left = [25]; // 운송중 특이사항 기록
+  const s2Num = [8, 9, 10]; // 단가·스크랩중량·결제금액
+  const s2Money = 10;       // 결제금액 — 양식과 같이 연녹색 배경
   scrapAll.forEach((r, i) => {
-    listRow(
+    const row = listRow(
       s2,
       [
-        i + 1, i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.vehicleNo ?? '', r.driverName ?? '',
-        r.driverPhone ?? '', r.vehicleType ?? '', r.vendorName ?? '', r.itemName ?? '', n(r.unitPrice),
-        '', n(r.grossWeight), '', n(r.tareWeight),
-        n(weightOf(r)), '', n(r.lossWeight), n(r.weight), '', n(r.amount), r.paidDate ? 'O' : 'X', r.memo ?? '',
+        i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.vendorName ?? '', r.itemName ?? '',
+        n(r.unitPrice), n(weightOf(r)), n(r.amount), r.paidDate ? 'O' : 'X',
       ],
-      { numberCols: s2Num, leftCols: s2Left, centerRest: true },
+      { numberCols: s2Num, centerRest: true },
     );
+    row.getCell(s2Money).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MONEY_FILL } };
   });
+
   const f2 = listRow(
     s2,
-    [
-      '합 계', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-      n(sum(scrapAll, weightOf)), '', n(sum(scrapAll, (r) => r.lossWeight)), n(sum(scrapAll, (r) => r.weight)),
-      '', n(sum(scrapAll, (r) => r.amount)), '', '',
-    ],
-    { bold: true, numberCols: s2Num, leftCols: s2Left, centerRest: true },
+    ['합 계', '', '', '', '', '', '', n(sum(scrapAll, weightOf)), n(sum(scrapAll, (r) => r.amount)), ''],
+    { bold: true, numberCols: s2Num, centerRest: true },
   );
-  s2.mergeCells(f2.number, 2, f2.number, 13);
-  closeList(f2, 25);
+  s2.mergeCells(f2.number, 2, f2.number, 8);
+  f2.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+  f2.getCell(s2Money).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MONEY_FILL } };
+  closeList(f2, 11);
 
-  /* 시트3 폐기물반출List */
+  /* 시트3 폐기물반출List — 보고 양식 그대로 14개 항목. 운반비는 아직 받는 칸이 없어 비워 둔다. */
   const s3 = wb.addWorksheet('폐기물반출List');
-  setWidths(s3, [2, 5, 5, 12, 12, 8, 9, 9, 13, 12, 9, 11, 6, 8, 10, 9, 49]);
-  listTitle(s3, '□ 원방 폐기물 반출보고', date + ' 기준', 17);
+  setWidths(s3, [2, 5, 15, 12, 11, 12, 11, 14, 16, 8, 11, 7, 12, 12, 12]);
+  listTitle(s3, '□ 원방 폐기물 반출보고', date + ' 기준', 15);
 
   listHeader(
     s3,
     [
-      'No', 'No(2)', '프로잭트명', '반출날짜', '상차지', '배출자', '운반자', '처리자', '상차제품',
-      '단가', '스크랩중량', '루베', '운반비', '처리비', '결제금액', '운송중 특이사항 기록',
+      'No', '프로젝트명', '반출날짜', '상차지', '배출자', '운반자', '처리자', '상차제품',
+      '단가', '스크랩중량', '루베', '운반비', '처리비', '합계',
     ],
-    { fill: WASTE_HEADER_FILL, fontColor: 'FFFFFFFF' },
+    { fill: WASTE_LIST_HEADER_FILL },
   );
 
-  const s3Num = [11, 12, 13, 14, 15, 16];
-  const s3Left = [17]; // 운송중 특이사항 기록
+  const s3Num = [10, 11, 12, 13, 14, 15]; // 단가·스크랩중량·루베·운반비·처리비·합계
+  const s3Money = [13, 14, 15];           // 운반비·처리비·합계 — 양식과 같이 연녹색 배경
+  const treatOf = (r) => Number(r.amount ?? 0);
   wasteAll.forEach((r, i) => {
-    listRow(
+    const treat = treatOf(r);
+    const row = listRow(
       s3,
       [
-        i + 1, i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.dischargerName ?? '',
+        i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.dischargerName ?? '',
         r.transporterName ?? '', r.vendorName ?? '', r.itemName ?? '',
-        n(r.unitPrice), n(weightOf(r)), n(r.cubicMeter), '', '', n(r.amount), r.memo ?? '',
+        n(r.unitPrice), n(weightOf(r)), r.cubicMeter == null ? '-' : n(r.cubicMeter),
+        '', n(treat), n(treat),
       ],
-      { numberCols: s3Num, leftCols: s3Left, centerRest: true },
+      { numberCols: s3Num, centerRest: true },
     );
+    s3Money.forEach((col) => {
+      row.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MONEY_FILL } };
+    });
   });
+
+  const treatTotal = sum(wasteAll, treatOf);
   const f3 = listRow(
     s3,
     [
-      '합 계', '', '', '', '', '', '', '', '', '',
-      n(sum(wasteAll, weightOf)), n(sum(wasteAll, (r) => r.cubicMeter)), '', '', n(sum(wasteAll, (r) => r.amount)), '',
+      '합 계', '', '', '', '', '', '', '', '',
+      n(sum(wasteAll, weightOf)), n(sum(wasteAll, (r) => r.cubicMeter)), '', n(treatTotal), n(treatTotal),
     ],
-    { bold: true, numberCols: s3Num, leftCols: s3Left, centerRest: true },
+    { bold: true, numberCols: s3Num, centerRest: true },
   );
-  s3.mergeCells(f3.number, 2, f3.number, 11);
-  closeList(f3, 17);
+  s3.mergeCells(f3.number, 2, f3.number, 10);
+  f3.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+  s3Money.forEach((col) => {
+    f3.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: MONEY_FILL } };
+  });
+  closeList(f3, 15);
 
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
