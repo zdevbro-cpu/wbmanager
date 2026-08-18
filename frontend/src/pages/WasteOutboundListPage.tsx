@@ -55,6 +55,7 @@ const DETAIL_FIELDS = (r: WasteOutbound) => [
   { label: '정산 중량(kg)', value: num(r.weight)?.toLocaleString() ?? '-' },
   { label: '루베 적용', value: num(r.cubicMeter)?.toLocaleString() ?? '-' },
   { label: '단가(원)', value: num(r.unitPrice)?.toLocaleString() ?? '-' },
+  { label: '운반비(원)', value: num(r.transportCost)?.toLocaleString() ?? '-' },
   { label: '금액(원)', value: num(r.amount)?.toLocaleString() ?? '-' },
   { label: '구분', value: show(r.category) },
   { label: '자회사 출고', value: r.isSubsidiary ? 'O' : '-' },

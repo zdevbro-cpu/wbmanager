@@ -7,7 +7,7 @@ const HEADER_FILL = 'FFEFEFEF';
 const SCRAP_HEADER_FILL = 'FF2E9BD6';
 const WASTE_HEADER_FILL = 'FFFFC000';
 // 반출 List 시트 — 스크랩은 연파랑, 폐기물은 연노랑 머리글. 금액 열은 연녹색(보고 양식과 동일).
-const LIST_HEADER_FILL = 'FF2E75B6';
+const LIST_HEADER_FILL = SCRAP_HEADER_FILL;
 const WASTE_LIST_HEADER_FILL = 'FFD98C00';
 const MONEY_FILL = 'FFE2EFDA';
 
@@ -404,8 +404,10 @@ export async function buildDailyXlsx(payload) {
 
   const s3Num = [10, 11, 12, 13, 14, 15]; // 단가·스크랩중량·루베·운반비·처리비·합계
   const s3Money = [13, 14, 15];           // 운반비·처리비·합계 — 양식과 같이 연녹색 배경
+  const carryOf = (r) => Number(r.transportCost ?? 0);
   const treatOf = (r) => Number(r.amount ?? 0);
   wasteAll.forEach((r, i) => {
+    const carry = carryOf(r);
     const treat = treatOf(r);
     const row = listRow(
       s3,
@@ -413,7 +415,7 @@ export async function buildDailyXlsx(payload) {
         i + 1, r.projectName, day(r.date), r.loadingPoint ?? '', r.dischargerName ?? '',
         r.transporterName ?? '', r.vendorName ?? '', r.itemName ?? '',
         n(r.unitPrice), n(weightOf(r)), r.cubicMeter == null ? '-' : n(r.cubicMeter),
-        '', n(treat), n(treat),
+        n(carry), n(treat), n(carry + treat),
       ],
       { numberCols: s3Num, centerRest: true },
     );
@@ -422,12 +424,14 @@ export async function buildDailyXlsx(payload) {
     });
   });
 
+  const carryTotal = sum(wasteAll, carryOf);
   const treatTotal = sum(wasteAll, treatOf);
   const f3 = listRow(
     s3,
     [
       '합 계', '', '', '', '', '', '', '', '',
-      n(sum(wasteAll, weightOf)), n(sum(wasteAll, (r) => r.cubicMeter)), '', n(treatTotal), n(treatTotal),
+      n(sum(wasteAll, weightOf)), n(sum(wasteAll, (r) => r.cubicMeter)),
+      n(carryTotal), n(treatTotal), n(carryTotal + treatTotal),
     ],
     { bold: true, numberCols: s3Num, centerRest: true },
   );
