@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarDays, FileText, FileSpreadsheet, Download, Plus, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
+import { CalendarDays, FileText, FileSpreadsheet, Plus } from 'lucide-react';
 import { api } from '../api/client';
 import { downloadFile } from '../lib/download';
 import { kstToday, kstThisMonth } from '../lib/datetime';
@@ -24,12 +24,6 @@ const kg = (v: number) => `${Math.round(v).toLocaleString()}kg`;
 const won = (v: number) => `${Math.round(v).toLocaleString()}원`;
 const thisMonth = () => kstThisMonth();
 const today = () => kstToday();
-
-function shiftMonth(month: string, delta: number) {
-  const [y, m] = month.split('-').map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
 
 // 일일 출고보고 — 하루를 한 장씩 넘겨 보는 업무일지 형태.
 // 그날 출고 요약과 발행한 보고서를 한 자리에서 확인한다.
@@ -84,26 +78,8 @@ export function DailyReportPage() {
       </div>
 
       <div
-        className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:auto_180px_minmax(0,1fr)_minmax(0,1.4fr)]`}
+        className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:180px_minmax(0,1fr)_minmax(0,1.4fr)]`}
       >
-        <div className="flex items-center gap-1 pb-0.5">
-          <button
-            type="button"
-            onClick={() => setMonth(shiftMonth(month, -1))}
-            aria-label="이전 달"
-            className={`${outlineBtnCls} h-[38px] px-2`}
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setMonth(shiftMonth(month, 1))}
-            aria-label="다음 달"
-            className={`${outlineBtnCls} h-[38px] px-2`}
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
         <FilterField label="기준 월">
           <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className={`${inputCls} px-2`} />
         </FilterField>
@@ -155,20 +131,6 @@ export function DailyReportPage() {
               {viewing.content}
             </pre>
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => navigator.clipboard?.writeText(viewing.content)}
-                className={outlineBtnCls}
-              >
-                <MessageCircle size={15} /> 카톡 공유용 복사
-              </button>
-              <button
-                type="button"
-                onClick={() => downloadFile(`/api/reports/published/${viewing.id}/export`, `${viewing.title}.txt`)}
-                className={outlineBtnCls}
-              >
-                <Download size={15} /> 텍스트
-              </button>
               <button
                 type="button"
                 onClick={() => downloadFile(`/api/reports/published/${viewing.id}/xlsx`, `${viewing.title}.xlsx`)}
