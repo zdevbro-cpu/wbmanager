@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, Inbox, PackageMinus, Recycle, Trash2, Coins, Layers } from 'lucide-react';
+import { BarChart3, Inbox, PackageMinus, Layers, Percent, ChevronDown, ChevronRight } from 'lucide-react';
 import { api } from '../api/client';
 import { useProjects } from '../hooks/useMasters';
 import { SummaryCard } from '../components/ui/SummaryCard';
@@ -34,6 +34,8 @@ export function AggregationPage() {
   const [month, setMonth] = useState('');
   const [projectId, setProjectId] = useState('');
   const [data, setData] = useState<Aggregation | null>(null);
+  // 소계표는 기본으로 접어 둔다 — 첫 화면은 지표와 그래프만 보이게 한다.
+  const [showTables, setShowTables] = useState(false);
 
   const search = () => {
     const { from, to } = monthRange(month);
@@ -104,13 +106,37 @@ export function AggregationPage() {
 
       {data && flow && (
         <div className="space-y-6">
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
-            <SummaryCard icon={Inbox} color="#60a5fa" label="입고" value={kg(data.totals.inbound)} />
-            <SummaryCard icon={Recycle} color="#fb923c" label="폐기물입고" value={kg(data.totals.waste_inbound)} />
-            <SummaryCard icon={Layers} color="#a78bfa" label="선별" value={kg(data.totals.sorting)} />
-            <SummaryCard icon={PackageMinus} color="#22c55e" label="매각" value={kg(data.totals.outbound_sale)} />
-            <SummaryCard icon={Trash2} color="#f59e0b" label="폐기물반출" value={kg(data.totals.waste_outbound)} />
-            <SummaryCard icon={Coins} color="#38bdf8" label="금액합계" value={won(data.totals.amount)} />
+          {/* 판단에 쓰는 네 값만 크게 두고, 나머지는 각 카드의 보조줄로 내린다.
+              색은 다른 화면과 같은 규칙 — 반입 파랑 / 매각 주황 / 재고 초록. */}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
+            <SummaryCard
+              icon={Inbox}
+              color="#60a5fa"
+              label="반입"
+              value={kg(flow.inTotal)}
+              sub={`스크랩 ${kg(data.totals.inbound)} · 폐기물 ${kg(data.totals.waste_inbound)}`}
+            />
+            <SummaryCard
+              icon={PackageMinus}
+              color="#f59e0b"
+              label="매각"
+              value={kg(data.totals.outbound_sale)}
+              sub={`${won(data.totals.amount)} · 폐기물반출 ${kg(data.totals.waste_outbound)}`}
+            />
+            <SummaryCard
+              icon={Layers}
+              color="#22c55e"
+              label="재고(잔여)"
+              value={kg(flow.remain)}
+              sub={`반입 − 처리 · 선별 ${kg(data.totals.sorting)}`}
+            />
+            <SummaryCard
+              icon={Percent}
+              color="#38bdf8"
+              label="회수율"
+              value={`${flow.rate.toFixed(1)}%`}
+              sub="처리 합계 ÷ 반입 합계"
+            />
           </div>
 
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
@@ -123,8 +149,21 @@ export function AggregationPage() {
             <ShareCard title="거래처 구성 (금액 상위 6)" groups={data.byVendor} metric="amount" color="#22c55e" />
           </div>
 
-          {/* 좌우 표는 줄 수를 맞춰 같은 높이로 세운다. 모자란 쪽은 빈 줄, 넘치는 쪽은 표 안에서 스크롤. */}
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
+          {/* 소계표는 접어 두고 필요할 때 펼친다. 좌우 표는 줄 수를 맞춰 같은 높이로 세우고,
+              모자란 쪽은 빈 줄, 넘치는 쪽은 표 안에서 스크롤한다. */}
+          <button
+            type="button"
+            onClick={() => setShowTables((v) => !v)}
+            className="flex w-full items-center gap-1.5 rounded-[10px] border border-border bg-card px-3 py-2 text-[13.5px] font-bold text-text-mid hover:bg-hover"
+          >
+            {showTables ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            소계표 {showTables ? '접기' : '펼치기'}
+            <span className="ml-1 text-[12.5px] font-semibold text-text-faint">
+              프로젝트 · 거래처 · 품목 · 구분 · 월별
+            </span>
+          </button>
+
+          <div className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 ${showTables ? '' : 'hidden'}`}>
             <GroupTable title="① 프로젝트별 소계" groups={data.byProject} rowSlots={pairRows(data.byProject, data.byVendor)} />
             <GroupTable title="② 거래처별 소계" groups={data.byVendor} rowSlots={pairRows(data.byProject, data.byVendor)} />
             <GroupTable title="③ 품목별 소계" groups={data.byItem} rowSlots={pairRows(data.byItem, data.byType)} />
