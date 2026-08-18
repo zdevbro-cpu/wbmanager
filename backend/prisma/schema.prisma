@@ -256,6 +256,17 @@ model WasteInbound {
   createdAt      DateTime @default(now()) @map("created_at")
   deletedAt      DateTime? @map("deleted_at")     // 소프트 삭제
 
+  // 폐기물 반출과 같은 항목을 입고에서도 관리한다. 재고는 그대로 netWeight로 잡고,
+  // 정산중량·루베·단가는 정산용으로 따로 입력받는다.
+  transporterName String?  @map("transporter_name") // 운반자
+  processorName   String?  @map("processor_name")   // 처리자
+  actualWeight    Decimal? @map("actual_weight") @db.Decimal(12, 3)  // 실중량 — 비우면 총중량 - 공차중량
+  settledWeight   Decimal? @map("settled_weight") @db.Decimal(12, 3) // 정산중량 — 비우면 입고량
+  cubicMeter      Decimal? @map("cubic_meter") @db.Decimal(12, 3)    // 루베 적용
+  unitPrice       Decimal? @map("unit_price") @db.Decimal(12, 2)
+  amount          Decimal? @map("amount") @db.Decimal(14, 2)         // 금액 = 정산중량 × 단가
+  transferDate    DateTime? @map("transfer_date")  // 이체일
+
   attachments Attachment[]
 
   @@map("waste_inbound")

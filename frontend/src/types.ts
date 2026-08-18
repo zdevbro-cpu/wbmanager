@@ -129,6 +129,15 @@ export interface WasteInbound {
   lossWeight?: string | null;
   netWeight: string;
   memo?: string | null;
+  // 정산 항목 — 폐기물 반출과 같은 구성
+  transporterName?: string | null;
+  processorName?: string | null;
+  actualWeight?: string | null;
+  settledWeight?: string | null;
+  cubicMeter?: string | null;
+  unitPrice?: string | null;
+  amount?: string | null;
+  transferDate?: string | null;
   project?: Project;
   item?: ItemMaster;
   attachments?: Attachment[];

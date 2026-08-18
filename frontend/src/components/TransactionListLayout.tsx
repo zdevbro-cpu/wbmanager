@@ -21,6 +21,10 @@ export interface TxFilter {
   vehicleNo: string;
   driverName: string;
   itemCode: string;
+  olbaro: string;
+  dischargerName: string;
+  transporterName: string;
+  processorName: string;
 }
 
 export const EMPTY_FILTER: TxFilter = {
@@ -31,7 +35,26 @@ export const EMPTY_FILTER: TxFilter = {
   vehicleNo: '',
   driverName: '',
   itemCode: '',
+  olbaro: '',
+  dischargerName: '',
+  transporterName: '',
+  processorName: '',
 };
+
+// 화면마다 쓰는 필터가 다르다. 지정하지 않으면 기존 6종을 그대로 보여 준다.
+export type FilterKey =
+  | 'projectId'
+  | 'date'
+  | 'itemCode'
+  | 'vehicleType'
+  | 'vehicleNo'
+  | 'driverName'
+  | 'olbaro'
+  | 'dischargerName'
+  | 'transporterName'
+  | 'processorName';
+
+const DEFAULT_FILTER_KEYS: FilterKey[] = ['projectId', 'date', 'itemCode', 'vehicleType', 'vehicleNo', 'driverName'];
 
 export interface Column<T> {
   header: string;
@@ -59,6 +82,8 @@ interface Props<T> {
   /** 엑셀 내보내기 대상 — /api/list-exports/{exportType} 로 현재 필터가 그대로 전달된다. */
   exportType?: 'inbound' | 'waste_inbound' | 'outbound_sale' | 'waste_outbound';
   exportName?: string;
+  /** 이 화면에서 쓸 검색 필터. 생략하면 프로젝트·기간·제품명·차종·차량번호·운전자. */
+  filterKeys?: FilterKey[];
   emptyText: string;
 }
 
@@ -78,6 +103,7 @@ export function TransactionListLayout<T>({
   onDelete,
   exportType,
   exportName,
+  filterKeys = DEFAULT_FILTER_KEYS,
   emptyText,
 }: Props<T>) {
   const { projects } = useProjects();
@@ -124,8 +150,13 @@ export function TransactionListLayout<T>({
 
       {/* 필터 바 — 1줄 배치. 각 항목에 라벨을 달아 좁아져도 무엇을 고르는지 알 수 있게 한다. */}
       <div className={`${cardCls} mb-4 p-4`}>
-        <div className="grid grid-cols-[repeat(7,minmax(0,1fr))_auto] items-end gap-2">
-          <div>
+        <div
+          className="grid items-end gap-2"
+          style={{
+            gridTemplateColumns: `repeat(${filterKeys.length + (filterKeys.includes('date') ? 1 : 0)},minmax(0,1fr)) auto`,
+          }}
+        >
+          <div className={filterKeys.includes('projectId') ? '' : 'hidden'}>
             <FilterLabel>프로젝트</FilterLabel>
             <select
               value={filter.projectId}
@@ -141,7 +172,7 @@ export function TransactionListLayout<T>({
             </select>
           </div>
 
-          <div className="col-span-2">
+          <div className={filterKeys.includes('date') ? 'col-span-2' : 'hidden'}>
             <FilterLabel>{dateLabel}</FilterLabel>
             <div className="flex items-center gap-1">
               <input
@@ -160,7 +191,7 @@ export function TransactionListLayout<T>({
             </div>
           </div>
 
-          <div>
+          <div className={filterKeys.includes('itemCode') ? '' : 'hidden'}>
             <FilterLabel>제품명</FilterLabel>
             <select
               value={filter.itemCode}
@@ -176,7 +207,7 @@ export function TransactionListLayout<T>({
             </select>
           </div>
 
-          <div>
+          <div className={filterKeys.includes('vehicleType') ? '' : 'hidden'}>
             <FilterLabel>차종</FilterLabel>
             <select
               value={filter.vehicleType}
@@ -192,7 +223,7 @@ export function TransactionListLayout<T>({
             </select>
           </div>
 
-          <div>
+          <div className={filterKeys.includes('vehicleNo') ? '' : 'hidden'}>
             <FilterLabel>차량번호</FilterLabel>
             <select
               value={filter.vehicleNo}
@@ -208,7 +239,7 @@ export function TransactionListLayout<T>({
             </select>
           </div>
 
-          <div>
+          <div className={filterKeys.includes('driverName') ? '' : 'hidden'}>
             <FilterLabel>운전자</FilterLabel>
             <select
               value={filter.driverName}
@@ -223,6 +254,53 @@ export function TransactionListLayout<T>({
               ))}
             </select>
           </div>
+
+          {filterKeys.includes('olbaro') && (
+            <div>
+              <FilterLabel>올바로</FilterLabel>
+              <select value={filter.olbaro} onChange={(e) => set({ olbaro: e.target.value })} className={`${inputCls} px-2`}>
+                <option value="">전체</option>
+                <option value="O">O(신고)</option>
+                <option value="X">X(미신고)</option>
+              </select>
+            </div>
+          )}
+
+          {filterKeys.includes('dischargerName') && (
+            <div>
+              <FilterLabel>배출자</FilterLabel>
+              <input
+                value={filter.dischargerName}
+                onChange={(e) => set({ dischargerName: e.target.value })}
+                placeholder="이름 일부"
+                className={`${inputCls} px-2`}
+              />
+            </div>
+          )}
+
+          {filterKeys.includes('transporterName') && (
+            <div>
+              <FilterLabel>운반자</FilterLabel>
+              <input
+                value={filter.transporterName}
+                onChange={(e) => set({ transporterName: e.target.value })}
+                placeholder="이름 일부"
+                className={`${inputCls} px-2`}
+              />
+            </div>
+          )}
+
+          {filterKeys.includes('processorName') && (
+            <div>
+              <FilterLabel>처리자</FilterLabel>
+              <input
+                value={filter.processorName}
+                onChange={(e) => set({ processorName: e.target.value })}
+                placeholder="이름 일부"
+                className={`${inputCls} px-2`}
+              />
+            </div>
+          )}
 
           <button
             type="button"

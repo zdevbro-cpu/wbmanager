@@ -6,10 +6,26 @@ import { toISO } from '../lib/date.js';
 const router = Router();
 
 router.get('/', async (req, res) => {
-  const { projectId, unreported, from, to, vehicleType, vehicleNo, driverName, itemCode } = req.query;
+  const {
+    projectId,
+    unreported,
+    from,
+    to,
+    vehicleType,
+    vehicleNo,
+    driverName,
+    itemCode,
+    olbaro,
+    dischargerName,
+    transporterName,
+    processorName,
+  } = req.query;
   const range = {};
   if (from) range.gte = new Date(from);
   if (to) range.lte = new Date(to);
+
+  // 배출자·운반자·처리자는 자유 입력이라 부분 일치로 찾는다.
+  const like = (v) => ({ contains: v, mode: 'insensitive' });
 
   const wasteInbounds = await prisma.wasteInbound.findMany({
     where: {
@@ -20,6 +36,10 @@ router.get('/', async (req, res) => {
       ...(vehicleNo ? { vehicleNo } : {}),
       ...(driverName ? { driverName } : {}),
       ...(itemCode ? { itemCode } : {}),
+      ...(olbaro ? { olbaroReported: olbaro === 'O' } : {}),
+      ...(dischargerName ? { dischargerName: like(dischargerName) } : {}),
+      ...(transporterName ? { transporterName: like(transporterName) } : {}),
+      ...(processorName ? { processorName: like(processorName) } : {}),
       // 미신고/미기재 폐기물 건만 필터 (S-FPMCPT)
       ...(unreported === 'true' ? { OR: [{ olbaroReported: false }, { handoverDate: null }] } : {}),
     },
@@ -48,6 +68,13 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: '감량이 과다합니다. 입고량이 음수가 됩니다.' });
   }
 
+  // 정산 항목 — 실중량·정산중량을 비우면 계근값에서 채우고, 금액은 정산중량 × 단가로 잡는다.
+  const num = (v) => (v === '' || v == null ? undefined : Number(v));
+  const actualWeight = num(req.body.actualWeight) ?? Number(grossWeight) - Number(tareWeight);
+  const settledWeight = num(req.body.settledWeight) ?? netWeight;
+  const unitPrice = num(req.body.unitPrice);
+  const amount = num(req.body.amount) ?? (unitPrice != null ? settledWeight * unitPrice : undefined);
+
   const wasteInbound = await prisma.$transaction(async (tx) => {
     const created = await tx.wasteInbound.create({
       data: {
@@ -55,6 +82,12 @@ router.post('/', async (req, res) => {
         netWeight,
         receiveDate: toISO(receiveDate),
         ...(handoverDate ? { handoverDate: toISO(handoverDate) } : {}),
+        actualWeight,
+        settledWeight,
+        cubicMeter: num(req.body.cubicMeter),
+        unitPrice,
+        amount,
+        transferDate: req.body.transferDate ? toISO(req.body.transferDate) : undefined,
       },
     });
     // 갑지가 폐기물도 `재고량 = 입고량 - 출고량`으로 집계하므로 스크랩과 동일하게 IN 계상한다.
