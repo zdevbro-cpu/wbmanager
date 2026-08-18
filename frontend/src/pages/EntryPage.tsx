@@ -40,55 +40,59 @@ export function EntryPage() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1100px] flex-1 px-7 py-14">
-        <h1 className="text-[26px] font-extrabold text-text-strong">업무 영역을 선택하세요</h1>
-        <p className="mt-1.5 text-[13.5px] text-text-sub">
-          선택한 영역의 메뉴만 표시됩니다. 좌측 상단에서 언제든 다시 고를 수 있습니다.
-        </p>
+      {/* 화면 한가운데에 정사각형 카드를 나란히 둔다. */}
+      <main className="flex flex-1 items-center justify-center px-7 py-12">
+        <div className="w-full max-w-[1000px] text-center">
+          <h1 className="text-[26px] font-extrabold text-text-strong">업무 영역을 선택하세요</h1>
+          <p className="mt-1.5 text-[13.5px] text-text-sub">
+            선택한 영역의 메뉴만 표시됩니다. 좌측 상단에서 언제든 다시 고를 수 있습니다.
+          </p>
 
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {AREAS.map((area) => {
-            const locked = (area.adminOnly && !isAdmin) || !area.ready;
-            const Icon = area.icon;
-            return (
-              <button
-                key={area.id}
-                type="button"
-                disabled={locked}
-                onClick={() => open(area)}
-                className={[
-                  'group relative flex flex-col items-start rounded-[14px] border bg-card p-5 text-left transition-colors',
-                  locked
-                    ? 'cursor-not-allowed border-border opacity-55'
-                    : 'border-border hover:border-primary hover:bg-hover',
-                ].join(' ')}
-              >
-                <div className="flex w-full items-start justify-between">
+          <div className="mt-10 grid grid-cols-1 justify-items-center gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {AREAS.map((area) => {
+              const locked = (area.adminOnly && !isAdmin) || !area.ready;
+              const Icon = area.icon;
+              return (
+                <button
+                  key={area.id}
+                  type="button"
+                  disabled={locked}
+                  onClick={() => open(area)}
+                  className={[
+                    'group relative flex aspect-square w-full max-w-[220px] flex-col items-center justify-center rounded-[16px] border bg-card p-5 text-center transition-colors',
+                    locked
+                      ? 'cursor-not-allowed border-border opacity-55'
+                      : 'border-border hover:border-primary hover:bg-hover',
+                  ].join(' ')}
+                >
+                  <span className="absolute top-3 right-3">
+                    {locked ? (
+                      <Lock size={15} className="text-text-faint" />
+                    ) : (
+                      <ArrowRight size={16} className="text-text-faint group-hover:text-primary" />
+                    )}
+                  </span>
+
                   <div
-                    className="flex h-12 w-12 items-center justify-center rounded-[12px]"
+                    className="flex h-14 w-14 items-center justify-center rounded-[14px]"
                     style={{ backgroundColor: `${area.accent}1f`, color: area.accent }}
                   >
-                    <Icon size={24} />
+                    <Icon size={26} />
                   </div>
-                  {locked ? (
-                    <Lock size={15} className="text-text-faint" />
-                  ) : (
-                    <ArrowRight size={16} className="text-text-faint group-hover:text-primary" />
+
+                  <div className="mt-4 text-[11px] font-bold tracking-[1px] text-text-faint">{area.acronym}</div>
+                  <div className="mt-0.5 text-[16px] font-extrabold text-text-strong">{area.title}</div>
+                  <p className="mt-1.5 line-clamp-2 text-[12.5px] leading-relaxed text-text-sub">{area.summary}</p>
+
+                  {locked && (
+                    <span className="mt-2 text-[12px] font-semibold text-text-faint">
+                      {!area.ready ? '준비 중' : '관리자 전용'}
+                    </span>
                   )}
-                </div>
-
-                <div className="mt-4 text-[11px] font-bold tracking-[1px] text-text-faint">{area.acronym}</div>
-                <div className="mt-0.5 text-[16px] font-extrabold text-text-strong">{area.title}</div>
-                <p className="mt-1.5 text-[12.5px] leading-relaxed text-text-sub">{area.summary}</p>
-
-                {locked && (
-                  <span className="mt-3 text-[12px] font-semibold text-text-faint">
-                    {!area.ready ? '준비 중' : '관리자 전용'}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </main>
     </div>
