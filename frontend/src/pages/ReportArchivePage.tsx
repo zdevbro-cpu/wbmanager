@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FileText, Eye, Trash2, Plus, RotateCcw, Copy, FileSpreadsheet } from 'lucide-react';
+import { FileText, Eye, Trash2, Plus, RotateCcw, FileSpreadsheet } from 'lucide-react';
 import { api } from '../api/client';
 import { downloadFile } from '../lib/download';
 import { useProjects } from '../hooks/useMasters';
@@ -193,13 +193,6 @@ export function ReportArchivePage() {
               {detail.content}
             </pre>
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => navigator.clipboard?.writeText(detail.content)}
-                className={outlineBtnCls}
-              >
-                <Copy size={15} /> 본문 복사
-              </button>
               <button
                 type="button"
                 onClick={() => downloadFile(`/api/reports/published/${detail.id}/xlsx`, `${detail.title}.xlsx`)}
