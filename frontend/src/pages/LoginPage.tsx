@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { LogIn, UserPlus } from 'lucide-react';
+import { LogIn, UserPlus, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatPhone } from '../lib/phone';
 import { inputCls, primaryBtnCls } from '../components/ui/classes';
 
 export function LoginPage() {
-  const { login, register } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const { login, register, resetPassword } = useAuth();
+  const [mode, setMode] = useState<'login' | 'register' | 'reset'>('login');
+  const [notice, setNotice] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -21,6 +22,10 @@ export function LoginPage() {
     try {
       if (mode === 'login') {
         await login(email, password);
+      } else if (mode === 'reset') {
+        // 가입되지 않은 주소여도 같은 안내를 보여 준다 — 어떤 주소가 있는지 알려주지 않기 위해서다.
+        await resetPassword(email);
+        setNotice('비밀번호 재설정 메일을 보냈습니다. 메일함을 확인하세요.');
       } else {
         await register(email, password, name, phone);
       }
@@ -47,7 +52,11 @@ export function LoginPage() {
         <div className="mb-5 flex rounded-[9px] border border-border p-0.5">
           <button
             type="button"
-            onClick={() => setMode('login')}
+            onClick={() => {
+              setMode('login');
+              setNotice('');
+              setError('');
+            }}
             className={`flex-1 rounded-[7px] py-1.5 text-[13px] font-bold ${
               mode === 'login' ? 'bg-primary text-white' : 'text-text-sub'
             }`}
@@ -56,7 +65,11 @@ export function LoginPage() {
           </button>
           <button
             type="button"
-            onClick={() => setMode('register')}
+            onClick={() => {
+              setMode('register');
+              setNotice('');
+              setError('');
+            }}
             className={`flex-1 rounded-[7px] py-1.5 text-[13px] font-bold ${
               mode === 'register' ? 'bg-primary text-white' : 'text-text-sub'
             }`}
@@ -91,6 +104,7 @@ export function LoginPage() {
             <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">이메일</label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputCls} />
           </div>
+          {mode !== 'reset' && (
           <div>
             <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">비밀번호</label>
             <input
@@ -102,14 +116,35 @@ export function LoginPage() {
               className={inputCls}
             />
           </div>
+          )}
+
+          {mode === 'reset' && (
+            <p className="text-[12.5px] text-text-sub">
+              가입한 이메일로 재설정 링크를 보냅니다. 메일의 링크에서 새 비밀번호를 정하면 됩니다.
+            </p>
+          )}
 
           {error && <p className="text-[12.5px] text-danger">{error}</p>}
+          {notice && <p className="text-[12.5px] text-success">{notice}</p>}
 
           <button type="submit" disabled={submitting} className={`${primaryBtnCls} w-full justify-center`}>
-            {mode === 'login' ? <LogIn size={15} /> : <UserPlus size={15} />}
-            {mode === 'login' ? '로그인' : '가입 신청'}
+            {mode === 'login' ? <LogIn size={15} /> : mode === 'reset' ? <KeyRound size={15} /> : <UserPlus size={15} />}
+            {mode === 'login' ? '로그인' : mode === 'reset' ? '재설정 메일 보내기' : '가입 신청'}
           </button>
         </form>
+
+        {/* 비밀번호를 잊었을 때 — 메일로 재설정 링크를 받는다. */}
+        <button
+          type="button"
+          onClick={() => {
+            setMode(mode === 'reset' ? 'login' : 'reset');
+            setNotice('');
+            setError('');
+          }}
+          className="mt-3 w-full text-center text-[12.5px] text-text-sub hover:text-text-strong"
+        >
+          {mode === 'reset' ? '로그인으로 돌아가기' : '비밀번호를 잊으셨나요?'}
+        </button>
 
         {mode === 'register' && (
           <p className="mt-4 text-[12px] text-text-faint">

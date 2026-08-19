@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, KeyRound } from 'lucide-react';
 import { api } from '../api/client';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
+import { useAuth } from '../context/AuthContext';
 import { pageTitleCls, tableWrapCls, thCls, tdCls, trCls, outlineBtnCls } from '../components/ui/classes';
 import { kstStamp } from '../lib/datetime';
 import type { AppUser } from '../context/AuthContext';
@@ -10,6 +11,7 @@ const STATUS_LABEL: Record<string, string> = { pending: '대기중', approved: '
 const STATUS_TONE: Record<string, BadgeTone> = { pending: 'amber', approved: 'green', rejected: 'red' };
 
 export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
+  const { resetPassword } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
 
   const load = () => {
@@ -23,6 +25,18 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
   const setStatus = async (id: string, status: string) => {
     await api.patch(`/api/auth/users/${id}/status`, { status });
     load();
+  };
+
+  // 현장에서 로그인이 막혔을 때 관리자가 바로 재설정 메일을 보낸다.
+  const sendReset = async (email?: string | null) => {
+    if (!email) return;
+    if (!window.confirm(`${email} 주소로 비밀번호 재설정 메일을 보낼까요?`)) return;
+    try {
+      await resetPassword(email);
+      window.alert('재설정 메일을 보냈습니다.');
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : '메일을 보내지 못했습니다.');
+    }
   };
 
   const setRole = async (id: string, role: string) => {
@@ -59,10 +73,6 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
                 <td className={tdCls}>{u.name ?? '-'}</td>
                 <td className={`${tdCls} tabular whitespace-nowrap`}>{u.phone ?? '-'}</td>
                 <td className={tdCls}>{u.email}</td>
-                <td className={`${tdCls} tabular whitespace-nowrap`}>
-                  {u.lastLoginAt ? `${kstStamp(u.lastLoginAt)} (${u.loginCount ?? 0}회)` : '접속 기록 없음'}
-                </td>
-                <td className={`${tdCls} tabular whitespace-nowrap`}>{u.lastLoginIp ?? '-'}</td>
                 <td className={tdCls}>
                   <select
                     value={u.role}
@@ -76,6 +86,10 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
                 <td className={tdCls}>
                   <Badge tone={STATUS_TONE[u.status]}>{STATUS_LABEL[u.status]}</Badge>
                 </td>
+                <td className={`${tdCls} tabular whitespace-nowrap`}>
+                  {u.lastLoginAt ? `${kstStamp(u.lastLoginAt)} (${u.loginCount ?? 0}회)` : '접속 기록 없음'}
+                </td>
+                <td className={`${tdCls} tabular whitespace-nowrap`}>{u.lastLoginIp ?? '-'}</td>
                 <td className={tdCls}>
                   <div className="flex gap-1.5">
                     {u.status !== 'approved' && (
@@ -88,13 +102,21 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
                         거절
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => sendReset(u.email)}
+                      title="비밀번호 재설정 메일 발송"
+                      className={outlineBtnCls}
+                    >
+                      <KeyRound size={14} /> 비밀번호 재설정
+                    </button>
                   </div>
                 </td>
               </tr>
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={8} className="py-10 text-center text-[13px] text-text-faint">
                   가입 신청자가 없습니다.
                 </td>
               </tr>

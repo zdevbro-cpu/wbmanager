@@ -3,6 +3,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
   type User,
 } from 'firebase/auth';
@@ -29,6 +30,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, phone: string) => Promise<void>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   refreshAppUser: () => Promise<void>;
 }
 
@@ -72,6 +74,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadAppUser();
   };
 
+  // 비밀번호 재설정 — 메일 발송과 재설정 화면은 Firebase가 처리한다.
+  const resetPassword = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
   const logout = async () => {
     await signOut(auth);
     setAppUser(null);
@@ -79,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ firebaseUser, appUser, loading, login, register, logout, refreshAppUser: loadAppUser }}
+      value={{ firebaseUser, appUser, loading, login, register, logout, resetPassword, refreshAppUser: loadAppUser }}
     >
       {children}
     </AuthContext.Provider>
