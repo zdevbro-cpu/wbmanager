@@ -42,13 +42,14 @@ export function EntryPage() {
 
       {/* 화면 한가운데에 정사각형 카드를 나란히 둔다. */}
       <main className="flex flex-1 items-center justify-center px-7 py-12">
-        <div className="w-full max-w-[1000px] text-center">
+        <div className="w-full max-w-[860px] text-center">
           <h1 className="text-[26px] font-extrabold text-text-strong">업무 영역을 선택하세요</h1>
           <p className="mt-1.5 text-[13.5px] text-text-sub">
             선택한 영역의 메뉴만 표시됩니다. 좌측 상단에서 언제든 다시 고를 수 있습니다.
           </p>
 
-          <div className="mt-10 grid grid-cols-1 justify-items-center gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {/* 1열 SWMS · DMS · AMS, 2열 HRM · SYS 로 서도록 3열 격자에 둔다. */}
+          <div className="mt-10 grid grid-cols-1 justify-items-center gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {AREAS.map((area) => {
               const locked = (area.adminOnly && !isAdmin) || !area.ready;
               const Icon = area.icon;

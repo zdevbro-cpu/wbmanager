@@ -38,6 +38,8 @@ export async function uploadToDrive({ buffer, fileName, mimeType }) {
       body: Readable.from(buffer),
     },
     fields: 'id, name, webViewLink',
+    // 공유 드라이브로 옮겨도 코드를 고치지 않도록 지금부터 켜 둔다. 개인 드라이브에서는 무해하다.
+    supportsAllDrives: true,
   });
 
   return {
@@ -45,4 +47,20 @@ export async function uploadToDrive({ buffer, fileName, mimeType }) {
     fileName: res.data.name,
     webViewLink: res.data.webViewLink,
   };
+}
+
+// DMS 열람·다운로드는 앱을 거친다 — 드라이브 링크를 화면에 노출하지 않기 위해서다.
+// 설계 근거: docs/dms-design.md 1장 원칙 2.
+export async function downloadFromDrive(fileId) {
+  const drive = getDriveClient();
+  const meta = await drive.files.get({
+    fileId,
+    fields: 'name, mimeType, size',
+    supportsAllDrives: true,
+  });
+  const res = await drive.files.get(
+    { fileId, alt: 'media', supportsAllDrives: true },
+    { responseType: 'stream' },
+  );
+  return { stream: res.data, ...meta.data };
 }

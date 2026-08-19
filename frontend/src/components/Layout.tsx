@@ -1,17 +1,33 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { LogOut, Grid2x2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { AREAS, areaOfPath } from '../lib/areas';
+import { AREAS, areaOfPath, findArea } from '../lib/areas';
 
 
 export function Layout() {
   const location = useLocation();
   const { appUser, logout } = useAuth();
   const isAdmin = appUser?.role === 'admin';
-  // 시작 화면에서 고른 영역의 메뉴만 띄운다. 경로로 되짚어 새로고침해도 유지된다.
-  const area = areaOfPath(location.pathname) ?? AREAS[0];
+  // 시작 화면에서 고른 영역의 메뉴만 띄운다.
+  // 보고서 보관함처럼 여러 영역이 공유하는 화면은 경로만으로 영역을 알 수 없어,
+  // 마지막에 머문 영역을 기억해 두고 경로는 보조 수단으로 쓴다.
+  const byPath = areaOfPath(location.pathname);
+  const [areaId, setAreaId] = useState(() => byPath?.id ?? localStorage.getItem('wb.area') ?? AREAS[0].id);
+
+  useEffect(() => {
+    if (byPath && byPath.id !== areaId) {
+      setAreaId(byPath.id);
+      localStorage.setItem('wb.area', byPath.id);
+    }
+  }, [byPath, areaId]);
+
+  const area = findArea(areaId) ?? AREAS[0];
   const navGroups = area.groups;
-  const allItems = AREAS.flatMap((a) => a.groups).flatMap((g) => g.items);
+  const allItems = [
+    ...AREAS.flatMap((a) => a.groups).flatMap((g) => g.items),
+    ...AREAS.flatMap((a) => a.pinned ?? []),
+  ];
   const current = allItems.find((i) => i.to === location.pathname);
 
   return (
@@ -61,6 +77,29 @@ export function Layout() {
             </div>
           ))}
         </nav>
+
+        {/* 영역을 오가지 않고 닿아야 하는 메뉴 — 계정 줄 바로 위에 고정한다. */}
+        {area.pinned?.length ? (
+          <div className="border-t border-border-top px-3 py-2">
+            {area.pinned.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  [
+                    'flex items-center gap-2.5 rounded-[9px] border-l-[3px] px-2.5 py-2 text-[13.5px] font-semibold no-underline',
+                    isActive
+                      ? 'border-accent bg-nav-active text-text-strong'
+                      : 'border-transparent text-[#9fb3d1] hover:bg-nav-hover',
+                  ].join(' ')
+                }
+              >
+                <item.icon size={16} />
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+        ) : null}
 
         {/* 어느 계정으로 들어와 있는지 화면을 옮겨도 계속 보이도록 사이드바 하단에 둔다. */}
         <div className="flex items-center gap-2 border-t border-border-top px-4 py-3">

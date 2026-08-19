@@ -11,6 +11,7 @@ import { AssetManagementPage } from './pages/AssetManagementPage';
 import { EmployeeManagementPage } from './pages/EmployeeManagementPage';
 import { ProjectManagementPage } from './pages/ProjectManagementPage';
 import { SystemAdminPage } from './pages/SystemAdminPage';
+import { DmsPage } from './pages/DmsPage';
 import { EntryPage } from './pages/EntryPage';
 import { LedgerPage } from './pages/LedgerPage';
 import { AggregationPage } from './pages/AggregationPage';
@@ -53,6 +54,7 @@ function Gate() {
         <Route path="/vehicles" element={<Navigate to="/assets" replace />} />
         <Route path="/employees" element={<EmployeeManagementPage />} />
         <Route path="/admin-alerts" element={<AdminAlertsPage />} />
+        <Route path="/dms" element={<DmsPage />} />
         <Route path="/system" element={<SystemAdminPage />} />
         <Route path="/masters" element={<Navigate to="/system" replace />} />
         <Route path="/users" element={<Navigate to="/system?tab=users" replace />} />

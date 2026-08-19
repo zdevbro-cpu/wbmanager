@@ -7,6 +7,7 @@ import { FilterField } from '../components/FilterField';
 import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
 import { AssetMaintenanceForm } from '../components/AssetMaintenanceForm';
+import { EntityDocuments } from '../components/EntityDocuments';
 import { MaintenancePage } from './MaintenancePage';
 import { uploadStagedFiles } from '../lib/uploadStaged';
 import { API_BASE_URL } from '../api/client';
@@ -1170,6 +1171,11 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                 </ul>
               )}
               <FileUpload label="차량등록증 · 보험증권 · 검사증 · 매뉴얼 등" fileType="자산서류" parentType="asset" parentId={asset.id} />
+
+              {/* 문서 관리(DMS)에 등록된 이 자산의 문서 — 분류·버전·이력이 함께 남는다. */}
+              <div className="mt-5 border-t border-border pt-4">
+                <EntityDocuments entityType="asset" entityId={asset.id} />
+              </div>
             </div>
           </>
         )}
