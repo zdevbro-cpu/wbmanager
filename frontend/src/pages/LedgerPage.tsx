@@ -7,6 +7,7 @@ import { useProjects, useVendors, useItemMasters } from '../hooks/useMasters';
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { FilterField, DateRangeField } from '../components/FilterField';
+import { SearchSelect } from '../components/SearchSelect';
 import { pageTitleCls, outlineBtnCls, inputCls, tableWrapCls, thCls,
   thNumCls,
   tdNumCls, tdCls, trCls } from '../components/ui/classes';
@@ -75,6 +76,14 @@ export function LedgerPage() {
       [r.projectName, r.vendorName, r.itemName].filter(Boolean).join(' ').toLowerCase().includes(keyword),
     );
   }, [rows, q]);
+
+  // 결과 내 검색 후보 — 지금 조회된 건에 실제로 나오는 프로젝트·거래처·품목 이름.
+  // 목록에 없는 말도 그대로 쳐서 찾을 수 있게 자유 입력은 살려 둔다.
+  const resultOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const r of rows) for (const n of [r.projectName, r.vendorName, r.itemName]) if (n) names.add(n);
+    return [...names].sort().map((n) => ({ value: n, label: n }));
+  }, [rows]);
 
   // 조회 조건에 걸린 건들의 재고 요약 — 재고 = 입고 - 출고(갑지 기준).
   // 선별은 품목을 바꿔 다는 재분류라 입출고 어느 쪽에도 넣지 않는다.
@@ -152,25 +161,21 @@ export function LedgerPage() {
         </FilterField>
 
         <FilterField label="거래처">
-          <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className={`${inputCls} px-2`}>
-            <option value="">전체</option>
-            {vendors.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-              </option>
-            ))}
-          </select>
+          <SearchSelect
+            ariaLabel="거래처"
+            options={vendors.map((v) => ({ value: v.id, label: v.name }))}
+            value={vendorId}
+            onChange={setVendorId}
+          />
         </FilterField>
 
         <FilterField label="품목">
-          <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} px-2`}>
-            <option value="">전체</option>
-            {items.map((i) => (
-              <option key={i.itemCode} value={i.itemCode}>
-                {i.itemName}
-              </option>
-            ))}
-          </select>
+          <SearchSelect
+            ariaLabel="품목"
+            options={items.map((i) => ({ value: i.itemCode, label: i.itemName }))}
+            value={itemCode}
+            onChange={setItemCode}
+          />
         </FilterField>
 
         <FilterField label="유형">
@@ -185,7 +190,14 @@ export function LedgerPage() {
         </FilterField>
 
         <FilterField label="결과 내 검색">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="프로젝트 / 거래처 / 품목" className={inputCls} />
+          <SearchSelect
+            ariaLabel="결과 내 검색"
+            options={resultOptions}
+            value={q}
+            onChange={setQ}
+            placeholder="프로젝트 / 거래처 / 품목"
+            allowFree
+          />
         </FilterField>
 
         <button

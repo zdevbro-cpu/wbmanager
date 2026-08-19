@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Recycle } from 'lucide-react';
 import { api } from '../api/client';
 import { TransactionListLayout, EMPTY_FILTER, type Column, type TxFilter } from '../components/TransactionListLayout';
+import { useFilterSuggestions } from '../hooks/useFilterSuggestions';
 import { FormModal } from '../components/FormModal';
 import { WasteInboundFormPage } from './WasteInboundFormPage';
 import { Badge } from '../components/ui/Badge';
@@ -68,11 +69,15 @@ export function WasteInboundListPage() {
   const [rows, setRows] = useState<WasteInbound[]>([]);
   const [filter, setFilter] = useState<TxFilter>(EMPTY_FILTER);
   const [open, setOpen] = useState(false);
+  const { suggestions, collect } = useFilterSuggestions();
 
   const load = () => {
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(filter)) if (v) params.set(k, v);
-    api.get<WasteInbound[]>(`/api/waste-inbounds?${params.toString()}`).then(setRows);
+    api.get<WasteInbound[]>(`/api/waste-inbounds?${params.toString()}`).then((list) => {
+      setRows(list);
+      collect(list);
+    });
   };
 
   useEffect(() => {
@@ -99,6 +104,7 @@ export function WasteInboundListPage() {
         detailFields={DETAIL_FIELDS}
         filter={filter}
         setFilter={setFilter}
+        suggestions={suggestions}
         filterKeys={['projectId', 'date', 'itemCode', 'vehicleNo', 'olbaro', 'dischargerName', 'transporterName', 'processorName']}
         onAdd={() => setOpen(true)}
         onDelete={remove}

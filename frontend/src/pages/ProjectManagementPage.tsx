@@ -5,6 +5,7 @@ import { useVendors, useEmployees, useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { EntityDocuments } from '../components/EntityDocuments';
 import { FilterField, DateRangeField } from '../components/FilterField';
+import { SearchSelect } from '../components/SearchSelect';
 import { Badge } from '../components/ui/Badge';
 import { NumberInput } from '../components/ui/NumberInput';
 import { formatNumber } from '../lib/number';
@@ -617,25 +618,21 @@ function ProjectFilterBar({
       <DateRangeField label="계약기간" from={from} to={to} setFrom={setFrom} setTo={setTo} />
 
       <FilterField label="발주처">
-        <select value={ordererId} onChange={(e) => setOrdererId(e.target.value)} className={`${inputCls} px-2`}>
-          <option value="">전체</option>
-          {vendors.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.name}
-            </option>
-          ))}
-        </select>
+        <SearchSelect
+          ariaLabel="발주처"
+          options={vendors.map((v) => ({ value: v.id, label: v.name }))}
+          value={ordererId}
+          onChange={setOrdererId}
+        />
       </FilterField>
 
       <FilterField label="담당자">
-        <select value={managerEmpId} onChange={(e) => setManagerEmpId(e.target.value)} className={`${inputCls} px-2`}>
-          <option value="">전체</option>
-          {employees.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name}
-            </option>
-          ))}
-        </select>
+        <SearchSelect
+          ariaLabel="담당자"
+          options={employees.map((e) => ({ value: e.id, label: e.name }))}
+          value={managerEmpId}
+          onChange={setManagerEmpId}
+        />
       </FilterField>
 
       <FilterField label="상태">

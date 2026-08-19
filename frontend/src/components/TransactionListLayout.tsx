@@ -3,6 +3,7 @@ import { Plus, Paperclip, Eye, Trash2, X, RotateCcw, Download, type LucideIcon }
 import { useProjects, useItemMasters, useVehicles, useEmployees } from '../hooks/useMasters';
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import { downloadFile } from '../lib/download';
+import { SearchSelect, type SearchOption } from './SearchSelect';
 import { pageTitleCls, primaryBtnCls, outlineBtnCls, inputCls, cardCls, tableWrapCls, thCls, trCls } from './ui/classes';
 import type { Attachment } from '../types';
 
@@ -84,6 +85,8 @@ interface Props<T> {
   exportName?: string;
   /** 이 화면에서 쓸 검색 필터. 생략하면 프로젝트·기간·제품명·차종·차량번호·운전자. */
   filterKeys?: FilterKey[];
+  /** 검색 후보 보강 — 마스터에 없는 실제 입력값(배출자·운반자·처리자·수기 차량번호 등)을 화면이 넘긴다. */
+  suggestions?: Partial<Record<FilterKey, string[]>>;
   /** 상세에서 수정 폼을 띄운다. 저장이 끝나면 done()을 불러 상세로 돌아온다. */
   editForm?: (row: T, done: () => void) => ReactNode;
   emptyText: string;
@@ -106,6 +109,7 @@ export function TransactionListLayout<T>({
   exportType,
   exportName,
   filterKeys = DEFAULT_FILTER_KEYS,
+  suggestions,
   editForm,
   emptyText,
 }: Props<T>) {
@@ -115,6 +119,19 @@ export function TransactionListLayout<T>({
   const { employees } = useEmployees();
   const [detail, setDetail] = useState<T | null>(null);
   const [detailEdit, setDetailEdit] = useState(false);
+
+  // 마스터 목록과 화면에 실제로 들어온 값을 합쳐 후보로 쓴다. 수기로 넣은
+  // 차량번호처럼 마스터에 없는 값도 검색할 수 있어야 한다.
+  const merge = (base: SearchOption[], key: FilterKey): SearchOption[] => {
+    const extra = (suggestions?.[key] ?? []).filter((v) => v && !base.some((o) => o.value === v));
+    return [...base, ...[...new Set(extra)].sort().map((v) => ({ value: v, label: v }))];
+  };
+  const projectOptions = projects.map((p) => ({ value: p.id, label: p.roundName }));
+  const itemOptions = merge(items.map((i) => ({ value: i.itemCode, label: i.itemName })), 'itemCode');
+  const vehicleTypeOptions = merge(VEHICLE_TYPES.map((t) => ({ value: t, label: t })), 'vehicleType');
+  const vehicleNoOptions = merge(vehicles.map((v) => ({ value: v.vehicleNo, label: v.vehicleNo })), 'vehicleNo');
+  const driverOptions = merge(employees.map((e) => ({ value: e.name, label: e.name })), 'driverName');
+  const nameOptions = (key: FilterKey) => merge([], key);
 
   const hasSum = columns.some((c) => c.sum);
   const tdBase = 'px-3 py-1.5 text-[13px] text-text';
@@ -162,18 +179,12 @@ export function TransactionListLayout<T>({
         >
           <div className={filterKeys.includes('projectId') ? '' : 'hidden'}>
             <FilterLabel>프로젝트</FilterLabel>
-            <select
+            <SearchSelect
+              ariaLabel="프로젝트"
+              options={projectOptions}
               value={filter.projectId}
-              onChange={(e) => set({ projectId: e.target.value })}
-              className={`${inputCls} px-2`}
-            >
-              <option value="">전체</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.roundName}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => set({ projectId: v })}
+            />
           </div>
 
           <div className={filterKeys.includes('date') ? 'col-span-2' : 'hidden'}>
@@ -197,66 +208,44 @@ export function TransactionListLayout<T>({
 
           <div className={filterKeys.includes('itemCode') ? '' : 'hidden'}>
             <FilterLabel>제품명</FilterLabel>
-            <select
+            <SearchSelect
+              ariaLabel="제품명"
+              options={itemOptions}
               value={filter.itemCode}
-              onChange={(e) => set({ itemCode: e.target.value })}
-              className={`${inputCls} px-2`}
-            >
-              <option value="">전체</option>
-              {items.map((i) => (
-                <option key={i.itemCode} value={i.itemCode}>
-                  {i.itemName}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => set({ itemCode: v })}
+            />
           </div>
 
           <div className={filterKeys.includes('vehicleType') ? '' : 'hidden'}>
             <FilterLabel>차종</FilterLabel>
-            <select
+            <SearchSelect
+              ariaLabel="차종"
+              options={vehicleTypeOptions}
               value={filter.vehicleType}
-              onChange={(e) => set({ vehicleType: e.target.value })}
-              className={`${inputCls} px-2`}
-            >
-              <option value="">전체</option>
-              {VEHICLE_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => set({ vehicleType: v })}
+            />
           </div>
 
           <div className={filterKeys.includes('vehicleNo') ? '' : 'hidden'}>
             <FilterLabel>차량번호</FilterLabel>
-            <select
+            <SearchSelect
+              ariaLabel="차량번호"
+              options={vehicleNoOptions}
               value={filter.vehicleNo}
-              onChange={(e) => set({ vehicleNo: e.target.value })}
-              className={`${inputCls} px-2`}
-            >
-              <option value="">전체</option>
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.vehicleNo}>
-                  {v.vehicleNo}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => set({ vehicleNo: v })}
+              allowFree
+            />
           </div>
 
           <div className={filterKeys.includes('driverName') ? '' : 'hidden'}>
             <FilterLabel>운전자</FilterLabel>
-            <select
+            <SearchSelect
+              ariaLabel="운전자"
+              options={driverOptions}
               value={filter.driverName}
-              onChange={(e) => set({ driverName: e.target.value })}
-              className={`${inputCls} px-2`}
-            >
-              <option value="">전체</option>
-              {employees.map((e) => (
-                <option key={e.id} value={e.name}>
-                  {e.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => set({ driverName: v })}
+              allowFree
+            />
           </div>
 
           {filterKeys.includes('olbaro') && (
@@ -273,11 +262,12 @@ export function TransactionListLayout<T>({
           {filterKeys.includes('dischargerName') && (
             <div>
               <FilterLabel>배출자</FilterLabel>
-              <input
+              <SearchSelect
+                ariaLabel="배출자"
+                options={nameOptions('dischargerName')}
                 value={filter.dischargerName}
-                onChange={(e) => set({ dischargerName: e.target.value })}
-                placeholder="이름 일부"
-                className={`${inputCls} px-2`}
+                onChange={(v) => set({ dischargerName: v })}
+                allowFree
               />
             </div>
           )}
@@ -285,11 +275,12 @@ export function TransactionListLayout<T>({
           {filterKeys.includes('transporterName') && (
             <div>
               <FilterLabel>운반자</FilterLabel>
-              <input
+              <SearchSelect
+                ariaLabel="운반자"
+                options={nameOptions('transporterName')}
                 value={filter.transporterName}
-                onChange={(e) => set({ transporterName: e.target.value })}
-                placeholder="이름 일부"
-                className={`${inputCls} px-2`}
+                onChange={(v) => set({ transporterName: v })}
+                allowFree
               />
             </div>
           )}
@@ -297,11 +288,12 @@ export function TransactionListLayout<T>({
           {filterKeys.includes('processorName') && (
             <div>
               <FilterLabel>처리자</FilterLabel>
-              <input
+              <SearchSelect
+                ariaLabel="처리자"
+                options={nameOptions('processorName')}
                 value={filter.processorName}
-                onChange={(e) => set({ processorName: e.target.value })}
-                placeholder="이름 일부"
-                className={`${inputCls} px-2`}
+                onChange={(v) => set({ processorName: v })}
+                allowFree
               />
             </div>
           )}
