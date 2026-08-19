@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Truck } from 'lucide-react';
 import { api } from '../api/client';
 import { TransactionListLayout, EMPTY_FILTER, type Column, type TxFilter } from '../components/TransactionListLayout';
+import { useFilterSuggestions } from '../hooks/useFilterSuggestions';
 import { FormModal } from '../components/FormModal';
 import { InboundFormPage } from './InboundFormPage';
 import type { Inbound } from '../types';
@@ -40,11 +41,15 @@ export function InboundListPage() {
   const [rows, setRows] = useState<Inbound[]>([]);
   const [filter, setFilter] = useState<TxFilter>(EMPTY_FILTER);
   const [open, setOpen] = useState(false);
+  const { suggestions, collect } = useFilterSuggestions();
 
   const load = () => {
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(filter)) if (v) params.set(k, v);
-    api.get<Inbound[]>(`/api/inbounds?${params.toString()}`).then(setRows);
+    api.get<Inbound[]>(`/api/inbounds?${params.toString()}`).then((list) => {
+      setRows(list);
+      collect(list);
+    });
   };
 
   useEffect(() => {
@@ -71,6 +76,7 @@ export function InboundListPage() {
         detailFields={DETAIL_FIELDS}
         filter={filter}
         setFilter={setFilter}
+        suggestions={suggestions}
         onAdd={() => setOpen(true)}
         onDelete={remove}
         editForm={(row, done) => (

@@ -83,6 +83,10 @@ export function DailyReportPage() {
     if (publishEntry) navigate('/reports', { replace: true });
   };
 
+  // '출고보고서' 메뉴로 들어와 발행 모달이 떠 있는 동안에는 뒤의 보관함 화면을 그리지 않는다.
+  // 입력하는 칸 뒤로 달력과 목록이 비쳐 보이면 어디를 보고 있는지 헷갈린다.
+  const publishOnly = publishEntry && !!publishRange;
+
   // 달력에서 시작일 → 종료일 순으로 고른다. 시작일을 다시 누르면 하루로 돌아간다.
   const pickDate = (date: string) => {
     if (!rangeStart || rangeEnd) {
@@ -99,69 +103,73 @@ export function DailyReportPage() {
 
   return (
     <div>
-      <div className="mb-5 flex items-center gap-2">
-        <CalendarDays size={20} className="text-primary" />
-        <h1 className={pageTitleCls}>보고서 보관함</h1>
-        <span className="ml-1 text-[13px] text-text-sub">
-          {month} · 출고 {activeDays.length}일 / 보고서 {publishedCount}건
-        </span>
-
-        <div className="ml-auto flex items-center gap-2">
-          <div className="flex overflow-hidden rounded-[10px] border border-border">
-            {(['calendar', 'list'] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setView(v)}
-                className={`px-3 py-2 text-[12.5px] font-bold ${
-                  view === v ? 'bg-primary text-white' : 'text-text-sub hover:bg-hover'
-                }`}
-              >
-                {v === 'calendar' ? '달력' : '목록'}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {view === 'list' ? (
-        <ReportArchivePage embedded />
-      ) : (
+      {!publishOnly && (
         <>
-          <div
-            className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:180px_minmax(0,1fr)_minmax(0,1.4fr)]`}
-          >
-            <FilterField label="기준 월">
-              <input
-                type="month"
-                value={month}
-                onChange={(e) => setMonth(e.target.value)}
-                className={`${inputCls} px-2`}
-              />
-            </FilterField>
-            <FilterField label="프로젝트">
-              <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} px-2`}>
-                <option value="">전체</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.roundName}
-                  </option>
+          <div className="mb-5 flex items-center gap-2">
+            <CalendarDays size={20} className="text-primary" />
+            <h1 className={pageTitleCls}>보고서 보관함</h1>
+            <span className="ml-1 text-[13px] text-text-sub">
+              {month} · 출고 {activeDays.length}일 / 보고서 {publishedCount}건
+            </span>
+
+            <div className="ml-auto flex items-center gap-2">
+              <div className="flex overflow-hidden rounded-[10px] border border-border">
+                {(['calendar', 'list'] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setView(v)}
+                    className={`px-3 py-2 text-[12.5px] font-bold ${
+                      view === v ? 'bg-primary text-white' : 'text-text-sub hover:bg-hover'
+                    }`}
+                  >
+                    {v === 'calendar' ? '달력' : '목록'}
+                  </button>
                 ))}
-              </select>
-            </FilterField>
-            <p className="pb-2 text-[12.5px] text-text-faint">
-              이 달 출고 {monthCount}건 · {kg(monthWeight)} · {won(monthAmount)} · 시작일을 누른 뒤 종료일을 누르면 구간이
-              잡힙니다.
-            </p>
+              </div>
+            </div>
           </div>
 
-          {days.length === 0 ? (
-            <p className="py-16 text-center text-[13px] text-text-faint">불러오는 중이거나 해당 월 데이터가 없습니다.</p>
+          {view === 'list' ? (
+            <ReportArchivePage embedded />
           ) : (
-            <div className="grid grid-cols-[minmax(0,1fr)_380px] gap-4">
-              <MonthCalendar days={days} from={from} to={to} onSelect={pickDate} />
-              <RangePanel days={picked} onDelete={removeReport} />
-            </div>
+            <>
+              <div
+                className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:180px_minmax(0,1fr)_minmax(0,1.4fr)]`}
+              >
+                <FilterField label="기준 월">
+                  <input
+                    type="month"
+                    value={month}
+                    onChange={(e) => setMonth(e.target.value)}
+                    className={`${inputCls} px-2`}
+                  />
+                </FilterField>
+                <FilterField label="프로젝트">
+                  <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} px-2`}>
+                    <option value="">전체</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.roundName}
+                      </option>
+                    ))}
+                  </select>
+                </FilterField>
+                <p className="pb-2 text-[12.5px] text-text-faint">
+                  이 달 출고 {monthCount}건 · {kg(monthWeight)} · {won(monthAmount)} · 시작일을 누른 뒤 종료일을 누르면 구간이
+                  잡힙니다.
+                </p>
+              </div>
+
+              {days.length === 0 ? (
+                <p className="py-16 text-center text-[13px] text-text-faint">불러오는 중이거나 해당 월 데이터가 없습니다.</p>
+              ) : (
+                <div className="grid grid-cols-[minmax(0,1fr)_380px] gap-4">
+                  <MonthCalendar days={days} from={from} to={to} onSelect={pickDate} />
+                  <RangePanel days={picked} onDelete={removeReport} />
+                </div>
+              )}
+            </>
           )}
         </>
       )}

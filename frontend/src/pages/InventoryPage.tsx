@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Boxes, X } from 'lucide-react';
 import { api } from '../api/client';
+import { SearchSelect } from '../components/SearchSelect';
 import { useProjects, useItemMasters } from '../hooks/useMasters';
 import { NumberInput } from '../components/ui/NumberInput';
 import { formatNumber } from '../lib/number';
@@ -118,22 +119,24 @@ export function InventoryPage() {
 
       <div className="mb-5 flex w-full items-center gap-2 rounded-[12px] border border-border bg-card px-4 py-2.5">
         <span className="mr-1 whitespace-nowrap text-[13px] font-extrabold text-text-strong">검색</span>
-        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-[200px] min-w-0`}>
-          <option value="">전체 프로젝트</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.roundName}
-            </option>
-          ))}
-        </select>
-        <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} w-[160px] min-w-0`}>
-          <option value="">전체 품목</option>
-          {items.map((i) => (
-            <option key={i.itemCode} value={i.itemCode}>
-              {i.itemName}
-            </option>
-          ))}
-        </select>
+        <div className="w-[200px] shrink-0">
+          <SearchSelect
+            ariaLabel="프로젝트"
+            options={projects.map((p) => ({ value: p.id, label: p.roundName }))}
+            value={projectId}
+            onChange={setProjectId}
+            placeholder="전체 프로젝트"
+          />
+        </div>
+        <div className="w-[160px] shrink-0">
+          <SearchSelect
+            ariaLabel="품목"
+            options={items.map((i) => ({ value: i.itemCode, label: i.itemName }))}
+            value={itemCode}
+            onChange={setItemCode}
+            placeholder="전체 품목"
+          />
+        </div>
       </div>
 
       {valuation && (
