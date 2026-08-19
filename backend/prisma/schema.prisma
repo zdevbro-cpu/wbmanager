@@ -787,8 +787,9 @@ model Document {
   updatedAt        DateTime      @default(now()) @updatedAt @map("updated_at")
   deletedAt        DateTime?     @map("deleted_at")
 
-  versions DocumentVersion[]
-  links    DocumentLink[]
+  versions    DocumentVersion[]
+  links       DocumentLink[]
+  attachments DocumentAttachment[]
 
   @@index([typeId, status, createdAt])
   @@map("document")
@@ -828,4 +829,21 @@ model DocumentLink {
   @@unique([documentId, entityType, entityId, relation])
   @@index([entityType, entityId])
   @@map("document_link")
+}
+
+// 문서에 딸린 첨부자료 — 본문 파일 외 참고 자료. 버전 이력과는 성격이 달라 따로 둔다.
+model DocumentAttachment {
+  id          String   @id @default(uuid())
+  documentId  String   @map("document_id")
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  storageKind String   @default("gdrive") @map("storage_kind")
+  storageKey  String?  @map("storage_key")
+  fileName    String?  @map("file_name")
+  mimeType    String?  @map("mime_type")
+  byteSize    BigInt?  @map("byte_size")
+  uploadedBy  String?  @map("uploaded_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([documentId])
+  @@map("document_attachment")
 }

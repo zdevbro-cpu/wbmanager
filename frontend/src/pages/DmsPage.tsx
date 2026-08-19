@@ -13,6 +13,7 @@ import {
   History,
   Eye,
   Printer,
+  Paperclip,
   Check,
   X,
   Save,
@@ -23,6 +24,8 @@ import { auth } from '../lib/firebase';
 import { useProjects } from '../hooks/useMasters';
 import { kstStamp } from '../lib/datetime';
 import { FormModal } from '../components/FormModal';
+import { FileDropField } from '../components/FileDropField';
+import { StagedFileUpload } from '../components/StagedFileUpload';
 import { pageTitleCls, cardCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 
 // 문서 분류 트리 — 대·중·소 3단. 설계 docs/dms-design.md 3.1·3.2를 따른다.
@@ -47,6 +50,12 @@ interface DocVersion {
   createdAt: string;
 }
 
+interface DocAttachment {
+  id: string;
+  fileName: string | null;
+  byteSize: number | null;
+}
+
 interface Doc {
   id: string;
   docNo: string | null;
@@ -66,6 +75,7 @@ interface Doc {
   } | null;
   type?: { name: string; code: string } | null;
   versions: DocVersion[];
+  attachments?: DocAttachment[];
   projects: { id: string; name: string | null }[];
 }
 
@@ -109,6 +119,24 @@ const day = (v: string) => v.slice(0, 10);
 const countAll = (nodes: DocType[]): number => nodes.reduce((sum, n) => sum + 1 + countAll(n.children), 0);
 
 // 내려받기도 앱을 거친다 — 드라이브 링크를 화면에 노출하지 않는다(설계 1장 원칙 2).
+// 첨부자료도 앱을 거쳐 받는다 — 본문과 같은 규칙이다.
+async function downloadAttachment(doc: Doc, item: DocAttachment) {
+  const token = await auth.currentUser?.getIdToken();
+  const res = await fetch(`${API_BASE_URL}/api/dms/documents/${doc.id}/attachments/${item.id}/content`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    window.alert('첨부자료를 내려받지 못했습니다.');
+    return;
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = item.fileName ?? 'attachment';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 const isReport = (doc: Doc) => doc.origin === 'SYSTEM';
 // 보고서는 document가 아니라 report에 있다. 내려받기·인쇄만 같은 자리에서 되게 한다.
 const contentUrl = (doc: Doc) =>
@@ -637,6 +665,11 @@ export function DmsPage() {
                           </span>
                         )}
                         {d.title}
+                        {!!d.attachments?.length && (
+                          <span className="ml-1.5 text-[11.5px] font-semibold text-text-faint">
+                            +첨부 {d.attachments.length}
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-1.5 text-[13px] text-text">{d.type?.name ?? '-'}</td>
                       <td className="px-3 py-1.5 text-[13px] text-text">
@@ -785,6 +818,7 @@ function UploadForm({
   onCancel: () => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
+  const [extras, setExtras] = useState<File[]>([]);
   const [title, setTitle] = useState('');
   const [projectId, setProjectId] = useState(defaultProjectId);
   const [docDate, setDocDate] = useState('');
@@ -803,6 +837,7 @@ function UploadForm({
     try {
       const form = new FormData();
       form.append('file', file);
+      extras.forEach((f) => form.append('attachments', f));
       form.append('typeId', type.id);
       form.append('title', title.trim() || file.name);
       if (projectId) form.append('projectId', projectId);
@@ -823,9 +858,10 @@ function UploadForm({
         분류 <b className="text-text-strong">{type.name}</b> ({type.code})
       </p>
 
-      <div>
-        <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">파일</label>
-        <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className={inputCls} />
+      {/* 본문과 첨부를 한 줄에 나란히 둔다. 첨부는 버전을 쌓지 않고 문서에 딸려 있다. */}
+      <div className="grid grid-cols-2 gap-3">
+        <FileDropField label="파일 (본문)" file={file} setFile={setFile} hint="계약서·필증·명세서 등" />
+        <StagedFileUpload label="첨부자료 (선택)" files={extras} setFiles={setExtras} hint="여러 개 올릴 수 있습니다" />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -905,10 +941,7 @@ function VersionForm({ doc, onDone, onCancel }: { doc: Doc; onDone: () => void; 
 
   return (
     <form onSubmit={submit} className="space-y-3.5">
-      <div>
-        <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">파일</label>
-        <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className={inputCls} />
-      </div>
+      <FileDropField file={file} setFile={setFile} hint="같은 파일이면 새 버전을 만들지 않습니다" />
       <div>
         <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">변경 사유</label>
         <input
@@ -918,6 +951,32 @@ function VersionForm({ doc, onDone, onCancel }: { doc: Doc; onDone: () => void; 
           className={inputCls}
         />
       </div>
+
+      {!!doc.attachments?.length && (
+        <div>
+          <p className="mb-1.5 text-[13px] font-semibold text-text-mid">첨부자료 {doc.attachments.length}건</p>
+          <div className="rounded-[8px] border border-border">
+            {doc.attachments.map((a) => (
+              <div
+                key={a.id}
+                className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-[12.5px] last:border-0"
+              >
+                <Paperclip size={12} className="shrink-0 text-text-faint" />
+                <span className="truncate text-text">{a.fileName}</span>
+                <span className="shrink-0 text-text-faint">{size(a.byteSize)}</span>
+                <button
+                  type="button"
+                  title="내려받기"
+                  onClick={() => downloadAttachment(doc, a)}
+                  className="ml-auto shrink-0 rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
+                >
+                  <Download size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <p className="mb-1.5 text-[13px] font-semibold text-text-mid">버전 이력</p>
@@ -1102,6 +1161,32 @@ function DetailForm({
           <p className="mt-2 text-[12px] text-text-faint">마지막 확인 {doc.meta.physicalCheckedAt}</p>
         )}
       </div>
+
+      {!!doc.attachments?.length && (
+        <div>
+          <p className="mb-1.5 text-[13px] font-semibold text-text-mid">첨부자료 {doc.attachments.length}건</p>
+          <div className="rounded-[8px] border border-border">
+            {doc.attachments.map((a) => (
+              <div
+                key={a.id}
+                className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-[12.5px] last:border-0"
+              >
+                <Paperclip size={12} className="shrink-0 text-text-faint" />
+                <span className="truncate text-text">{a.fileName}</span>
+                <span className="shrink-0 text-text-faint">{size(a.byteSize)}</span>
+                <button
+                  type="button"
+                  title="내려받기"
+                  onClick={() => downloadAttachment(doc, a)}
+                  className="ml-auto shrink-0 rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
+                >
+                  <Download size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <p className="mb-1.5 text-[13px] font-semibold text-text-mid">버전 이력</p>

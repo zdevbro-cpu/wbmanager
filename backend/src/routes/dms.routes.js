@@ -264,7 +264,7 @@ router.get('/documents', async (req, res) => {
       // 분류를 콕 집어 고른 경우에만 보여 준다.
       ...(typeId ? {} : { type: { name: { not: { contains: '계근표' } } } }),
     },
-    include: { type: true, versions: { orderBy: { versionNo: 'desc' } }, links: true },
+    include: { type: true, versions: { orderBy: { versionNo: 'desc' } }, links: true, attachments: true },
     orderBy: { createdAt: 'desc' },
     take: 300,
   });
@@ -280,6 +280,7 @@ router.get('/documents', async (req, res) => {
     ...d,
     origin: 'UPLOAD',
     versions: d.versions.map((v) => ({ ...v, byteSize: v.byteSize == null ? null : Number(v.byteSize) })),
+    attachments: d.attachments.map((a) => ({ ...a, byteSize: a.byteSize == null ? null : Number(a.byteSize) })),
     projects: links
       .filter((l) => l.entityType === 'project')
       .map((l) => ({ id: l.entityId, name: nameOf[l.entityId] ?? null })),
@@ -320,22 +321,41 @@ router.get('/documents', async (req, res) => {
 });
 
 // 등록 — 메타와 첫 파일을 함께 받는다.
-router.post('/documents', upload.single('file'), async (req, res) => {
+router.post(
+  '/documents',
+  upload.fields([
+    { name: 'file', maxCount: 1 },
+    { name: 'attachments', maxCount: 10 },
+  ]),
+  async (req, res) => {
   const { title, typeId, projectId, description, docDate } = req.body;
-  if (!req.file) return res.status(400).json({ error: '파일은 필수입니다.' });
+  const mainFile = req.files?.file?.[0];
+  const extras = req.files?.attachments ?? [];
+  if (!mainFile) return res.status(400).json({ error: '파일은 필수입니다.' });
   if (!typeId) return res.status(400).json({ error: '문서 분류는 필수입니다.' });
 
   const type = await prisma.documentType.findUnique({ where: { id: typeId } });
   if (!type) return res.status(404).json({ error: '문서 분류를 찾을 수 없습니다.' });
 
-  const docTitle = String(title ?? '').trim() || decodeUploadName(req.file.originalname);
-  const checksum = sha256(req.file.buffer);
+  const docTitle = String(title ?? '').trim() || decodeUploadName(mainFile.originalname);
+  const checksum = sha256(mainFile.buffer);
 
   const { driveFileId, fileName } = await uploadToDrive({
-    buffer: req.file.buffer,
-    fileName: decodeUploadName(req.file.originalname),
-    mimeType: req.file.mimetype,
+    buffer: mainFile.buffer,
+    fileName: decodeUploadName(mainFile.originalname),
+    mimeType: mainFile.mimetype,
   });
+
+  // 첨부자료도 같은 폴더에 올린다. 본문과 달리 버전을 쌓지 않는다.
+  const uploadedExtras = [];
+  for (const f of extras) {
+    const saved = await uploadToDrive({
+      buffer: f.buffer,
+      fileName: decodeUploadName(f.originalname),
+      mimeType: f.mimetype,
+    });
+    uploadedExtras.push({ ...saved, mimeType: f.mimetype, size: f.size });
+  }
 
   // 보존 만료일은 분류의 보존연한에서 산출한다(설계 3.3).
   const retentionUntil = type.retentionMonths
@@ -361,13 +381,25 @@ router.post('/documents', upload.single('file'), async (req, res) => {
         storageKind: 'gdrive',
         storageKey: driveFileId,
         fileName,
-        mimeType: req.file.mimetype,
-        byteSize: BigInt(req.file.size),
+        mimeType: mainFile.mimetype,
+        byteSize: BigInt(mainFile.size),
         checksumSha256: checksum,
         uploadedBy: req.appUser?.id ?? null,
       },
     });
     await tx.document.update({ where: { id: doc.id }, data: { currentVersionId: version.id } });
+    if (uploadedExtras.length) {
+      await tx.documentAttachment.createMany({
+        data: uploadedExtras.map((e) => ({
+          documentId: doc.id,
+          storageKey: e.driveFileId,
+          fileName: e.fileName,
+          mimeType: e.mimeType,
+          byteSize: BigInt(e.size),
+          uploadedBy: req.appUser?.id ?? null,
+        })),
+      });
+    }
     if (projectId) {
       await tx.documentLink.create({
         data: { documentId: doc.id, entityType: 'project', entityId: projectId, relation: 'attachment' },
@@ -376,9 +408,14 @@ router.post('/documents', upload.single('file'), async (req, res) => {
     return doc;
   });
 
-  recordDocAudit(req, { documentId: saved.id, action: 'doc_create', detail: `${type.name} / ${docTitle}` });
+  recordDocAudit(req, {
+    documentId: saved.id,
+    action: 'doc_create',
+    detail: `${type.name} / ${docTitle}${uploadedExtras.length ? ` (+첨부 ${uploadedExtras.length})` : ''}`,
+  });
   res.status(201).json(saved);
-});
+  },
+);
 
 // 새 버전 — 같은 파일이면 거부해 불필요한 버전 증식을 막는다(설계 2.3).
 router.post('/documents/:id/versions', upload.single('file'), async (req, res) => {
@@ -453,6 +490,26 @@ router.get('/documents/:id/content', async (req, res) => {
   }
 });
 
+// 첨부자료 내려받기 — 드라이브 링크를 노출하지 않고 앱이 중계한다.
+router.get('/documents/:id/attachments/:attachmentId/content', async (req, res) => {
+  const item = await prisma.documentAttachment.findFirst({
+    where: { id: req.params.attachmentId, documentId: req.params.id },
+  });
+  if (!item?.storageKey) return res.status(404).json({ error: '첨부자료를 찾을 수 없습니다.' });
+
+  try {
+    const { stream, mimeType } = await downloadFromDrive(item.storageKey);
+    const encoded = encodeURIComponent(item.fileName ?? 'attachment');
+    res.setHeader('Content-Type', mimeType || item.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="attachment"; filename*=UTF-8''${encoded}`);
+    recordDocAudit(req, { documentId: req.params.id, action: 'doc_download', detail: `첨부 ${item.fileName ?? ''}`.trim() });
+    stream.pipe(res);
+  } catch (err) {
+    console.error('[dms] 첨부 다운로드 실패:', err.message);
+    res.status(502).json({ error: '드라이브에서 파일을 가져오지 못했습니다.' });
+  }
+});
+
 // 업무 화면용 — "이 프로젝트(자산·임직원) 문서 전부"
 router.get('/entities/:type/:id/documents', async (req, res) => {
   const links = await prisma.documentLink.findMany({
@@ -475,7 +532,7 @@ router.get('/entities/:type/:id/documents', async (req, res) => {
 router.get('/documents/:id', async (req, res) => {
   const doc = await prisma.document.findUnique({
     where: { id: req.params.id },
-    include: { type: true, versions: { orderBy: { versionNo: 'desc' } }, links: true },
+    include: { type: true, versions: { orderBy: { versionNo: 'desc' } }, links: true, attachments: true },
   });
   if (!doc || doc.deletedAt) return res.status(404).json({ error: '문서를 찾을 수 없습니다.' });
 
@@ -488,6 +545,7 @@ router.get('/documents/:id', async (req, res) => {
   res.json({
     ...rest,
     versions: doc.versions.map((v) => ({ ...v, byteSize: v.byteSize == null ? null : Number(v.byteSize) })),
+    attachments: doc.attachments.map((a) => ({ ...a, byteSize: a.byteSize == null ? null : Number(a.byteSize) })),
     projects: projects.map((p) => ({ id: p.id, name: p.roundName })),
   });
 });

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { FileText, Upload, Download, Trash2, Printer } from 'lucide-react';
 import { api, API_BASE_URL } from '../api/client';
 import { auth } from '../lib/firebase';
+import { FileDropField } from './FileDropField';
+import { StagedFileUpload } from './StagedFileUpload';
 import { inputCls, outlineBtnCls, primaryBtnCls } from './ui/classes';
 
 // 업무 화면(프로젝트·자산·임직원)에 붙이는 문서함.
@@ -109,6 +111,7 @@ export function EntityDocuments({
   const [leaves, setLeaves] = useState<{ id: string; label: string }[]>([]);
   const [adding, setAdding] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [extras, setExtras] = useState<File[]>([]);
   const [typeId, setTypeId] = useState('');
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
@@ -148,6 +151,7 @@ export function EntityDocuments({
     try {
       const form = new FormData();
       form.append('file', file);
+      extras.forEach((f) => form.append('attachments', f));
       form.append('typeId', typeId);
       form.append('title', title.trim() || file.name);
       if (entityType === 'project') form.append('projectId', entityId);
@@ -157,6 +161,7 @@ export function EntityDocuments({
         await api.post(`/api/dms/documents/${created.id}/links`, { entityType, entityId });
       }
       setFile(null);
+      setExtras([]);
       setTitle('');
       setAdding(false);
       load();
@@ -185,7 +190,10 @@ export function EntityDocuments({
 
       {adding && (
         <form onSubmit={submit} className="mb-3 space-y-2.5 rounded-[10px] border border-border p-3">
-          <input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className={inputCls} />
+          <div className="grid grid-cols-2 gap-3">
+            <FileDropField label="파일 (본문)" file={file} setFile={setFile} />
+            <StagedFileUpload label="첨부자료 (선택)" files={extras} setFiles={setExtras} />
+          </div>
           <select value={typeId} onChange={(e) => setTypeId(e.target.value)} className={inputCls}>
             {leaves.map((l) => (
               <option key={l.id} value={l.id}>
