@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { prisma } from '../lib/prisma.js';
 import { uploadToDrive } from '../lib/drive.js';
+import { decodeUploadName } from '../lib/fileName.js';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -30,7 +31,7 @@ router.post('/', upload.single('file'), async (req, res) => {
 
   const { driveFileId, fileName, webViewLink } = await uploadToDrive({
     buffer: req.file.buffer,
-    fileName: req.file.originalname,
+    fileName: decodeUploadName(req.file.originalname),
     mimeType: req.file.mimetype,
   });
 

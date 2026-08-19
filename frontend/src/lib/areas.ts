@@ -14,6 +14,7 @@ import {
   BellRing,
   Users,
   Settings,
+  FolderOpen,
   Scale,
   ClipboardList,
   type LucideIcon,
@@ -31,6 +32,8 @@ export interface NavGroup {
 }
 
 export interface Area {
+  /** 그룹과 별개로 사이드바 맨 아래에 고정하는 메뉴 — 영역을 오가지 않고 닿아야 하는 것들 */
+  pinned?: NavItem[];
   id: string;
   acronym: string;
   title: string;
@@ -71,10 +74,26 @@ export const AREAS: Area[] = [
           { to: '/inventory', label: '재고 / 재고평가', icon: Boxes },
           { to: '/pnl', label: '손익보고서', icon: TrendingUp },
           { to: '/daily-report', label: '출고보고서', icon: FileText },
-          { to: '/reports', label: '보고서 보관함', icon: FileArchive },
         ],
       },
     ],
+    pinned: [{ to: '/reports', label: '보고서 보관함', icon: FileArchive }],
+  },
+  {
+    id: 'dms',
+    acronym: 'DMS',
+    title: '문서 관리',
+    summary: '계약·증빙 문서를 분류 트리로 모아 관리',
+    icon: FolderOpen,
+    accent: '#a78bfa',
+    ready: true,
+    groups: [
+      {
+        label: '문서',
+        items: [{ to: '/dms', label: '문서 관리', icon: FolderOpen }],
+      },
+    ],
+    pinned: [{ to: '/reports', label: '보고서 보관함', icon: FileArchive }],
   },
   {
     id: 'assets',

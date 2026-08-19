@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { formatPhone } from '../lib/phone';
 import { useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
+import { EntityDocuments } from '../components/EntityDocuments';
 import { QrCode } from '../components/QrCode';
 import { Badge } from '../components/ui/Badge';
 import { primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
@@ -260,6 +261,11 @@ export function EmployeeDetailModal({
               onRemove: () => removeTraining(t.id),
             }))}
           />
+
+          {/* 근로계약서·자격증 사본 등 이 직원의 문서 — 분류·버전·이력이 함께 남는다. */}
+          <div className="border-t border-border pt-4">
+            <EntityDocuments entityType="employee" entityId={employeeId} />
+          </div>
 
           <div className="flex justify-end border-t border-border pt-3">
             <button type="button" onClick={onDelete} className={`${outlineBtnCls} text-danger`}>

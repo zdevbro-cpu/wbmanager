@@ -3,6 +3,7 @@ import { Layers, Plus, Eye, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
 import { useVendors, useEmployees, useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
+import { EntityDocuments } from '../components/EntityDocuments';
 import { FilterField, DateRangeField } from '../components/FilterField';
 import { Badge } from '../components/ui/Badge';
 import { NumberInput } from '../components/ui/NumberInput';
@@ -221,11 +222,17 @@ export function ProjectManagementPage() {
               onCancel={() => setDetailEdit(false)}
             />
           ) : (
-            <ProjectDetail
-              project={detail}
-              onEdit={() => setDetailEdit(true)}
-              onStatusChange={(next) => changeDetailStatus(detail, next)}
-            />
+            <>
+              <ProjectDetail
+                project={detail}
+                onEdit={() => setDetailEdit(true)}
+                onStatusChange={(next) => changeDetailStatus(detail, next)}
+              />
+              {/* 계약서·정산서 등 이 차수에 딸린 문서를 같은 화면에서 다룬다. */}
+              <div className="mt-5 border-t border-border pt-4">
+                <EntityDocuments entityType="project" entityId={detail.id} />
+              </div>
+            </>
           )}
         </FormModal>
       )}
