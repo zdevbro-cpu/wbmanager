@@ -60,6 +60,11 @@ router.post('/quick-vehicle', async (req, res) => {
   const plateNo = String(req.body?.plateNo ?? '').trim();
   const vehicleType = req.body?.vehicleType ? String(req.body.vehicleType).trim() : null;
   if (!plateNo) return res.status(400).json({ error: '차량번호는 필수입니다.' });
+  // 적다 만 값이 차량 목록에 남지 않도록 번호 꼴을 갖춘 것만 받는다.
+  // 화면에서도 거르지만, 목록을 더럽히는 값은 여기서 한 번 더 막는다.
+  if (!/^(?:[가-힣]{2})?\d{2,3}[가-힣]\d{4}$/.test(plateNo.replace(/[\s-]/g, ''))) {
+    return res.status(400).json({ error: '차량번호 형식이 아닙니다.' });
+  }
 
   const existing = await prisma.asset.findFirst({
     where: { assetType: 'VEHICLE', vehicle: { plateNo } },

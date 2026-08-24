@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Trash2, CheckCircle2 } from 'lucide-react';
 import { api } from '../api/client';
+import { registerVehicleAfterSave } from '../lib/vehicleRegister';
 import { useProjects, useVendors, useItemMasters, useCommonCodes } from '../hooks/useMasters';
 import { MasterSelect } from '../components/MasterSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
@@ -159,6 +160,9 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
       const wasteOutbound = isEdit
         ? await api.patch<WasteOutbound>(`/api/waste-outbounds/${record.id}`, payload)
         : await api.post<WasteOutbound>('/api/waste-outbounds', payload);
+
+      // 저장이 끝난 뒤에 차량번호를 목록에 올린다. 번호 꼴이 아닌 값은 올리지 않는다.
+      await registerVehicleAfterSave(vehicleNo, vehicleType);
       await uploadStagedFiles(
         [
           { fileType: '계량증명서', files: certFiles },
