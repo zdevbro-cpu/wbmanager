@@ -125,7 +125,13 @@ export function WasteInboundListPage() {
 
       {open && (
         <FormModal title="폐기물 입고 등록" icon={Recycle} wide onClose={() => setOpen(false)}>
-          <WasteInboundFormPage embedded onCreated={load} />
+          <WasteInboundFormPage
+            embedded
+            onCreated={() => {
+              load();
+              setOpen(false);
+            }}
+          />
         </FormModal>
       )}
     </>

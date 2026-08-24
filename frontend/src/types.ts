@@ -211,6 +211,13 @@ export interface WasteOutbound {
   attachments?: Attachment[];
 }
 
+export interface ExternalDriver {
+  id: string;
+  name: string;
+  phone?: string | null;
+  memo?: string | null;
+}
+
 export interface Vehicle {
   id: string;
   vehicleNo: string;

@@ -21,6 +21,7 @@ import {
   trCls,
 } from '../components/ui/classes';
 import type { Vehicle, VehicleMaintenance, Attachment } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 const VEHICLE_KINDS = ['법인차량', '중장비', '어테치'];
 
@@ -178,7 +179,7 @@ function VehicleRegister({ onRegistered }: { onRegistered: () => void }) {
         </div>
         <div className="min-w-[150px] flex-1">
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">검사 만료일</label>
-          <input type="date" value={inspectionExpiry} onChange={(e) => setInspectionExpiry(e.target.value)} className={inputCls} />
+          <DateField value={inspectionExpiry} onChange={(e) => setInspectionExpiry(e.target.value)} className={inputCls} />
         </div>
         <div className="min-w-[130px] flex-1">
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">사용 현장</label>
@@ -224,7 +225,7 @@ function InspectionSection({ vehicle, onUpdated }: { vehicle: Vehicle; onUpdated
       <div className={`${cardPadCls} flex flex-wrap items-end gap-2`}>
         <div className="min-w-[160px]">
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">검사 만료일</label>
-          <input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} className={inputCls} />
+          <DateField value={expiry} onChange={(e) => setExpiry(e.target.value)} className={inputCls} />
         </div>
         <button type="button" onClick={save} className={`${outlineBtnCls} shrink-0`}>
           저장
@@ -280,7 +281,7 @@ function MaintenanceSection({ vehicle }: { vehicle: Vehicle }) {
       <form onSubmit={handleSubmit} className={`${cardPadCls} mb-3 flex flex-wrap items-end gap-2`}>
         <div className="min-w-[150px]">
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">정비일</label>
-          <input type="date" value={maintenanceDate} onChange={(e) => setMaintenanceDate(e.target.value)} className={inputCls} />
+          <DateField value={maintenanceDate} onChange={(e) => setMaintenanceDate(e.target.value)} className={inputCls} />
         </div>
         <div className="min-w-[200px] flex-1">
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">정비 내용</label>

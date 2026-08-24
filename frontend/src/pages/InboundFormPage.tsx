@@ -13,6 +13,7 @@ import { formatNumber } from '../lib/number';
 import { uploadStagedFiles } from '../lib/uploadStaged';
 import { pageTitleCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { Inbound } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 interface Props {
   embedded?: boolean;
@@ -234,7 +235,7 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
 
           <div>
             <label className={labelCls}>상차일(계근일)</label>
-            <input type="date" value={inboundDate} onChange={(e) => setInboundDate(e.target.value)} required className={inputCls} />
+            <DateField value={inboundDate} onChange={(e) => setInboundDate(e.target.value)} required className={inputCls} />
           </div>
 
           <div>

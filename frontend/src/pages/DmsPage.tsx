@@ -27,6 +27,7 @@ import { FormModal } from '../components/FormModal';
 import { FileDropField } from '../components/FileDropField';
 import { StagedFileUpload } from '../components/StagedFileUpload';
 import { pageTitleCls, cardCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
+import { DateField } from '../components/ui/DateField';
 
 // 문서 분류 트리 — 대·중·소 3단. 설계 docs/dms-design.md 3.1·3.2를 따른다.
 export interface DocType {
@@ -878,7 +879,7 @@ function UploadForm({
         </div>
         <div>
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">문서일자</label>
-          <input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} className={inputCls} />
+          <DateField value={docDate} onChange={(e) => setDocDate(e.target.value)} className={inputCls} />
         </div>
       </div>
 
@@ -1123,7 +1124,7 @@ function DetailForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">문서일자</label>
-          <input type="date" value={docDate} onChange={(e) => setDocDate(e.target.value)} className={inputCls} />
+          <DateField value={docDate} onChange={(e) => setDocDate(e.target.value)} className={inputCls} />
         </div>
         <div>
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">비고</label>

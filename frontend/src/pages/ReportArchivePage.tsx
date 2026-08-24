@@ -18,6 +18,7 @@ import {
   trCls,
 } from '../components/ui/classes';
 import type { SavedReport } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 const TYPE_LABEL: Record<string, string> = { daily: '일일 출고보고', pnl: '손익 보고' };
 
@@ -258,7 +259,7 @@ function PublishForm({
         </div>
         <div>
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">보고일</label>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className={inputCls} />
+          <DateField value={date} onChange={(e) => setDate(e.target.value)} required className={inputCls} />
         </div>
         <div>
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">프로젝트</label>

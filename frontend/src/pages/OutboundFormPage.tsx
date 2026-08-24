@@ -12,6 +12,7 @@ import { formatNumber } from '../lib/number';
 import { uploadStagedFiles } from '../lib/uploadStaged';
 import { pageTitleCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { OutboundSale } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 // 구분 목록 — 원본 엑셀 `스크랩출고량` 시트 실제 사용값
 const CATEGORIES = ['출고', '보류', '기타'];
@@ -191,7 +192,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
 
           <div>
             <label className={labelCls}>계량일</label>
-            <input type="date" value={outboundDate} onChange={(e) => setOutboundDate(e.target.value)} required className={inputCls} />
+            <DateField value={outboundDate} onChange={(e) => setOutboundDate(e.target.value)} required className={inputCls} />
           </div>
 
           <div>
@@ -301,7 +302,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
           </div>
           <div>
             <label className={labelCls}>입금일</label>
-            <input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className={inputCls} />
+            <DateField value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className={inputCls} />
           </div>
 
           <label className="flex items-end gap-2 pb-2 text-[13px] font-semibold text-text-mid">

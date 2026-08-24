@@ -22,6 +22,7 @@ import {
   trCls,
 } from '../components/ui/classes';
 import type { Project, Vendor, Employee } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 const STATUSES = ['진행', '완료', '보류'];
 const DEFAULT_CYCLES = ['월별', '차수완료', '수시'];
@@ -479,9 +480,9 @@ function ProjectForm({
         <div className="col-span-2">
           <label className={labelCls}>계약기간</label>
           <div className="flex items-center gap-2">
-            <input type="date" value={f.startDate} onChange={(e) => set({ startDate: e.target.value })} className={inputCls} />
+            <DateField value={f.startDate} onChange={(e) => set({ startDate: e.target.value })} className={inputCls} />
             <span className="text-center text-text-faint">~</span>
-            <input type="date" value={f.endDate} onChange={(e) => set({ endDate: e.target.value })} className={inputCls} />
+            <DateField value={f.endDate} onChange={(e) => set({ endDate: e.target.value })} className={inputCls} />
           </div>
         </div>
         <div>

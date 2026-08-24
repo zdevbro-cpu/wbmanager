@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { useCommonCodes, useVendors } from '../hooks/useMasters';
 import { NumberInput } from './ui/NumberInput';
 import { primaryBtnCls, outlineBtnCls, inputCls } from './ui/classes';
+import { DateField } from './ui/DateField';
 
 const DEFAULT_TYPES = ['정기점검', '수리', '소모품교체', '사고수리', '법정검사', '교정'];
 const STATUSES = ['요청', '진행중', '완료'];
@@ -101,11 +102,11 @@ export function AssetMaintenanceForm({
 
         <div>
           <label className={labelCls}>요청일</label>
-          <input type="date" value={requestedAt} onChange={(e) => setRequestedAt(e.target.value)} className={inputCls} />
+          <DateField value={requestedAt} onChange={(e) => setRequestedAt(e.target.value)} className={inputCls} />
         </div>
         <div>
           <label className={labelCls}>완료일</label>
-          <input type="date" value={completedAt} onChange={(e) => setCompletedAt(e.target.value)} className={inputCls} />
+          <DateField value={completedAt} onChange={(e) => setCompletedAt(e.target.value)} className={inputCls} />
         </div>
         <div>
           <label className={labelCls}>계기판(km)</label>
@@ -133,7 +134,7 @@ export function AssetMaintenanceForm({
           <label className={labelCls}>
             다음 예정일 <span className="font-normal text-text-faint">— 입력하면 자산 일정으로 등록되어 알림에 표시됩니다</span>
           </label>
-          <input type="date" value={nextDueDate} onChange={(e) => setNextDueDate(e.target.value)} className={inputCls} />
+          <DateField value={nextDueDate} onChange={(e) => setNextDueDate(e.target.value)} className={inputCls} />
         </div>
       </div>
 

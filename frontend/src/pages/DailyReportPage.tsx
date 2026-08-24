@@ -19,6 +19,7 @@ import {
   inputCls,
 } from '../components/ui/classes';
 import type { DiaryDay, DiaryResponse } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -487,11 +488,11 @@ function PublishDialog({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">시작일</label>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputCls} />
+          <DateField value={from} onChange={(e) => setFrom(e.target.value)} className={inputCls} />
         </div>
         <div>
           <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">종료일</label>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputCls} />
+          <DateField value={to} onChange={(e) => setTo(e.target.value)} className={inputCls} />
         </div>
       </div>
 

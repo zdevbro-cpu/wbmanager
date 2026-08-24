@@ -1,4 +1,6 @@
-import { useVehicles, useEmployees, useCommonCodes } from '../hooks/useMasters';
+import { useState } from 'react';
+import { useVehicles, useEmployees, useCommonCodes, useExternalDrivers } from '../hooks/useMasters';
+import { SearchSelect } from './SearchSelect';
 import { inputCls } from './ui/classes';
 import { formatPhone } from '../lib/phone';
 import { isPlateNo } from '../lib/plate';
@@ -31,6 +33,8 @@ export function VehicleDriverFields({
 }: Props) {
   const { vehicles } = useVehicles();
   const { employees } = useEmployees();
+  const { drivers, quickCreate: createDriver } = useExternalDrivers();
+  const [registering, setRegistering] = useState(false);
   const { labels: codeVehicleTypes } = useCommonCodes('차종');
   const vehicleTypes = codeVehicleTypes.length > 0 ? codeVehicleTypes : DEFAULT_VEHICLE_TYPES;
 
@@ -44,10 +48,33 @@ export function VehicleDriverFields({
   const isNewPlateOk =
     vehicles.some((v) => v.vehicleNo === vehicleNo.trim()) || isPlateNo(vehicleNo);
 
+  // 임직원 + 외부 운전자를 한 목록으로 보여 준다.
+  const driverOptions = [
+    ...employees.map((e) => ({ value: e.name, label: e.name })),
+    ...drivers
+      .filter((d) => !employees.some((e) => e.name === d.name))
+      .map((d) => ({ value: d.name, label: `${d.name}${d.phone ? ` (${d.phone})` : ''}` })),
+  ];
+
   const handleDriverChange = (name: string) => {
     setDriverName(name);
-    const employee = employees.find((e) => e.name === name);
-    if (employee?.phone) setDriverPhone(employee.phone);
+    const known = employees.find((e) => e.name === name) ?? drivers.find((d) => d.name === name);
+    if (known?.phone) setDriverPhone(known.phone);
+  };
+
+  const isNewDriver =
+    driverName.trim().length > 0 &&
+    !employees.some((e) => e.name === driverName.trim()) &&
+    !drivers.some((d) => d.name === driverName.trim());
+
+  // 지금 적어 둔 이름·연락처를 외부 운전자 목록에 올린다.
+  const registerDriver = async () => {
+    setRegistering(true);
+    try {
+      await createDriver(driverName.trim(), driverPhone.trim() || undefined);
+    } finally {
+      setRegistering(false);
+    }
   };
 
   // 2열 그리드의 셀로 그대로 들어가도록 각 항목을 독립 블록으로 내보낸다.
@@ -93,16 +120,25 @@ export function VehicleDriverFields({
 
       <div>
         <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">운전자</label>
-        <select value={driverName} onChange={(e) => handleDriverChange(e.target.value)} className={inputCls}>
-          <option value="">선택</option>
-          {employees.map((e) => (
-            <option key={e.id} value={e.name}>
-              {e.name}
-            </option>
-          ))}
-        </select>
-        {employees.length === 0 && (
-          <p className="mt-1 text-[12px] text-text-faint">관리 &gt; 임직원 관리에서 먼저 등록하세요.</p>
+        {/* 임직원과 외부 기사를 함께 찾는다. 목록에 없으면 적은 이름 그대로 이 건에 저장되고,
+            아래 버튼으로 외부 운전자 목록에 올려 두면 다음부터 검색된다. */}
+        <SearchSelect
+          ariaLabel="운전자"
+          options={driverOptions}
+          value={driverName}
+          onChange={handleDriverChange}
+          placeholder="이름 검색 또는 직접 입력"
+          allowFree
+        />
+        {isNewDriver && (
+          <button
+            type="button"
+            onClick={registerDriver}
+            disabled={registering}
+            className="mt-1 text-[12px] font-semibold text-primary hover:underline disabled:opacity-50"
+          >
+            {registering ? '등록 중...' : `+ '${driverName.trim()}' 운전자 등록`}
+          </button>
         )}
       </div>
 

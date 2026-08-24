@@ -12,6 +12,7 @@ import { formatNumber } from '../lib/number';
 import { uploadStagedFiles } from '../lib/uploadStaged';
 import { pageTitleCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { WasteOutbound } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 interface Props {
   embedded?: boolean;
@@ -214,12 +215,12 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
 
           <div>
             <label className={labelCls}>상차일(반출일)</label>
-            <input type="date" value={outboundDate} onChange={(e) => setOutboundDate(e.target.value)} required className={inputCls} />
+            <DateField value={outboundDate} onChange={(e) => setOutboundDate(e.target.value)} required className={inputCls} />
           </div>
 
           <div>
             <label className={labelCls}>인계일</label>
-            <input type="date" value={handoverDate} onChange={(e) => setHandoverDate(e.target.value)} className={inputCls} />
+            <DateField value={handoverDate} onChange={(e) => setHandoverDate(e.target.value)} className={inputCls} />
           </div>
 
           <div>
@@ -386,7 +387,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
 
           <div>
             <label className={labelCls}>이체일</label>
-            <input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} className={inputCls} />
+            <DateField value={transferDate} onChange={(e) => setTransferDate(e.target.value)} className={inputCls} />
           </div>
 
           {/* 두 항목을 한 줄에 나란히 둔다 — 좁은 칸에서 글자가 접히지 않게 두 칸을 쓴다. */}

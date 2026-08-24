@@ -19,6 +19,7 @@ import {
   trCls,
 } from '../components/ui/classes';
 import type { Employee } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 interface CertRow {
   certName: string;
@@ -364,7 +365,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
             </div>
             <div className="flex-1">
               <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">입사일</label>
-              <input type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} className={inputCls} />
+              <DateField value={hireDate} onChange={(e) => setHireDate(e.target.value)} className={inputCls} />
             </div>
           </div>
 
@@ -404,16 +405,14 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
                       </option>
                     ))}
                   </select>
-                  <input
-                    type="date"
+                  <DateField
                     value={c.acquiredDate}
                     onChange={(e) => setCerts(certs.map((r, ri) => (ri === i ? { ...r, acquiredDate: e.target.value } : r)))}
                     title="취득일"
                     aria-label="취득일"
                     className={`${inputCls} min-w-0`}
                   />
-                  <input
-                    type="date"
+                  <DateField
                     value={c.expiryDate}
                     onChange={(e) => setCerts(certs.map((r, ri) => (ri === i ? { ...r, expiryDate: e.target.value } : r)))}
                     title="만료일"
@@ -478,8 +477,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
                       </option>
                     ))}
                   </select>
-                  <input
-                    type="date"
+                  <DateField
                     value={t.trainingDate}
                     onChange={(e) =>
                       setTrainings(trainings.map((r, ri) => (ri === i ? { ...r, trainingDate: e.target.value } : r)))
@@ -500,8 +498,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
                     placeholder="주기"
                     className={`${inputCls} min-w-0 px-2`}
                   />
-                  <input
-                    type="date"
+                  <DateField
                     value={t.nextDueDate}
                     onChange={(e) =>
                       setTrainings(trainings.map((r, ri) => (ri === i ? { ...r, nextDueDate: e.target.value } : r)))

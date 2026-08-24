@@ -8,6 +8,7 @@ import { pageTitleCls, inputCls, tableWrapCls, thCls,
   thNumCls,
   tdNumCls, tdCls, trCls } from '../components/ui/classes';
 import type { WasteOutbound } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 export function WasteManagementPage() {
   const { projects } = useProjects();
@@ -93,8 +94,7 @@ export function WasteManagementPage() {
                   )}
                 </td>
                 <td className={tdCls}>
-                  <input
-                    type="date"
+                  <DateField
                     value={r.handoverDate ? r.handoverDate.slice(0, 10) : ''}
                     onChange={(e) => updateStatus(r.id, { handoverDate: e.target.value || null })}
                     className="h-8 rounded-[6px] border border-border bg-input px-2 text-[12.5px] text-input-text outline-none focus:border-primary"
