@@ -31,6 +31,8 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
   const { items, quickCreate: quickCreateItem } = useItemMasters();
   // 반복 입력값은 공통코드 관리에서 유지한다.
   const { labels: dischargerOptions } = useCommonCodes('배출자');
+  const { labels: transporterOptions } = useCommonCodes('운반자');
+  const { labels: processorOptions } = useCommonCodes('처리자');
   const { labels: unloadingPointOptions } = useCommonCodes('하차지');
 
   const [projectId, setProjectId] = useState(record?.projectId ?? '');
@@ -211,21 +213,33 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
           <div>
             <label className={labelCls}>운반자</label>
             <input
+              list="wi-transporters"
               value={transporterName}
               onChange={(e) => setTransporterName(e.target.value)}
               placeholder="운반 업체"
               className={inputCls}
             />
+            <datalist id="wi-transporters">
+              {transporterOptions.map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
           </div>
 
           <div>
             <label className={labelCls}>처리자</label>
             <input
+              list="wi-processors"
               value={processorName}
               onChange={(e) => setProcessorName(e.target.value)}
               placeholder="처리 업체"
               className={inputCls}
             />
+            <datalist id="wi-processors">
+              {processorOptions.map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
           </div>
 
           <div>
