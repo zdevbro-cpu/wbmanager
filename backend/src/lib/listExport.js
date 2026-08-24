@@ -104,7 +104,7 @@ const OUTBOUND_COLUMNS = [
   { header: '공급가액(원)', key: 'amount', width: 14 },
   { header: '부가세(원)', key: 'vatAmount', width: 12 },
   { header: '구분', key: 'category', width: 10 },
-  { header: '자회사출고', key: 'subsidiary', width: 10 },
+  { header: '지출', key: 'subsidiary', width: 10 },
   { header: '계산서발행', key: 'taxInvoice', width: 10 },
   { header: '입금일', key: 'paidDate', width: 12 },
   { header: '비고', key: 'memo', width: 20 },
@@ -134,7 +134,7 @@ const WASTE_OUTBOUND_COLUMNS = [
   { header: '단가(원)', key: 'unitPrice', width: 12 },
   { header: '금액(원)', key: 'amount', width: 14 },
   { header: '구분', key: 'category', width: 10 },
-  { header: '자회사출고', key: 'subsidiary', width: 10 },
+  { header: '지출', key: 'subsidiary', width: 10 },
   { header: '이체일', key: 'transferDate', width: 12 },
   { header: '비고', key: 'memo', width: 20 },
 ];

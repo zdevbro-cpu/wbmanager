@@ -59,7 +59,7 @@ const DETAIL_FIELDS = (r: WasteOutbound) => [
   { label: '운반비(원)', value: num(r.transportCost)?.toLocaleString() ?? '-' },
   { label: '금액(원)', value: num(r.amount)?.toLocaleString() ?? '-' },
   { label: '구분', value: show(r.category) },
-  { label: '자회사 출고', value: r.isSubsidiary ? 'O' : '-' },
+  { label: '지출', value: r.isSubsidiary ? 'O' : '-' },
   { label: '이체일', value: date(r.transferDate) },
   { label: '올바로 메모', value: show(r.olbaroMemo) },
   { label: '비고', value: show(r.memo) },
