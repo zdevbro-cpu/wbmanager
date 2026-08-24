@@ -347,7 +347,8 @@ function GroupTable({
               <th className={`${thCls} text-right`}>선별</th>
               <th className={`${thCls} text-right`}>매각</th>
               <th className={`${thCls} text-right`}>폐기물반출</th>
-              <th className={`${thCls} text-right`}>금액</th>
+              <th className={`${thCls} text-right`}>매각금액</th>
+              <th className={`${thCls} text-right`}>폐기물비용</th>
               <th className={`${thCls} text-right`}>건수</th>
             </tr>
           </thead>
@@ -360,18 +361,19 @@ function GroupTable({
                 <td className={`${tdCls} tabular text-right`}>{Math.round(g.sorting).toLocaleString()}</td>
                 <td className={`${tdCls} tabular text-right`}>{Math.round(g.outbound_sale).toLocaleString()}</td>
                 <td className={`${tdCls} tabular text-right`}>{Math.round(g.waste_outbound).toLocaleString()}</td>
-                <td className={`${tdCls} tabular text-right`}>{Math.round(g.amount).toLocaleString()}</td>
+                <td className={`${tdCls} tabular text-right`}>{Math.round(g.saleAmount ?? 0).toLocaleString()}</td>
+                <td className={`${tdCls} tabular text-right`}>{Math.round(g.wasteAmount ?? 0).toLocaleString()}</td>
                 <td className={`${tdCls} tabular text-right`}>{g.count}</td>
               </tr>
             ))}
             {Array.from({ length: blanks }, (_, i) => (
               <tr key={`blank-${i}`} className={trCls} style={{ height: ROW_HEIGHT }}>
-                <td className={tdCls} colSpan={8} />
+                <td className={tdCls} colSpan={9} />
               </tr>
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-[13px] text-text-faint">
+                <td colSpan={9} className="py-8 text-center text-[13px] text-text-faint">
                   {emptyText ?? '데이터 없음'}
                 </td>
               </tr>
@@ -381,7 +383,9 @@ function GroupTable({
             <tfoot className="sticky bottom-0 z-[1]">
               <tr className="border-t-2 border-border bg-hover">
                 <td className={`${tdCls} font-bold text-text-strong`}>합계</td>
-                {(['inbound', 'waste_inbound', 'sorting', 'outbound_sale', 'waste_outbound', 'amount', 'count'] as const).map(
+                {(
+                  ['inbound', 'waste_inbound', 'sorting', 'outbound_sale', 'waste_outbound', 'saleAmount', 'wasteAmount', 'count'] as const
+                ).map(
                   (k) => (
                     <td key={k} className={`${tdCls} tabular text-right font-bold text-text-strong`}>
                       {Math.round(sum(k)).toLocaleString()}

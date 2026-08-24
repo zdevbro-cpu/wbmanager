@@ -454,6 +454,8 @@ export interface LedgerDetail {
 }
 
 export interface AggregationGroup {
+  saleAmount?: number;
+  wasteAmount?: number;
   key: string;
   label: string;
   inbound: number;
