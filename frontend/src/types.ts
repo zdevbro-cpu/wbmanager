@@ -305,6 +305,8 @@ export interface Asset {
   manager?: Employee;
   location?: string | null;
   ownershipType?: string | null;
+  /** 회사가 보유·관리하는 자산인지. 운송만 맡는 외부 차량은 false다. */
+  isCompanyAsset?: boolean;
   acquiredAt?: string | null;
   acquireCost?: string | null;
   usefulLifeMonth?: number | null;

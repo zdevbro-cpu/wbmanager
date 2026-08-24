@@ -6,12 +6,14 @@ const router = Router();
 
 // 자산 목록 — 유형·상태·분류·검색어 필터 (설계문서 4.관리자 2)
 router.get('/', async (req, res) => {
-  const { assetType, status, category, q } = req.query;
+  const { assetType, status, category, q, isCompany } = req.query;
   const assets = await prisma.asset.findMany({
     where: {
       ...(assetType ? { assetType } : {}),
       ...(status ? { status } : {}),
       ...(category ? { category } : {}),
+      // 'true'는 회사자산만, 'false'는 외부만. 없으면 둘 다 본다.
+      ...(isCompany === 'true' ? { isCompanyAsset: true } : isCompany === 'false' ? { isCompanyAsset: false } : {}),
       ...(q
         ? {
             OR: [
@@ -76,6 +78,9 @@ router.post('/quick-vehicle', async (req, res) => {
       name: plateNo,
       category: vehicleType,
       status: '가용',
+      // 계근 등록에서 차량번호만 적어 만든 차량은 운송만 맡는 외부 차량으로 본다.
+      // 회사 차량이면 자산 관리에서 구분을 바꾼다.
+      isCompanyAsset: false,
       vehicle: { create: { plateNo, vehicleType } },
     },
     include: { vehicle: true },
@@ -155,11 +160,12 @@ router.post('/', async (req, res) => {
 
 // 상태 변경 등 부분 수정. 자산은 삭제하지 않고 상태(폐기/매각)로만 종료한다.
 router.patch('/:id', async (req, res) => {
-  const { status, disposedAt, disposeReason, location, ownerDept, managerEmpId, memo } = req.body;
+  const { status, disposedAt, disposeReason, location, ownerDept, managerEmpId, memo, isCompanyAsset } = req.body;
   const updated = await prisma.asset.update({
     where: { id: req.params.id },
     data: {
       ...(status !== undefined ? { status } : {}),
+      ...(isCompanyAsset !== undefined ? { isCompanyAsset: Boolean(isCompanyAsset) } : {}),
       ...(disposedAt !== undefined ? { disposedAt: toISO(disposedAt) } : {}),
       ...(disposeReason !== undefined ? { disposeReason } : {}),
       ...(location !== undefined ? { location } : {}),
@@ -213,6 +219,13 @@ router.delete('/:id/schedules/:scheduleId', async (req, res) => {
 router.post('/:id/maintenances', async (req, res) => {
   const { maintType, nextDueDate, requestedAt, startedAt, completedAt, cost, mileageAt, hoursAt, nextDueMileage } = req.body;
   if (!maintType) return res.status(400).json({ error: 'maintType은 필수입니다.' });
+
+  // 정비는 회사자산만 관리한다. 운송만 맡는 외부 차량은 정비 이력을 남기지 않는다.
+  const target = await prisma.asset.findUnique({ where: { id: req.params.id }, select: { isCompanyAsset: true } });
+  if (!target) return res.status(404).json({ error: '자산을 찾을 수 없습니다.' });
+  if (!target.isCompanyAsset) {
+    return res.status(400).json({ error: '외부 자산은 정비 관리 대상이 아닙니다. 회사자산으로 바꾼 뒤 등록하세요.' });
+  }
 
   const created = await prisma.$transaction(async (tx) => {
     const maintenance = await tx.assetMaintenance.create({

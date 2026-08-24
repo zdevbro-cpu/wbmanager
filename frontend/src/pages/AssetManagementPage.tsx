@@ -38,6 +38,9 @@ import type { Asset, AssetSchedule, Employee } from '../types';
 // 1차 범위 — 자산 마스터 + 유형별 상세 + 일정 + 첨부. 배정/운행일지/정비/비용은 이후 단계.
 const STATUSES = ['가용', '사용중', '정비중', '수리대기', '유휴', '매각', '폐기', '분실'];
 const OWNERSHIPS = ['자가', '리스', '렌트', '임차'];
+// 회사가 보유·관리하는 자산과, 운송만 맡고 기록에만 남는 외부 자산을 가른다.
+// 정비는 회사자산에 대해서만 관리한다.
+const COMPANY_LABEL = (v?: boolean) => (v === false ? '외부' : '회사자산');
 const FUEL_TYPES = ['휘발유', '경유', 'LPG', '전기', '수소', '하이브리드'];
 
 const STATUS_TONE: Record<string, BadgeTone> = {
@@ -102,6 +105,7 @@ export function AssetManagementPage() {
   const [assetType, setAssetType] = useState('');
   const [status, setStatus] = useState('');
   const [category, setCategory] = useState('');
+  const [isCompany, setIsCompany] = useState('');
   const [q, setQ] = useState('');
   const [openForm, setOpenForm] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -113,9 +117,10 @@ export function AssetManagementPage() {
     if (assetType) params.set('assetType', assetType);
     if (status) params.set('status', status);
     if (category) params.set('category', category);
+    if (isCompany) params.set('isCompany', isCompany);
     if (q) params.set('q', q);
     api.get<Asset[]>(`/api/assets?${params.toString()}`).then(setAssets);
-  }, [assetType, status, category, q]);
+  }, [assetType, status, category, isCompany, q]);
 
   useEffect(() => {
     load();
@@ -155,8 +160,16 @@ export function AssetManagementPage() {
       </div>
 
       <div
-        className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)_auto]`}
+        className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)_auto]`}
       >
+        <FilterField label="자산구분">
+          <select value={isCompany} onChange={(e) => setIsCompany(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            <option value="true">회사자산</option>
+            <option value="false">외부</option>
+          </select>
+        </FilterField>
+
         <FilterField label="자산유형">
           <select value={assetType} onChange={(e) => setAssetType(e.target.value)} className={`${inputCls} px-2`}>
             <option value="">전체</option>
@@ -215,6 +228,7 @@ export function AssetManagementPage() {
           <thead>
             <tr className="border-y border-border">
               <th className={thCls}>자산번호</th>
+              <th className={thCls}>구분</th>
               <th className={thCls}>유형</th>
               <th className={thCls}>분류</th>
               <th className={thCls}>자산명</th>
@@ -235,6 +249,9 @@ export function AssetManagementPage() {
               return (
                 <tr key={a.id} className={trCls}>
                   <td className={`${tdCls} tabular whitespace-nowrap`}>{a.assetNo}</td>
+                  <td className={tdCls}>
+                    <Badge tone={a.isCompanyAsset === false ? 'slate' : 'blue'}>{COMPANY_LABEL(a.isCompanyAsset)}</Badge>
+                  </td>
                   <td className={tdCls}>
                     <span className="inline-flex items-center gap-1">
                       {a.assetType === 'VEHICLE' ? <Car size={13} /> : <Wrench size={13} />}
@@ -323,6 +340,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
     managerEmpId: '',
     location: '',
     ownershipType: '자가',
+    isCompanyAsset: 'true',
     acquiredAt: '',
     acquireCost: '',
     usefulLifeMonth: '',
@@ -445,6 +463,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
     try {
       const asset = await api.post<{ id: string }>('/api/assets', {
         ...clean(form),
+        isCompanyAsset: form.isCompanyAsset !== 'false',
         assetType,
         ...(assetType === 'VEHICLE'
           ? { vehicle: clean(vehicle) }
@@ -544,6 +563,13 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
         <div>
           <label className={labelCls}>보관/주차 위치</label>
           <input value={form.location} onChange={(e) => set({ location: e.target.value })} className={inputCls} />
+        </div>
+        <div>
+          <label className={labelCls}>자산구분</label>
+          <select value={form.isCompanyAsset} onChange={(e) => set({ isCompanyAsset: e.target.value })} className={inputCls}>
+            <option value="true">회사자산</option>
+            <option value="false">외부 (운송만 담당)</option>
+          </select>
         </div>
         <div>
           <label className={labelCls}>보유형태</label>
@@ -860,6 +886,13 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
     onChanged();
   };
 
+  // 운송만 맡던 차량을 회사가 인수하는 등 구분이 바뀔 수 있다. 상세에서 바로 바꾼다.
+  const changeCompany = async (value: string) => {
+    await api.patch(`/api/assets/${assetId}`, { isCompanyAsset: value === 'true' });
+    load();
+    onChanged();
+  };
+
   return (
     <div className="fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-black/50 p-6">
       <div className="w-full max-w-[820px] rounded-[14px] border border-border bg-card p-5">
@@ -878,6 +911,7 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
           <>
             <dl className="mb-5 grid grid-cols-3 gap-x-5 gap-y-2">
               {[
+                { label: '자산구분', value: COMPANY_LABEL(asset.isCompanyAsset) },
                 { label: '유형', value: asset.assetType === 'VEHICLE' ? '차량' : '장비' },
                 { label: '분류', value: show(asset.category) },
                 { label: '모델/규격', value: show(asset.modelName) },
@@ -923,6 +957,15 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
             </dl>
 
             <div className="mb-5 flex items-center gap-2">
+              <span className="text-[13px] font-semibold text-text-mid">자산구분</span>
+              <select
+                value={asset.isCompanyAsset === false ? 'false' : 'true'}
+                onChange={(e) => changeCompany(e.target.value)}
+                className={`${inputCls} w-[170px]`}
+              >
+                <option value="true">회사자산</option>
+                <option value="false">외부 (운송만 담당)</option>
+              </select>
               <span className="text-[13px] font-semibold text-text-mid">상태</span>
               <select value={asset.status} onChange={(e) => changeStatus(e.target.value)} className={`${inputCls} w-[140px]`}>
                 {STATUSES.map((s) => (
@@ -994,6 +1037,11 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
               </div>
             </div>
 
+            {asset.isCompanyAsset === false ? (
+              <div className="mb-5 rounded-[10px] border border-border bg-hover px-4 py-3 text-[12.5px] text-text-sub">
+                운송만 담당하는 외부 자산입니다. 정비는 회사자산에 대해서만 관리하므로 정비 이력을 두지 않습니다.
+              </div>
+            ) : (
             <div className="mb-5">
               <div className="mb-2 flex items-center gap-2">
                 <h3 className={`${sectionTitleCls} text-[15px]`}>정비 이력</h3>
@@ -1076,6 +1124,7 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                 </table>
               </div>
             </div>
+            )}
 
             <div className="mb-5">
               <h3 className={`${sectionTitleCls} mb-2 text-[15px]`}>이동 이력</h3>
