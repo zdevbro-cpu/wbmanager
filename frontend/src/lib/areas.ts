@@ -61,7 +61,7 @@ export const AREAS: Area[] = [
         label: '입출고',
         items: [
           { to: '/inbound', label: '입고 현황', icon: Truck },
-          { to: '/waste-inbound', label: '폐기물 입고 현황', icon: Recycle },
+          { to: '/waste-inbound', label: '폐기물 수집·운반 현황', icon: Recycle },
           { to: '/outbound', label: '출고 현황', icon: PackageMinus },
           { to: '/waste-outbound', label: '폐기물 반출 현황', icon: Trash2 },
         ],

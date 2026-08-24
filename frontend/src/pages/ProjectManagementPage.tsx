@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Layers, Plus, Eye, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
-import { useVendors, useEmployees, useCommonCodes } from '../hooks/useMasters';
+import { useVendors, useEmployees } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { EntityDocuments } from '../components/EntityDocuments';
 import { FilterField, DateRangeField } from '../components/FilterField';
@@ -25,7 +25,6 @@ import type { Project, Vendor, Employee } from '../types';
 import { DateField } from '../components/ui/DateField';
 
 const STATUSES = ['진행', '완료', '보류'];
-const DEFAULT_CYCLES = ['월별', '차수완료', '수시'];
 
 const day = (v?: string | null) => (v ? v.slice(0, 10) : '-');
 const money = (v?: string | null) => formatNumber(v);
@@ -146,7 +145,6 @@ export function ProjectManagementPage() {
             <tr className="border-y border-border">
               <th className={thCls}>코드</th>
               <th className={thCls}>프로젝트(사업)명</th>
-              <th className={thCls}>차수</th>
               <th className={thCls}>발주처</th>
               <th className={thCls}>시공사</th>
               <th className={thCls}>현장</th>
@@ -163,7 +161,6 @@ export function ProjectManagementPage() {
               <tr key={p.id} className={trCls}>
                 <td className={`${tdCls} tabular whitespace-nowrap`}>{show(p.projectCode)}</td>
                 <td className={`${tdCls} font-semibold text-text-strong`}>{p.roundName}</td>
-                <td className={tdCls}>{show(p.roundNo)}</td>
                 <td className={tdCls}>{show(p.orderer?.name)}</td>
                 <td className={tdCls}>{show(p.contractor?.name)}</td>
                 <td className={tdCls}>{show(p.siteName ?? p.region)}</td>
@@ -192,7 +189,7 @@ export function ProjectManagementPage() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={12} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={11} className="py-10 text-center text-[13px] text-text-faint">
                   {projects.length === 0 ? '등록된 프로젝트가 없습니다.' : '검색 조건에 맞는 프로젝트가 없습니다.'}
                 </td>
               </tr>
@@ -289,11 +286,9 @@ function ProjectDetail({
   const fields: { label: string; value: string }[] = [
     { label: '프로젝트 코드', value: show(p.projectCode) },
     { label: '사업명', value: p.roundName },
-    { label: '차수', value: show(p.roundNo) },
     { label: '발주처', value: show(p.orderer?.name) },
     { label: '시공사', value: show(p.contractor?.name) },
     { label: '매입처', value: show(p.buyer?.name) },
-    { label: '현장명', value: show(p.siteName) },
     { label: '지역', value: show(p.region) },
     { label: '배출자', value: show(p.dischargerName) },
     { label: '계약기간', value: `${day(p.startDate)} ~ ${day(p.endDate)}` },
@@ -302,7 +297,6 @@ function ProjectDetail({
     { label: '계약중량(kg)', value: formatNumber(p.contractWeight) },
     { label: '계약보증금', value: money(p.deposit) },
     { label: '선급금', value: money(p.advancePayment) },
-    { label: '정산주기', value: show(p.settlementCycle) },
     { label: '담당자', value: show(p.manager?.name) },
   ];
 
@@ -360,16 +354,12 @@ function ProjectForm({
 }) {
   const { vendors } = useVendors();
   const { employees } = useEmployees();
-  const { labels: cycleCodes } = useCommonCodes('정산주기');
-  const cycles = cycleCodes.length > 0 ? cycleCodes : DEFAULT_CYCLES;
 
   const [f, setF] = useState({
     roundName: project?.roundName ?? '',
-    roundNo: project?.roundNo ?? '',
     ordererId: project?.ordererId ?? '',
     contractorId: project?.contractorId ?? '',
     buyerId: project?.buyerId ?? '',
-    siteName: project?.siteName ?? '',
     region: project?.region ?? '',
     dischargerName: project?.dischargerName ?? '',
     startDate: project?.startDate?.slice(0, 10) ?? '',
@@ -379,7 +369,6 @@ function ProjectForm({
     contractWeight: project?.contractWeight ? String(project.contractWeight) : '',
     deposit: project?.deposit ? String(project.deposit) : '',
     advancePayment: project?.advancePayment ? String(project.advancePayment) : '',
-    settlementCycle: project?.settlementCycle ?? '',
     managerEmpId: project?.managerEmpId ?? '',
     memo: project?.memo ?? '',
     status: project?.status ?? '진행',
@@ -426,7 +415,9 @@ function ProjectForm({
     <form onSubmit={submit}>
       <div className="grid grid-cols-3 gap-x-3 gap-y-3.5">
         <div className="col-span-2">
-          <label className={labelCls}>프로젝트(사업)명</label>
+          <label className={labelCls}>
+            프로젝트(사업)명 <span className="text-danger">*</span>
+          </label>
           <input
             value={f.roundName}
             onChange={(e) => set({ roundName: e.target.value })}
@@ -434,10 +425,6 @@ function ProjectForm({
             placeholder="포스코_KM_안산"
             className={inputCls}
           />
-        </div>
-        <div>
-          <label className={labelCls}>차수</label>
-          <input value={f.roundNo} onChange={(e) => set({ roundNo: e.target.value })} placeholder="26-1차" className={inputCls} />
         </div>
 
         <div>
@@ -459,10 +446,6 @@ function ProjectForm({
           </select>
         </div>
 
-        <div>
-          <label className={labelCls}>현장명</label>
-          <input value={f.siteName} onChange={(e) => set({ siteName: e.target.value })} className={inputCls} />
-        </div>
         <div>
           <label className={labelCls}>지역</label>
           <input value={f.region} onChange={(e) => set({ region: e.target.value })} placeholder="안산 / 평택" className={inputCls} />
@@ -533,17 +516,6 @@ function ProjectForm({
           <NumberInput value={f.advancePayment} onChange={(v) => set({ advancePayment: v })} />
         </div>
 
-        <div>
-          <label className={labelCls}>정산주기</label>
-          <select value={f.settlementCycle} onChange={(e) => set({ settlementCycle: e.target.value })} className={inputCls}>
-            <option value="">선택</option>
-            {cycles.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
         <div>
           <label className={labelCls}>담당자</label>
           <select value={f.managerEmpId} onChange={(e) => set({ managerEmpId: e.target.value })} className={inputCls}>

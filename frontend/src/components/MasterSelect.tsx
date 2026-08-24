@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { inputCls } from './ui/classes';
+import { SearchSelect } from './SearchSelect';
 
 interface Option {
   value: string;
@@ -35,7 +36,14 @@ export function MasterSelect({ label, options, value, onChange, onQuickCreate, p
       <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">{label}</label>
       {!creating ? (
         <div className="flex gap-2">
-          <select value={value} onChange={(e) => onChange(e.target.value)} className={inputCls}>
+          <SearchSelect
+            ariaLabel={label}
+            options={options.map((o) => ({ value: o.value, label: o.isTemporary ? `${o.label} (임시)` : o.label }))}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder ?? '검색 또는 선택'}
+          />
+          <select value={value} onChange={(e) => onChange(e.target.value)} className="hidden">
             <option value="">{placeholder ?? '선택'}</option>
             {options.map((opt) => (
               <option key={opt.value} value={opt.value}>
