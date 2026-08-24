@@ -379,6 +379,11 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
             />
           </div>
 
+          <div className="col-span-2">
+            <label className={labelCls}>올바로 메모(기준업체량 등)</label>
+            <input value={olbaroMemo} onChange={(e) => setOlbaroMemo(e.target.value)} className={inputCls} />
+          </div>
+
           <p className="col-span-4 text-[12.5px] text-text-faint">
             실중량 = 총중량 − 공차중량 · 정산중량 = 거래처 감량 전 실중량(없으면 실중량 − 감량)
             <span className="tabular ml-1 font-bold text-text-strong">{formatNumber(settledNum)}</span> kg
@@ -497,12 +502,11 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
           </div>
 
           <div className="col-span-2">
-            <label className={labelCls}>올바로 메모(기준업체량 등)</label>
-            <input value={olbaroMemo} onChange={(e) => setOlbaroMemo(e.target.value)} className={inputCls} />
+            <StagedFileUpload label="계량증명서" files={certFiles} setFiles={setCertFiles} />
           </div>
-
-          <StagedFileUpload label="계량증명서" files={certFiles} setFiles={setCertFiles} />
-          <StagedFileUpload label="참고 서류" files={refFiles} setFiles={setRefFiles} />
+          <div className="col-span-2">
+            <StagedFileUpload label="참고 서류" files={refFiles} setFiles={setRefFiles} />
+          </div>
         </div>
 
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
