@@ -123,15 +123,17 @@ export function VehicleDriverFields({
         <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">운전자</label>
         {/* 임직원과 외부 기사를 함께 찾는다. 목록에 없으면 적은 이름 그대로 이 건에 저장되고,
             아래 버튼으로 외부 운전자 목록에 올려 두면 다음부터 검색된다. */}
-        <div className="flex gap-2">
-          <SearchSelect
-            ariaLabel="운전자"
-            options={driverOptions}
-            value={driverName}
-            onChange={handleDriverChange}
-            placeholder="이름 검색 또는 직접 입력"
-            allowFree
-          />
+        <div className="flex min-w-0 gap-1.5">
+          <div className="min-w-0 flex-1">
+            <SearchSelect
+              ariaLabel="운전자"
+              options={driverOptions}
+              value={driverName}
+              onChange={handleDriverChange}
+              placeholder="이름 검색"
+              allowFree
+            />
+          </div>
           {/* 제품명의 '마스터에 없음'과 같은 자리·같은 모양으로 둔다. */}
           {isNewDriver && (
             <button
@@ -139,7 +141,7 @@ export function VehicleDriverFields({
               onClick={registerDriver}
               disabled={registering}
               title={`'${driverName.trim()}'을(를) 운전자 목록에 등록`}
-              className="inline-flex h-[38px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[8px] border border-border px-3 text-[12.5px] font-semibold text-text-mid hover:bg-hover disabled:opacity-50"
+              className="inline-flex h-[38px] shrink-0 items-center gap-0.5 whitespace-nowrap rounded-[8px] border border-border px-2 text-[12px] font-semibold text-text-mid hover:bg-hover disabled:opacity-50"
             >
               <Plus size={14} /> {registering ? '등록 중...' : '신규등록'}
             </button>

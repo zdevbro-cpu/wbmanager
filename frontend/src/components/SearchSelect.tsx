@@ -138,6 +138,13 @@ export function SearchSelect({
           setActive(0);
         }}
         onKeyDown={onKeyDown}
+        // 탭으로 다음 칸에 가도 적은 값이 확정되어야 한다. 목록 클릭은 mousedown에서 먼저 처리된다.
+        onBlur={() => {
+          window.setTimeout(() => {
+            if (boxRef.current?.contains(document.activeElement)) return;
+            commitOrClose();
+          }, 0);
+        }}
         className={`${inputCls} ${value ? 'pr-14' : 'pr-8'} px-2 ${className}`}
       />
 
