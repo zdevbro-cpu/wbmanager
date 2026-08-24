@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, CheckCircle2 } from 'lucide-react';
+import { Trash2, CheckCircle2, Plus } from 'lucide-react';
 import { api } from '../api/client';
 import { registerVehicleAfterSave } from '../lib/vehicleRegister';
 import { useProjects, useVendors, useItemMasters, useCommonCodes } from '../hooks/useMasters';
@@ -68,6 +68,9 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
   const [certFiles, setCertFiles] = useState<File[]>([]);
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [created, setCreated] = useState<WasteOutbound | null>(null);
+  // 한 차에 여러 현장이 섞이는 경우 — 행을 추가해 현장별로 나눠 등록한다(최대 5행).
+  // 차량·기사·배출자 같은 공통 정보는 위 입력을 그대로 쓰고, 행마다 현장·품목·중량만 다르게 넣는다.
+  const [splits, setSplits] = useState<{ projectId: string; itemCode: string; weight: string; amount: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -159,13 +162,29 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
         memo: memo || undefined,
         olbaroMemo: olbaroMemo || undefined,
       };
-      const wasteOutbound = isEdit
-        ? await api.patch<WasteOutbound>(`/api/waste-outbounds/${record.id}`, payload)
-        : await api.post<WasteOutbound>('/api/waste-outbounds', payload);
+      // 현장별로 나눈 행이 있으면 행마다 한 건씩 만든다. 없으면 지금까지처럼 한 건이다.
+      const rows = splits.filter((r) => r.projectId && Number(r.weight) > 0);
+      if (!isEdit && rows.length > 0) {
+        for (const r of rows) {
+          await api.post<WasteOutbound>('/api/waste-outbounds', {
+            ...payload,
+            projectId: r.projectId,
+            itemCode: r.itemCode || undefined,
+            weight: Number(r.weight),
+            amount: r.amount ? Number(r.amount) : undefined,
+          });
+        }
+      }
+      const wasteOutbound =
+        !isEdit && rows.length > 0
+          ? null
+          : isEdit
+            ? await api.patch<WasteOutbound>(`/api/waste-outbounds/${record.id}`, payload)
+            : await api.post<WasteOutbound>('/api/waste-outbounds', payload);
 
       // 저장이 끝난 뒤에 차량번호를 목록에 올린다. 번호 꼴이 아닌 값은 올리지 않는다.
       await registerVehicleAfterSave(vehicleNo, vehicleType);
-      await uploadStagedFiles(
+      if (wasteOutbound) await uploadStagedFiles(
         [
           { fileType: '계량증명서', files: certFiles },
           { fileType: '참고서류', files: refFiles },
@@ -173,12 +192,14 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
         'waste_outbound',
         wasteOutbound.id,
       );
+
       setCertFiles([]);
       setRefFiles([]);
       if (isEdit) {
         onSaved?.();
       } else {
-        setCreated(wasteOutbound);
+        if (wasteOutbound) setCreated(wasteOutbound);
+        setSplits([]);
         onCreated?.();
       }
     } catch (err) {
@@ -296,13 +317,13 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
           </div>
 
           <div>
-            <label className={labelCls}>총중량(kg)</label>
-            <NumberInput value={grossWeight} onChange={setGrossWeight} decimals={3} />
+            <label className={labelCls}>공차중량(kg)</label>
+            <NumberInput value={tareWeight} onChange={setTareWeight} decimals={3} />
           </div>
 
           <div>
-            <label className={labelCls}>공차중량(kg)</label>
-            <NumberInput value={tareWeight} onChange={setTareWeight} decimals={3} />
+            <label className={labelCls}>총중량(kg)</label>
+            <NumberInput value={grossWeight} onChange={setGrossWeight} decimals={3} />
           </div>
 
           <div>
@@ -403,6 +424,74 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
               />
               자회사 출고
             </label>
+          </div>
+
+          {/* 한 차에 여러 현장이 섞였을 때 — 행을 추가해 현장별로 나눠 등록한다(최대 5행).
+              행을 채우면 위의 프로젝트·제품명·정산중량 대신 행별 값으로 그 수만큼 건이 만들어진다. */}
+          <div className="col-span-4">
+            <div className="mb-1.5 flex items-center gap-2">
+              <span className="text-[13px] font-semibold text-text-mid">현장 분할 등록</span>
+              <span className="text-[12px] text-text-faint">
+                한 차에 여러 현장이 섞였을 때만 씁니다. 채운 행 수만큼 건이 만들어집니다.
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setSplits((rows) =>
+                    rows.length >= 5 ? rows : [...rows, { projectId: '', itemCode: '', weight: '', amount: '' }],
+                  )
+                }
+                disabled={splits.length >= 5 || isEdit}
+                className="ml-auto inline-flex h-8 items-center gap-1 rounded-[8px] border border-border px-2 text-[12px] font-semibold text-text-mid hover:bg-hover disabled:opacity-50"
+              >
+                <Plus size={13} /> 행 추가
+              </button>
+            </div>
+
+            {splits.length > 0 && (
+              <div className="space-y-2">
+                {splits.map((row, i) => (
+                  <div
+                    key={i}
+                    className="grid items-end gap-2 [grid-template-columns:minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+                  >
+                    <SearchSelect
+                      ariaLabel={`${i + 1}행 프로젝트`}
+                      options={projects.map((pr) => ({ value: pr.id, label: pr.roundName }))}
+                      value={row.projectId}
+                      onChange={(v) => setSplits((rows) => rows.map((r, j) => (j === i ? { ...r, projectId: v } : r)))}
+                      placeholder="프로젝트"
+                    />
+                    <SearchSelect
+                      ariaLabel={`${i + 1}행 제품명`}
+                      options={items.map((it) => ({ value: it.itemCode, label: it.itemName }))}
+                      value={row.itemCode}
+                      onChange={(v) => setSplits((rows) => rows.map((r, j) => (j === i ? { ...r, itemCode: v } : r)))}
+                      placeholder="제품명"
+                    />
+                    <NumberInput
+                      value={row.weight}
+                      onChange={(v) => setSplits((rows) => rows.map((r, j) => (j === i ? { ...r, weight: v } : r)))}
+                      decimals={3}
+                      placeholder="정산중량"
+                    />
+                    <NumberInput
+                      value={row.amount}
+                      onChange={(v) => setSplits((rows) => rows.map((r, j) => (j === i ? { ...r, amount: v } : r)))}
+                      placeholder="금액(선택)"
+                    />
+                    <button
+                      type="button"
+                      title="행 삭제"
+                      onClick={() => setSplits((rows) => rows.filter((_, j) => j !== i))}
+                      className="h-[38px] rounded-[8px] border border-border px-2 text-text-sub hover:bg-hover hover:text-danger"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="col-span-2">
