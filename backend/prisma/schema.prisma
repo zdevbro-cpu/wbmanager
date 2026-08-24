@@ -545,6 +545,9 @@ model Asset {
   manager         Employee? @relation(fields: [managerEmpId], references: [id])
   location        String?   @map("location") // 보관/주차 위치
   ownershipType   String?   @map("ownership_type") // 자가/리스/렌트/임차
+  // 회사가 보유·관리하는 자산인지. 운송만 맡고 기록에만 남는 외부 차량은 false로 두고
+  // 정비 관리 대상에서 뺀다. 계근 등록에서 차량번호만 적어 만들어진 차량이 여기 해당한다.
+  isCompanyAsset  Boolean   @default(true) @map("is_company_asset")
   acquiredAt      DateTime? @map("acquired_at")
   acquireCost     Decimal?  @map("acquire_cost") @db.Decimal(14, 2)
   usefulLifeMonth Int?      @map("useful_life_month")

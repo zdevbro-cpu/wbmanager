@@ -26,7 +26,8 @@ const STATUSES = ['요청', '진행중', '완료'];
 const show = (v?: string | number | null) => (v == null || v === '' ? '-' : String(v));
 const date = (v?: string | null) => (v ? v.slice(0, 10) : '-');
 
-// 정비 현황 — 자산 구분 없이 정비 이력을 한 화면에서 보고 등록한다(설계문서 4.관리자 5).
+// 정비 현황 — 회사자산의 정비 이력을 한 화면에서 보고 등록한다(설계문서 4.관리자 5).
+// 운송만 맡고 기록에만 남는 외부 차량은 정비 대상이 아니라 목록에도 선택지에도 넣지 않는다.
 // 자산 관리 화면 안 탭으로도 쓰기 때문에 제목줄을 감출 수 있게 한다.
 export function MaintenancePage({ embedded = false }: { embedded?: boolean } = {}) {
   const [rows, setRows] = useState<AssetMaintenance[]>([]);
@@ -53,7 +54,7 @@ export function MaintenancePage({ embedded = false }: { embedded?: boolean } = {
 
   useEffect(() => {
     load();
-    api.get<Asset[]>('/api/assets').then(setAssets);
+    api.get<Asset[]>('/api/assets?isCompany=true').then(setAssets);
   }, [load]);
 
   const totalCost = rows.reduce((sum, r) => sum + Number(r.cost ?? 0), 0);
@@ -185,7 +186,7 @@ export function MaintenancePage({ embedded = false }: { embedded?: boolean } = {
       {open && (
         <FormModal title="정비 등록" icon={Wrench} onClose={() => setOpen(false)}>
           <div className="mb-3">
-            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">자산</label>
+            <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">자산 (회사자산만)</label>
             <select value={openAssetId} onChange={(e) => setOpenAssetId(e.target.value)} className={inputCls}>
               <option value="">선택</option>
               {assets.map((a) => (
@@ -196,6 +197,12 @@ export function MaintenancePage({ embedded = false }: { embedded?: boolean } = {
               ))}
             </select>
           </div>
+
+          {assets.length === 0 && (
+            <p className="mb-3 text-[12.5px] text-text-faint">
+              등록된 회사자산이 없습니다. 자산 관리에서 자산구분을 회사자산으로 등록한 뒤 정비를 남기세요.
+            </p>
+          )}
 
           {openAssetId ? (
             <AssetMaintenanceForm
