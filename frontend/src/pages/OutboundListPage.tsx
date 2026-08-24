@@ -46,7 +46,7 @@ const DETAIL_FIELDS = (r: OutboundSale) => [
   { label: '공급가액(원)', value: num(r.amount)?.toLocaleString() ?? '-' },
   { label: '부가세(원)', value: num(r.vatAmount)?.toLocaleString() ?? '-' },
   { label: '구분', value: show(r.category) },
-  { label: '자회사 출고', value: r.isSubsidiary ? 'O' : '-' },
+  { label: '직납', value: r.isSubsidiary ? 'O' : '-' },
   { label: '입금일', value: r.paidDate ? r.paidDate.slice(0, 10) : '-' },
   { label: '비고', value: show(r.memo) },
 ];
