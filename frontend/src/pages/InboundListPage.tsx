@@ -96,7 +96,13 @@ export function InboundListPage() {
 
       {open && (
         <FormModal title="입고(반입) 등록" icon={Truck} wide onClose={() => setOpen(false)}>
-          <InboundFormPage embedded onCreated={load} />
+          <InboundFormPage
+            embedded
+            onCreated={() => {
+              load();
+              setOpen(false);
+            }}
+          />
         </FormModal>
       )}
     </>

@@ -12,6 +12,7 @@ import { formatNumber } from '../lib/number';
 import { uploadStagedFiles } from '../lib/uploadStaged';
 import { pageTitleCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { WasteInbound } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 interface Props {
   embedded?: boolean;
@@ -192,12 +193,12 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
 
           <div>
             <label className={labelCls}>상차일</label>
-            <input type="date" value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} required className={inputCls} />
+            <DateField value={receiveDate} onChange={(e) => setReceiveDate(e.target.value)} required className={inputCls} />
           </div>
 
           <div>
             <label className={labelCls}>인계일</label>
-            <input type="date" value={handoverDate} onChange={(e) => setHandoverDate(e.target.value)} className={inputCls} />
+            <DateField value={handoverDate} onChange={(e) => setHandoverDate(e.target.value)} className={inputCls} />
           </div>
 
           <div>
@@ -327,7 +328,7 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
 
           <div>
             <label className={labelCls}>이체일</label>
-            <input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} className={inputCls} />
+            <DateField value={transferDate} onChange={(e) => setTransferDate(e.target.value)} className={inputCls} />
           </div>
 
           <p className="self-end pb-2 text-[13px] text-text-sub">

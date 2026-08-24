@@ -9,6 +9,7 @@ import { QrCode } from '../components/QrCode';
 import { Badge } from '../components/ui/Badge';
 import { primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { Employee, EmployeeCertification, EmployeeTraining } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 const TRAINING_TYPES = ['의무', '보수'];
 const CERT_TYPES = ['국가기술자격', '면허', '교육이수증', '기타'];
@@ -340,7 +341,7 @@ function BasicInfoForm({
         </div>
         <div>
           <label className={label}>입사일</label>
-          <input type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} className={inputCls} />
+          <DateField value={hireDate} onChange={(e) => setHireDate(e.target.value)} className={inputCls} />
         </div>
         <div>
           <label className={label}>부서</label>
@@ -549,15 +550,13 @@ function CertForm({
             </option>
           ))}
         </select>
-        <input
-          type="date"
+        <DateField
           value={acquiredDate}
           onChange={(e) => setAcquiredDate(e.target.value)}
           aria-label="취득일"
           className={`${inputCls} min-w-0`}
         />
-        <input
-          type="date"
+        <DateField
           value={expiryDate}
           onChange={(e) => setExpiryDate(e.target.value)}
           aria-label="만료일"
@@ -652,8 +651,7 @@ function TrainingForm({
             </option>
           ))}
         </select>
-        <input
-          type="date"
+        <DateField
           value={trainingDate}
           onChange={(e) => setTrainingDate(e.target.value)}
           aria-label="이수일"
@@ -668,8 +666,7 @@ function TrainingForm({
           placeholder="주기"
           className={`${inputCls} min-w-0 px-2`}
         />
-        <input
-          type="date"
+        <DateField
           value={nextDueDate}
           onChange={(e) => setNextDueDate(e.target.value)}
           aria-label="다음 예정일"

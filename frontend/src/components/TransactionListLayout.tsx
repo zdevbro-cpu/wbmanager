@@ -6,6 +6,7 @@ import { downloadFile } from '../lib/download';
 import { SearchSelect, type SearchOption } from './SearchSelect';
 import { pageTitleCls, primaryBtnCls, outlineBtnCls, inputCls, cardCls, tableWrapCls, thCls, trCls } from './ui/classes';
 import type { Attachment } from '../types';
+import { DateField } from './ui/DateField';
 
 function FilterLabel({ children }: { children: ReactNode }) {
   return <span className="mb-1 block text-[11.5px] font-semibold text-text-sub">{children}</span>;
@@ -190,15 +191,13 @@ export function TransactionListLayout<T>({
           <div className={filterKeys.includes('date') ? 'col-span-2' : 'hidden'}>
             <FilterLabel>{dateLabel}</FilterLabel>
             <div className="flex items-center gap-1">
-              <input
-                type="date"
+              <DateField
                 value={filter.from}
                 onChange={(e) => set({ from: e.target.value })}
                 className={`${inputCls} px-2`}
               />
               <span className="shrink-0 text-text-faint">~</span>
-              <input
-                type="date"
+              <DateField
                 value={filter.to}
                 onChange={(e) => set({ to: e.target.value })}
                 className={`${inputCls} px-2`}

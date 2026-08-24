@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../api/client';
-import type { Vendor, ItemMaster, Project, Vehicle, Employee, CommonCode, Asset } from '../types';
+import type { Vendor, ItemMaster, Project, Vehicle, Employee, CommonCode, Asset, ExternalDriver } from '../types';
 
 export function useVendors() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -135,4 +135,28 @@ export function useEmployees() {
   }, [reload]);
 
   return { employees, reload };
+}
+
+// 외부 운전자 — 계근 등록에서 바로 등록해 두고 다음부터 골라 쓴다.
+export function useExternalDrivers() {
+  const [drivers, setDrivers] = useState<ExternalDriver[]>([]);
+
+  const reload = useCallback(() => {
+    api.get<ExternalDriver[]>('/api/external-drivers').then(setDrivers);
+  }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  const quickCreate = useCallback(
+    async (name: string, phone?: string) => {
+      const driver = await api.post<ExternalDriver>('/api/external-drivers', { name, phone });
+      reload();
+      return driver;
+    },
+    [reload],
+  );
+
+  return { drivers, reload, quickCreate };
 }

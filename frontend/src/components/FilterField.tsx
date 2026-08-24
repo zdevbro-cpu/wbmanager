@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { inputCls } from './ui/classes';
+import { DateField } from './ui/DateField';
 
 // 검색 필터 항목 — 무엇을 고르는 칸인지 라벨을 달아 준다.
 export function FilterField({ label, children }: { label: string; children: ReactNode }) {
@@ -28,9 +29,9 @@ export function DateRangeField({
   return (
     <FilterField label={label}>
       <div className="flex items-center gap-1">
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label={`${label} 시작`} className={`${inputCls} px-2`} />
+        <DateField value={from} onChange={(e) => setFrom(e.target.value)} aria-label={`${label} 시작`} className={`${inputCls} px-2`} />
         <span className="shrink-0 text-text-faint">~</span>
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label={`${label} 종료`} className={`${inputCls} px-2`} />
+        <DateField value={to} onChange={(e) => setTo(e.target.value)} aria-label={`${label} 종료`} className={`${inputCls} px-2`} />
       </div>
     </FilterField>
   );

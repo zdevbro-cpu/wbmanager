@@ -9,6 +9,7 @@ import { pageTitleCls, primaryBtnCls, inputCls, tableWrapCls, thCls,
   thNumCls,
   tdNumCls, tdCls, trCls } from '../components/ui/classes';
 import type { InventoryValuation, InventoryValuationRow, LedgerEntry } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 const SOURCE_LABEL: Record<string, string> = { project: '차수전용', global: '전체적용', base: '기준단가' };
 
@@ -322,8 +323,7 @@ function PriceRegisterForm({
           </option>
         ))}
       </select>
-      <input
-        type="date"
+      <DateField
         value={effectiveDate}
         onChange={(e) => setEffectiveDate(e.target.value)}
         className={`${inputCls} w-[150px] min-w-0`}

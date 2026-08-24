@@ -139,6 +139,17 @@ model ItemPriceHistory {
   @@map("item_price_history")
 }
 
+// 외부 운전자 — 계근 등록에서 이름을 적어 넣는 기사들. 임직원 마스터와 섞이지 않게 따로 둔다.
+model ExternalDriver {
+  id        String   @id @default(uuid())
+  name      String   @unique @map("name")
+  phone     String?  @map("phone")
+  memo      String?  @map("memo")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("external_driver")
+}
+
 // 프로젝트(차수) — 원본 프로젝트명은 `발주처_시공사_현장`을 이어 붙인 형태였다(예: 포스코_KM_안산).
 // 발주처별·현장별 집계가 가능하도록 요소를 분리해 두고, 원본 문자열은 roundName에 그대로 보존한다.
 model Project {

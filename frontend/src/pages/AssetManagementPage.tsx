@@ -33,6 +33,7 @@ import {
   trCls,
 } from '../components/ui/classes';
 import type { Asset, AssetSchedule, Employee } from '../types';
+import { DateField } from '../components/ui/DateField';
 
 // 근거: data/차량장비_자산관리_설계정리.md
 // 1차 범위 — 자산 마스터 + 유형별 상세 + 일정 + 첨부. 배정/운행일지/정비/비용은 이후 단계.
@@ -571,7 +572,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
 
         <div>
           <label className={labelCls}>취득일</label>
-          <input type="date" value={form.acquiredAt} onChange={(e) => set({ acquiredAt: e.target.value })} className={inputCls} />
+          <DateField value={form.acquiredAt} onChange={(e) => set({ acquiredAt: e.target.value })} className={inputCls} />
         </div>
         <div>
           <label className={labelCls}>취득가액(원)</label>
@@ -650,8 +651,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
             </div>
             <div>
               <label className={labelCls}>보험 만료일</label>
-              <input
-                type="date"
+              <DateField
                 value={vehicle.insuranceEnd}
                 onChange={(e) => setVehicle({ ...vehicle, insuranceEnd: e.target.value })}
                 className={inputCls}
@@ -660,8 +660,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
 
             <div>
               <label className={labelCls}>다음 정기검사일</label>
-              <input
-                type="date"
+              <DateField
                 value={vehicle.inspectionNext}
                 onChange={(e) => setVehicle({ ...vehicle, inspectionNext: e.target.value })}
                 className={inputCls}
@@ -677,8 +676,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
             </div>
             <div>
               <label className={labelCls}>리스 만료일</label>
-              <input
-                type="date"
+              <DateField
                 value={vehicle.leaseEnd}
                 onChange={(e) => setVehicle({ ...vehicle, leaseEnd: e.target.value })}
                 className={inputCls}
@@ -744,8 +742,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
 
             <div>
               <label className={labelCls}>다음 점검일</label>
-              <input
-                type="date"
+              <DateField
                 value={equipment.inspectionNext}
                 onChange={(e) => setEquipment({ ...equipment, inspectionNext: e.target.value })}
                 className={inputCls}
@@ -753,8 +750,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
             </div>
             <div>
               <label className={labelCls}>다음 교정일</label>
-              <input
-                type="date"
+              <DateField
                 value={equipment.calibrationNext}
                 onChange={(e) => setEquipment({ ...equipment, calibrationNext: e.target.value })}
                 className={inputCls}
@@ -762,8 +758,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
             </div>
             <div>
               <label className={labelCls}>보증 만료일</label>
-              <input
-                type="date"
+              <DateField
                 value={equipment.warrantyEnd}
                 onChange={(e) => setEquipment({ ...equipment, warrantyEnd: e.target.value })}
                 className={inputCls}
@@ -948,7 +943,7 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                     </option>
                   ))}
                 </select>
-                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={`${inputCls} w-[150px]`} />
+                <DateField value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={`${inputCls} w-[150px]`} />
                 <button type="submit" className={`${primaryBtnCls} shrink-0 whitespace-nowrap px-4`}>
                   일정 추가
                 </button>
@@ -1098,7 +1093,7 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                 }}
                 className="mb-2 flex gap-2"
               >
-                <input type="date" value={moveDate} onChange={(e) => setMoveDate(e.target.value)} className={`${inputCls} w-[150px]`} />
+                <DateField value={moveDate} onChange={(e) => setMoveDate(e.target.value)} className={`${inputCls} w-[150px]`} />
                 <input
                   value={moveTo}
                   onChange={(e) => setMoveTo(e.target.value)}
