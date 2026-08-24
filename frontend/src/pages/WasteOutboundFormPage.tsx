@@ -429,7 +429,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
                 onChange={(e) => setIsSubsidiary(e.target.checked)}
                 className="h-4 w-4 accent-primary"
               />
-              지출
+              직출
             </label>
           </div>
 
