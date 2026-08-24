@@ -57,7 +57,7 @@ export function MasterSelect({ label, options, value, onChange, onQuickCreate, p
             onClick={() => setCreating(true)}
             className="inline-flex h-[38px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[8px] border border-border px-3 text-[12.5px] font-semibold text-text-mid hover:bg-hover"
           >
-            <Plus size={14} /> 마스터에 없음
+            <Plus size={14} /> 마스터에 등록
           </button>
         </div>
       ) : (

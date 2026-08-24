@@ -244,15 +244,6 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
             </datalist>
           </div>
 
-          <label className="flex items-end gap-2 pb-2 text-[13px] font-semibold text-text-mid">
-            <input
-              type="checkbox"
-              checked={olbaroReported}
-              onChange={(e) => setOlbaroReported(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            올바로 신고 완료(O)
-          </label>
 
           <VehicleDriverFields
             vehicleType={vehicleType}
@@ -274,49 +265,58 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
               onQuickCreate={quickCreateItem}
             />
           </div>
-
           <div>
             <label className={labelCls}>총중량(kg)</label>
             <NumberInput value={grossWeight} onChange={setGrossWeight} decimals={3} required />
           </div>
-
           <div>
             <label className={labelCls}>공차중량(kg)</label>
             <NumberInput value={tareWeight} onChange={setTareWeight} decimals={3} required />
           </div>
-
           <div>
             <label className={labelCls}>감량(kg)</label>
             <NumberInput value={lossWeight} onChange={setLossWeight} decimals={3} />
           </div>
-
-          <p className="col-span-4 text-[13px] text-text-sub">
-            입고량(자동계산): <span className="tabular font-bold text-text-strong">{netWeight}</span> kg
-            <span className="ml-1 text-text-faint">= 총중량 − 공차중량 − 감량</span>
-          </p>
-
           <div>
             <label className={labelCls}>실중량(kg)</label>
             <NumberInput value={actualWeight} onChange={setActualWeight} decimals={3} />
             <p className="mt-1 text-[12px] text-text-faint">비우면 총중량 − 공차중량</p>
           </div>
-
           <div>
             <label className={labelCls}>정산중량(kg)</label>
             <NumberInput value={settledWeight} onChange={setSettledWeight} decimals={3} />
             <p className="mt-1 text-[12px] text-text-faint">비우면 입고량</p>
           </div>
-
           <div>
             <label className={labelCls}>루베 적용(㎥)</label>
             <NumberInput value={cubicMeter} onChange={setCubicMeter} decimals={3} />
           </div>
-
-
-          <div className="col-span-4">
+          <p className="col-span-4 text-[13px] text-text-sub">
+            입고량(자동계산): <span className="tabular font-bold text-text-strong">{netWeight}</span> kg
+            <span className="ml-1 text-text-faint">= 총중량 − 공차중량 − 감량</span>
+          </p>
+          <div className="col-span-3">
             <label className={labelCls}>비고</label>
             <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
           </div>
+          <label className="flex items-end gap-2 pb-2 text-[13px] font-semibold text-text-mid">
+            <input
+              type="checkbox"
+              checked={olbaroReported}
+              onChange={(e) => setOlbaroReported(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            올바로 신고 완료(O)
+          </label>
+
+
+
+
+
+
+
+
+
 
           <StagedFileUpload label="계량증명서" files={certFiles} setFiles={setCertFiles} />
           <StagedFileUpload label="참고 서류" files={refFiles} setFiles={setRefFiles} />
