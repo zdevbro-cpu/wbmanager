@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Truck, CheckCircle2, AlertTriangle, ScanLine } from 'lucide-react';
 import { api, API_BASE_URL } from '../api/client';
+import { registerVehicleAfterSave } from '../lib/vehicleRegister';
 import { auth } from '../lib/firebase';
 import { useProjects, useItemMasters } from '../hooks/useMasters';
 import { MasterSelect } from '../components/MasterSelect';
@@ -178,6 +179,9 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
       const inbound = isEdit
         ? await api.patch<Inbound>(`/api/inbounds/${record.id}`, payload)
         : await api.post<Inbound>('/api/inbounds', payload);
+
+      // 저장이 끝난 뒤에 차량번호를 목록에 올린다. 번호 꼴이 아닌 값은 올리지 않는다.
+      await registerVehicleAfterSave(vehicleNo, vehicleType);
       // 첨부는 부모 id가 있어야 붙일 수 있어 저장 성공 후 올린다.
       await uploadStagedFiles(
         [

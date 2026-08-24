@@ -1,6 +1,7 @@
 import { useVehicles, useEmployees, useCommonCodes } from '../hooks/useMasters';
 import { inputCls } from './ui/classes';
 import { formatPhone } from '../lib/phone';
+import { isPlateNo } from '../lib/plate';
 
 // 차종 목록 — 공통코드(그룹: 차종)에서 관리한다. 공통코드가 비어 있으면 원본 엑셀 사용값으로 대체한다.
 const DEFAULT_VEHICLE_TYPES = ['집게차', '카고', '암롤트럭', '방통차', '1톤트럭', '트레일러', '기타'];
@@ -28,7 +29,7 @@ export function VehicleDriverFields({
   driverPhone,
   setDriverPhone,
 }: Props) {
-  const { vehicles, quickCreate } = useVehicles();
+  const { vehicles } = useVehicles();
   const { employees } = useEmployees();
   const { labels: codeVehicleTypes } = useCommonCodes('차종');
   const vehicleTypes = codeVehicleTypes.length > 0 ? codeVehicleTypes : DEFAULT_VEHICLE_TYPES;
@@ -39,16 +40,9 @@ export function VehicleDriverFields({
     if (vehicle?.vehicleType) setVehicleType(vehicle.vehicleType);
   };
 
-  // 목록에 없는 번호를 적고 칸을 벗어나면 차량으로 등록해 다음부터 목록에 뜨게 한다.
-  const registerIfNew = async () => {
-    const no = vehicleNo.trim();
-    if (!no || vehicles.some((v) => v.vehicleNo === no)) return;
-    try {
-      await quickCreate(no, vehicleType || undefined);
-    } catch {
-      // 등록에 실패해도 입력값은 그대로 두어 저장을 막지 않는다.
-    }
-  };
+  // 이미 목록에 있는 번호이거나 번호 꼴을 갖췄으면 저장 시 목록에 올라간다.
+  const isNewPlateOk =
+    vehicles.some((v) => v.vehicleNo === vehicleNo.trim()) || isPlateNo(vehicleNo);
 
   const handleDriverChange = (name: string) => {
     setDriverName(name);
@@ -61,15 +55,20 @@ export function VehicleDriverFields({
     <>
       <div>
         <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">차량번호</label>
-        {/* 목록에서 고르거나 직접 적는다. 새 번호는 칸을 벗어날 때 차량으로 등록된다. */}
+        {/* 목록에서 고르거나 직접 적는다. 새 번호는 이 건을 저장할 때 차량 목록에 올라간다. */}
         <input
           list="vehicle-plate-options"
           value={vehicleNo}
           onChange={(e) => handleVehicleChange(e.target.value)}
-          onBlur={registerIfNew}
           placeholder="선택하거나 직접 입력"
           className={inputCls}
         />
+        {/* 번호 꼴이 아니면 차량 목록에 올리지 않는다. 적다 만 값이 목록에 남지 않게 하기 위해서다. */}
+        {vehicleNo.trim() && !isNewPlateOk && (
+          <p className="mt-1 text-[12px] text-text-faint">
+            차량번호 형식이 아니어서 차량 목록에는 추가되지 않습니다. 이 건에는 적은 그대로 저장됩니다.
+          </p>
+        )}
         <datalist id="vehicle-plate-options">
           {vehicles.map((v) => (
             <option key={v.id} value={v.vehicleNo}>
