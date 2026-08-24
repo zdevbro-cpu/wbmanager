@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Users, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
-import { useProjects, useEmployees } from '../hooks/useMasters';
+import { useProjects, useEmployees, useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FilterField } from '../components/FilterField';
 import { SearchSelect } from '../components/SearchSelect';
@@ -229,6 +229,12 @@ function LaborForm({
   onCancel: () => void;
 }) {
   const { employees } = useEmployees();
+  // 임직원에 없는 현장 인력도 한 번 적어 두면 다음부터 목록에서 고를 수 있다.
+  const { labels: workerCodes } = useCommonCodes('작업자');
+  const workerOptions = [
+    ...employees.map((e) => ({ value: e.name, label: e.name })),
+    ...workerCodes.filter((n) => !employees.some((e) => e.name === n)).map((n) => ({ value: n, label: n })),
+  ];
   const [f, setF] = useState({
     projectId: defaultProjectId,
     workDate: kstToday(),
@@ -319,7 +325,7 @@ function LaborForm({
           </label>
           <SearchSelect
             ariaLabel="작업자"
-            options={employees.map((e) => ({ value: e.name, label: e.name }))}
+            options={workerOptions}
             value={f.workerName}
             onChange={pickWorker}
             placeholder="검색 또는 직접 입력"
