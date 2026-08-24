@@ -17,6 +17,8 @@ const emptyGroup = (key, label) => ({
   outbound_sale: 0,
   waste_outbound: 0,
   amount: 0,
+  saleAmount: 0, // 매각 매출
+  wasteAmount: 0, // 폐기물 반출 처리비
   count: 0,
 });
 
@@ -34,8 +36,11 @@ export function buildAggregation(rows) {
     if (!key) return;
     if (!map.has(key)) map.set(key, emptyGroup(key, label ?? key));
     const entry = map.get(key);
+    const amt = Number(row.amount ?? 0);
     entry[row.type] += Number(row.weight ?? 0);
-    entry.amount += Number(row.amount ?? 0);
+    entry.amount += amt;
+    if (row.type === 'outbound_sale') entry.saleAmount += amt;
+    if (row.type === 'waste_outbound') entry.wasteAmount += amt;
     entry.count += 1;
   };
 
