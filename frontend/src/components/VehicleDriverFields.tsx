@@ -132,6 +132,16 @@ export function VehicleDriverFields({
         />
       </div>
 
+      <div>
+        <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">연락처</label>
+        <input
+          value={driverPhone}
+          onChange={(e) => setDriverPhone(formatPhone(e.target.value))}
+          placeholder="010-0000-0000"
+          className={inputCls}
+        />
+      </div>
+
       {/* 제품명의 '마스터에 없음'과 같은 자리·같은 모양. 늘 보이고, 이름이 있어야 눌린다. */}
       <div>
         <span className="mb-1.5 block text-[13px] font-semibold text-transparent select-none" aria-hidden>
@@ -155,16 +165,6 @@ export function VehicleDriverFields({
         >
           <Plus size={14} /> {registering ? '등록 중...' : '신규등록'}
         </button>
-      </div>
-
-      <div>
-        <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">연락처</label>
-        <input
-          value={driverPhone}
-          onChange={(e) => setDriverPhone(formatPhone(e.target.value))}
-          placeholder="010-0000-0000"
-          className={inputCls}
-        />
       </div>
     </>
   );
