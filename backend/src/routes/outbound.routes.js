@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { postLedgerEntry, postInboundLedger } from '../lib/ledger.js';
 import { toISO } from '../lib/date.js';
 import { rememberCodes } from '../lib/rememberCodes.js';
+import { rememberDriver } from '../lib/rememberDriver.js';
 
 const router = Router();
 
@@ -174,6 +175,7 @@ router.post('/', async (req, res) => {
   });
 
   await rememberCodes([['상차지', req.body.loadingPoint]]);
+  await rememberDriver(req.body.driverName, req.body.driverPhone);
   res.status(201).json(outbound);
 });
 
@@ -241,6 +243,7 @@ router.patch('/:id', async (req, res) => {
   });
 
   await rememberCodes([['상차지', patch.loadingPoint]]);
+  await rememberDriver(patch.driverName, patch.driverPhone);
   res.json(updated);
 });
 

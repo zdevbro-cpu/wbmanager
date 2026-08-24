@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
 import { useVehicles, useEmployees, useCommonCodes, useExternalDrivers } from '../hooks/useMasters';
 import { SearchSelect } from './SearchSelect';
 import { inputCls } from './ui/classes';
@@ -34,8 +32,7 @@ export function VehicleDriverFields({
 }: Props) {
   const { vehicles } = useVehicles();
   const { employees } = useEmployees();
-  const { drivers, quickCreate: createDriver } = useExternalDrivers();
-  const [registering, setRegistering] = useState(false);
+  const { drivers } = useExternalDrivers();
   const { labels: codeVehicleTypes } = useCommonCodes('차종');
   const vehicleTypes = codeVehicleTypes.length > 0 ? codeVehicleTypes : DEFAULT_VEHICLE_TYPES;
 
@@ -67,16 +64,6 @@ export function VehicleDriverFields({
     driverName.trim().length > 0 &&
     !employees.some((e) => e.name === driverName.trim()) &&
     !drivers.some((d) => d.name === driverName.trim());
-
-  // 지금 적어 둔 이름·연락처를 외부 운전자 목록에 올린다.
-  const registerDriver = async () => {
-    setRegistering(true);
-    try {
-      await createDriver(driverName.trim(), driverPhone.trim() || undefined);
-    } finally {
-      setRegistering(false);
-    }
-  };
 
   // 2열 그리드의 셀로 그대로 들어가도록 각 항목을 독립 블록으로 내보낸다.
   return (
@@ -130,6 +117,11 @@ export function VehicleDriverFields({
           placeholder="이름 검색 또는 직접 입력"
           allowFree
         />
+        {isNewDriver && (
+          <p className="mt-1 text-[12px] text-text-faint">
+            목록에 없는 이름입니다. 이 건을 저장하면 연락처와 함께 운전자 목록에 올라갑니다.
+          </p>
+        )}
       </div>
 
       <div>
@@ -142,30 +134,6 @@ export function VehicleDriverFields({
         />
       </div>
 
-      {/* 제품명의 '마스터에 없음'과 같은 자리·같은 모양. 늘 보이고, 이름이 있어야 눌린다. */}
-      <div>
-        <span className="mb-1.5 block text-[13px] font-semibold text-transparent select-none" aria-hidden>
-          운전자 등록
-        </span>
-        <button
-          type="button"
-          onClick={registerDriver}
-          disabled={registering || !driverName.trim()}
-          title={
-            isNewDriver
-              ? `'${driverName.trim()}'을(를) 운전자 목록에 등록`
-              : '이름을 적으면 운전자 목록에 등록할 수 있습니다'
-          }
-          className={[
-            'inline-flex h-[38px] w-full items-center justify-center gap-1 whitespace-nowrap rounded-[8px] border px-2 text-[12.5px] font-semibold disabled:opacity-50',
-            isNewDriver
-              ? 'border-primary text-primary hover:bg-nav-hover'
-              : 'border-border text-text-mid hover:bg-hover',
-          ].join(' ')}
-        >
-          <Plus size={14} /> {registering ? '등록 중...' : '신규등록'}
-        </button>
-      </div>
     </>
   );
 }
