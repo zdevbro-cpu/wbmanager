@@ -217,16 +217,6 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             </datalist>
           </div>
 
-          <VehicleDriverFields
-            vehicleType={vehicleType}
-            setVehicleType={setVehicleType}
-            vehicleNo={vehicleNo}
-            setVehicleNo={setVehicleNo}
-            driverName={driverName}
-            setDriverName={setDriverName}
-            driverPhone={driverPhone}
-            setDriverPhone={setDriverPhone}
-          />
 
           <div className="col-span-2">
             <MasterSelect
@@ -290,6 +280,17 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             <label className={labelCls}>단가(원)</label>
             <NumberInput value={unitPrice} onChange={setUnitPrice} />
           </div>
+
+          <VehicleDriverFields
+            vehicleType={vehicleType}
+            setVehicleType={setVehicleType}
+            vehicleNo={vehicleNo}
+            setVehicleNo={setVehicleNo}
+            driverName={driverName}
+            setDriverName={setDriverName}
+            driverPhone={driverPhone}
+            setDriverPhone={setDriverPhone}
+          />
 
           <p className="col-span-4 text-[12.5px] text-text-faint">
             실중량 = 총중량 − 공차중량 · 정산중량 = 총중량 − 공차중량 − 감량
