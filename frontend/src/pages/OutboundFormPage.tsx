@@ -51,6 +51,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
   const [lossWeight, setLossWeight] = useState(initNum(record?.lossWeight));
   const [stockWeight, setStockWeight] = useState(initNum(record?.stockWeight));
   const [unitPrice, setUnitPrice] = useState(initNum(record?.unitPrice));
+  const [amount, setAmount] = useState(initNum(record?.amount));
   const [category, setCategory] = useState(record?.category ?? '');
   const [isSubsidiary, setIsSubsidiary] = useState(record?.isSubsidiary ?? false);
   const [memo, setMemo] = useState(record?.memo ?? '');
@@ -77,6 +78,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
     setLossWeight('');
     setStockWeight('');
     setUnitPrice('');
+    setAmount('');
     setCategory('');
     setIsSubsidiary(false);
     setMemo('');
@@ -105,8 +107,9 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
     settledWeightNum !== null && stockWeight !== '' && Number(stockWeight) !== settledWeightNum;
 
   // 공급가액 = 정산중량 × 단가, 부가세 = 공급가액 10%
-  const amountNum =
-    settledWeightNum !== null && unitPrice ? settledWeightNum * Number(unitPrice) : null;
+  // 공급가액은 정산중량 × 단가로 잡되, 손으로 적으면 그 값이 우선한다(끝자리 절사·협의 금액 대응).
+  const autoAmountNum = settledWeightNum !== null && unitPrice ? settledWeightNum * Number(unitPrice) : null;
+  const amountNum = amount !== '' ? Number(amount) : autoAmountNum;
   const vatNum = amountNum === null ? null : Math.round(amountNum * 0.1);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,6 +133,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
         lossWeight: lossWeight ? Number(lossWeight) : undefined,
         stockWeight: stockWeight ? Number(stockWeight) : undefined,
         unitPrice: unitPrice ? Number(unitPrice) : undefined,
+        amount: amount !== '' ? Number(amount) : undefined,
         category: category || undefined,
         isSubsidiary,
         memo: memo || undefined,
@@ -277,6 +281,16 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
           <div>
             <label className={labelCls}>단가(원)</label>
             <NumberInput value={unitPrice} onChange={setUnitPrice} />
+          </div>
+
+          <div>
+            <label className={labelCls}>공급가액(원)</label>
+            <NumberInput
+              value={amount}
+              onChange={setAmount}
+              placeholder={autoAmountNum === null ? '' : String(Math.round(autoAmountNum))}
+            />
+            <p className="mt-1 text-[12px] text-text-faint">비우면 정산중량 × 단가</p>
           </div>
 
           <p className="col-span-4 text-[12.5px] text-text-faint">
