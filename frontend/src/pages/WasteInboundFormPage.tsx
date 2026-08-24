@@ -318,8 +318,13 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
 
 
 
-          <StagedFileUpload label="계량증명서" files={certFiles} setFiles={setCertFiles} />
-          <StagedFileUpload label="참고 서류" files={refFiles} setFiles={setRefFiles} />
+          {/* 첨부는 두 칸씩 써서 좌우로 넓게 둔다 — 파일을 끌어다 놓기 편해야 한다. */}
+          <div className="col-span-2">
+            <StagedFileUpload label="계량증명서" files={certFiles} setFiles={setCertFiles} />
+          </div>
+          <div className="col-span-2">
+            <StagedFileUpload label="참고 서류" files={refFiles} setFiles={setRefFiles} />
+          </div>
         </div>
 
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
