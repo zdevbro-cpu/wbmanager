@@ -16,7 +16,8 @@ const date = (v?: string | null) => (v ? v.slice(0, 10) : '-');
 const actual = (r: WasteInbound) => num(r.actualWeight) ?? (num(r.grossWeight) ?? 0) - (num(r.tareWeight) ?? 0);
 const settled = (r: WasteInbound) => num(r.settledWeight) ?? num(r.netWeight);
 
-// 폐기물 반출과 같은 구성으로 맞춘다. 계근 상세(총중량·공차중량·감량 등)는 행을 클릭해 확인한다.
+// 수집·운반 현황 — 화면에는 운반에 필요한 항목만 둔다.
+// 차종·총중량·공차중량·감량 등 계근 상세와 정산 항목은 행을 눌러 상세에서 본다.
 const COLUMNS: Column<WasteInbound>[] = [
   { header: '상차일', nowrap: true, render: (r) => date(r.receiveDate) },
   { header: '인계일', nowrap: true, render: (r) => date(r.handoverDate) },
@@ -26,16 +27,11 @@ const COLUMNS: Column<WasteInbound>[] = [
   },
   { header: '프로젝트명', render: (r) => show(r.project?.roundName) },
   { header: '배출자', render: (r) => show(r.dischargerName) },
-  { header: '운반자', render: (r) => show(r.transporterName) },
+  { header: '하차지', render: (r) => show(r.unloadingPoint) },
   { header: '차량번호', nowrap: true, render: (r) => show(r.vehicleNo) },
-  { header: '처리자', render: (r) => show(r.processorName) },
   { header: '제품명', render: (r) => show(r.item?.itemName ?? r.itemName) },
-  { header: '실중량(kg)', align: 'right', render: (r) => actual(r)?.toLocaleString() ?? '-', sum: (r) => actual(r) },
-  { header: '정산중량(kg)', align: 'right', render: (r) => settled(r)?.toLocaleString() ?? '-', sum: (r) => settled(r) },
-  { header: '루베 적용', align: 'right', render: (r) => num(r.cubicMeter)?.toLocaleString() ?? '-' },
-  { header: '단가(원)', align: 'right', render: (r) => num(r.unitPrice)?.toLocaleString() ?? '-' },
-  { header: '금액(원)', align: 'right', render: (r) => num(r.amount)?.toLocaleString() ?? '-', sum: (r) => num(r.amount) },
-  { header: '이체일', nowrap: true, render: (r) => date(r.transferDate) },
+  { header: '입고량(kg)', align: 'right', render: (r) => num(r.netWeight)?.toLocaleString() ?? '-', sum: (r) => num(r.netWeight) },
+  { header: '비고', render: (r) => show(r.memo) },
 ];
 
 const DETAIL_FIELDS = (r: WasteInbound) => [
@@ -59,9 +55,6 @@ const DETAIL_FIELDS = (r: WasteInbound) => [
   { label: '입고량(kg)', value: num(r.netWeight)?.toLocaleString() ?? '-' },
   { label: '정산중량(kg)', value: settled(r)?.toLocaleString() ?? '-' },
   { label: '루베 적용', value: num(r.cubicMeter)?.toLocaleString() ?? '-' },
-  { label: '단가(원)', value: num(r.unitPrice)?.toLocaleString() ?? '-' },
-  { label: '금액(원)', value: num(r.amount)?.toLocaleString() ?? '-' },
-  { label: '이체일', value: date(r.transferDate) },
   { label: '비고', value: show(r.memo) },
 ];
 
@@ -93,9 +86,9 @@ export function WasteInboundListPage() {
   return (
     <>
       <TransactionListLayout
-        title="폐기물 입고 현황"
+        title="폐기물 수집·운반 현황"
         icon={Recycle}
-        addLabel="폐기물 입고 등록"
+        addLabel="수집·운반 등록"
         dateLabel="입고구간"
         columns={COLUMNS}
         rows={rows}
@@ -119,12 +112,12 @@ export function WasteInboundListPage() {
           />
         )}
         exportType="waste_inbound"
-        exportName="폐기물입고현황"
-        emptyText="등록된 폐기물 입고 내역이 없습니다."
+        exportName="폐기물수집운반현황"
+        emptyText="등록된 수집·운반 내역이 없습니다."
       />
 
       {open && (
-        <FormModal title="폐기물 입고 등록" icon={Recycle} wide onClose={() => setOpen(false)}>
+        <FormModal title="폐기물 수집·운반 등록" icon={Recycle} wide onClose={() => setOpen(false)}>
           <WasteInboundFormPage
             embedded
             onCreated={() => {

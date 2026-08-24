@@ -299,6 +299,9 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
                 </option>
               ))}
             </select>
+            <p className="mt-1 text-[12px] text-text-faint">
+              집계·보고서에서 묶어 보기 위한 분류입니다. 금액 계산에는 쓰이지 않습니다.
+            </p>
           </div>
           <div>
             <label className={labelCls}>입금일</label>

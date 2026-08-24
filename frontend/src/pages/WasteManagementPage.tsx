@@ -80,18 +80,16 @@ export function WasteManagementPage() {
                 <td className={tdCls}>{r.buyer?.name ?? '-'}</td>
                 <td className={tdNumCls}>{formatNumber(r.weight)}</td>
                 <td className={tdCls}>
-                  {r.olbaroReported ? (
-                    <Badge tone="green">신고완료</Badge>
-                  ) : (
-                    <label className="inline-flex items-center gap-1.5">
-                      <input
-                        type="checkbox"
-                        checked={r.olbaroReported}
-                        onChange={(e) => updateStatus(r.id, { olbaroReported: e.target.checked })}
-                      />
-                      <Badge tone="red">미신고</Badge>
-                    </label>
-                  )}
+                  {/* 잘못 눌렀거나 신고가 반려된 건도 있어 미신고로 되돌릴 수 있게 둔다. */}
+                  <label className="inline-flex items-center gap-1.5" title="체크하면 신고완료, 해제하면 미신고">
+                    <input
+                      type="checkbox"
+                      checked={r.olbaroReported}
+                      onChange={(e) => updateStatus(r.id, { olbaroReported: e.target.checked })}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    {r.olbaroReported ? <Badge tone="green">신고완료</Badge> : <Badge tone="red">미신고</Badge>}
+                  </label>
                 </td>
                 <td className={tdCls}>
                   <DateField

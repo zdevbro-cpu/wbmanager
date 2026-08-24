@@ -52,8 +52,6 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
   const [actualWeight, setActualWeight] = useState(initNum(record?.actualWeight));
   const [settledWeight, setSettledWeight] = useState(initNum(record?.settledWeight));
   const [cubicMeter, setCubicMeter] = useState(initNum(record?.cubicMeter));
-  const [unitPrice, setUnitPrice] = useState(initNum(record?.unitPrice));
-  const [transferDate, setTransferDate] = useState(initDate(record?.transferDate));
   const [memo, setMemo] = useState(record?.memo ?? '');
   const [certFiles, setCertFiles] = useState<File[]>([]);
   const [refFiles, setRefFiles] = useState<File[]>([]);
@@ -83,8 +81,6 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
     setActualWeight('');
     setSettledWeight('');
     setCubicMeter('');
-    setUnitPrice('');
-    setTransferDate('');
     setMemo('');
     setCertFiles([]);
     setRefFiles([]);
@@ -99,12 +95,10 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
       : null;
   const netWeight = formatNumber(netWeightNum);
 
-  // 실중량·정산중량은 비워 두면 계근값이 그대로 저장된다. 금액은 정산중량 × 단가.
+  // 실중량·정산중량은 비워 두면 계근값이 그대로 저장된다. 수집·운반은 정산을 하지 않아 단가·금액을 받지 않는다.
   const actualWeightNum =
     actualWeight !== '' ? Number(actualWeight) : grossWeight && tareWeight ? Number(grossWeight) - Number(tareWeight) : null;
   const settledWeightNum = settledWeight !== '' ? Number(settledWeight) : netWeightNum;
-  const amountNum = settledWeightNum !== null && unitPrice ? settledWeightNum * Number(unitPrice) : null;
-  const amount = formatNumber(amountNum);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,9 +125,6 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
         actualWeight: actualWeightNum ?? undefined,
         settledWeight: settledWeightNum ?? undefined,
         cubicMeter: cubicMeter ? Number(cubicMeter) : undefined,
-        unitPrice: unitPrice ? Number(unitPrice) : undefined,
-        amount: amountNum ?? undefined,
-        transferDate: transferDate || undefined,
         memo: memo || undefined,
       };
       const wasteInbound = isEdit
@@ -172,7 +163,7 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
       {!embedded && (
         <div className="mb-5 flex items-center gap-2">
           <Recycle size={20} className="text-primary" />
-          <h1 className={pageTitleCls}>폐기물 입고 등록</h1>
+          <h1 className={pageTitleCls}>폐기물 수집·운반 등록</h1>
         </div>
       )}
 
@@ -321,20 +312,6 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
             <NumberInput value={cubicMeter} onChange={setCubicMeter} decimals={3} />
           </div>
 
-          <div>
-            <label className={labelCls}>단가(원)</label>
-            <NumberInput value={unitPrice} onChange={setUnitPrice} />
-          </div>
-
-          <div>
-            <label className={labelCls}>이체일</label>
-            <DateField value={transferDate} onChange={(e) => setTransferDate(e.target.value)} className={inputCls} />
-          </div>
-
-          <p className="self-end pb-2 text-[13px] text-text-sub">
-            금액(자동계산): <span className="tabular font-bold text-text-strong">{amount}</span> 원
-            <span className="ml-1 text-text-faint">= 정산중량 × 단가</span>
-          </p>
 
           <div className="col-span-4">
             <label className={labelCls}>비고</label>

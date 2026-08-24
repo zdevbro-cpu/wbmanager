@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { registerVehicleAfterSave } from '../lib/vehicleRegister';
 import { useProjects, useVendors, useItemMasters, useCommonCodes } from '../hooks/useMasters';
 import { MasterSelect } from '../components/MasterSelect';
+import { SearchSelect } from '../components/SearchSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
 import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
@@ -225,34 +226,26 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
 
           <div>
             <label className={labelCls}>배출자</label>
-            <input
-              list="wo-dischargers"
+            <SearchSelect
+              ariaLabel="배출자"
+              options={dischargerOptions.map((o) => ({ value: o, label: o }))}
               value={dischargerName}
-              onChange={(e) => setDischargerName(e.target.value)}
-              placeholder="케이엠티엘에스 / 크로스특수 등"
-              className={inputCls}
+              onChange={setDischargerName}
+              placeholder="검색 또는 직접 입력"
+              allowFree
             />
-            <datalist id="wo-dischargers">
-              {dischargerOptions.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
           </div>
 
           <div>
             <label className={labelCls}>운반자</label>
-            <input
-              list="wo-transporters"
+            <SearchSelect
+              ariaLabel="운반자"
+              options={transporterOptions.map((o) => ({ value: o, label: o }))}
               value={transporterName}
-              onChange={(e) => setTransporterName(e.target.value)}
-              placeholder="원방 / 주원 / 서윤산업 등"
-              className={inputCls}
+              onChange={setTransporterName}
+              placeholder="검색 또는 직접 입력"
+              allowFree
             />
-            <datalist id="wo-transporters">
-              {transporterOptions.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
           </div>
 
           <div>

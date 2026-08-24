@@ -64,6 +64,9 @@ export function AggregationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month, projectId]);
 
+  // 금액은 유형별로 성격이 다르다 — 매각은 매출, 폐기물반출은 처리비(비용)라 카드에서 갈라 보여 준다.
+  const amountOf = (type: string) => Number(data?.byType?.find((g) => g.key === type)?.amount ?? 0);
+
   // 반입 대비 처리 진척 — 보고서가 매번 손으로 계산하던 회수율이다.
   const flow = useMemo(() => {
     if (!data) return null;
@@ -121,7 +124,7 @@ export function AggregationPage() {
               color="#f59e0b"
               label="매각"
               value={kg(data.totals.outbound_sale)}
-              sub={`${won(data.totals.amount)} · 폐기물반출 ${kg(data.totals.waste_outbound)}`}
+              sub={`매각금액 ${won(amountOf('outbound_sale'))} · 폐기물반출 ${kg(data.totals.waste_outbound)}`}
             />
             <SummaryCard
               icon={Layers}

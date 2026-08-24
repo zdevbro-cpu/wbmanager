@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Boxes, X } from 'lucide-react';
 import { api } from '../api/client';
+import { useEscapeClose } from '../hooks/useEscapeClose';
 import { SearchSelect } from '../components/SearchSelect';
 import { useProjects, useItemMasters } from '../hooks/useMasters';
 import { NumberInput } from '../components/ui/NumberInput';
@@ -183,7 +184,7 @@ export function InventoryPage() {
       )}
 
       {drilldown && (
-        <div className="fixed top-0 right-0 h-screen w-[860px] max-w-full overflow-y-auto border-l border-border bg-card p-5 shadow-[-8px_0_24px_rgba(0,0,0,0.35)]">
+        <DrilldownPanel onClose={() => setDrilldown(null)}>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-[16px] font-extrabold text-text-strong">
               {drilldown.row.projectName} / {drilldown.row.itemName}
@@ -252,7 +253,7 @@ export function InventoryPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </DrilldownPanel>
       )}
     </div>
   );
@@ -332,5 +333,21 @@ function PriceRegisterForm({
         등록
       </button>
     </form>
+  );
+}
+
+// 재고 상세 — ESC나 바깥 클릭으로도 닫힌다. 화면을 덮는 층이 있어야 바깥 클릭을 받을 수 있다.
+function DrilldownPanel({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  useEscapeClose(onClose);
+
+  return (
+    <div className="fixed inset-0 z-30" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-0 right-0 h-screen w-[860px] max-w-full overflow-y-auto border-l border-border bg-card p-5 shadow-[-8px_0_24px_rgba(0,0,0,0.35)]"
+      >
+        {children}
+      </div>
+    </div>
   );
 }
