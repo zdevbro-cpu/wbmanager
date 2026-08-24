@@ -146,7 +146,12 @@ export function VehicleDriverFields({
               ? `'${driverName.trim()}'을(를) 운전자 목록에 등록`
               : '이름을 적으면 운전자 목록에 등록할 수 있습니다'
           }
-          className="inline-flex h-[38px] w-full items-center justify-center gap-1 whitespace-nowrap rounded-[8px] border border-border px-2 text-[12.5px] font-semibold text-text-mid hover:bg-hover disabled:opacity-50"
+          className={[
+            'inline-flex h-[38px] w-full items-center justify-center gap-1 whitespace-nowrap rounded-[8px] border px-2 text-[12.5px] font-semibold disabled:opacity-50',
+            isNewDriver
+              ? 'border-primary text-primary hover:bg-nav-hover'
+              : 'border-border text-text-mid hover:bg-hover',
+          ].join(' ')}
         >
           <Plus size={14} /> {registering ? '등록 중...' : '신규등록'}
         </button>

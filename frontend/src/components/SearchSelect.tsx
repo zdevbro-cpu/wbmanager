@@ -131,6 +131,8 @@ export function SearchSelect({
           setQuery(e.target.value);
           setActive(0);
           if (!open) setOpen(true);
+          // 자유 입력 칸은 치는 즉시 값이 된다. 밖에서 '목록에 없는 값'인지 바로 알 수 있어야 한다.
+          if (allowFree) onChange(e.target.value);
         }}
         onFocus={() => {
           setOpen(true);
@@ -165,23 +167,26 @@ export function SearchSelect({
         className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-text-faint"
       />
 
-      {open && (
+      {/* 고를 것이 없으면 목록을 띄우지 않는다 — 적은 값은 그대로 쓰이므로 안내가 필요 없다. */}
+      {open && filtered.length > 0 && (
         <ul
           id={listId}
           role="listbox"
           className="absolute left-0 right-0 top-[calc(100%+2px)] z-40 max-h-[240px] overflow-y-auto rounded-[8px] border border-border bg-card py-1 shadow-lg"
         >
-          {/* 조건을 비우는 줄 — 드롭다운의 '전체'와 같은 자리다. */}
-          <li>
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={clear}
-              className="block w-full px-3 py-1.5 text-left text-[12.5px] text-text-faint hover:bg-hover"
-            >
-              {placeholder}
-            </button>
-          </li>
+          {/* 고른 값을 비우는 줄 — 값이 있을 때만 둔다. */}
+          {value && (
+            <li>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={clear}
+                className="block w-full px-3 py-1.5 text-left text-[12.5px] text-text-faint hover:bg-hover"
+              >
+                {placeholder === '전체' ? '전체' : '선택 해제'}
+              </button>
+            </li>
+          )}
           {filtered.map((o, i) => (
             <li key={o.value}>
               <button
@@ -199,11 +204,6 @@ export function SearchSelect({
               </button>
             </li>
           ))}
-          {filtered.length === 0 && (
-            <li className="px-3 py-2 text-[12.5px] text-text-faint">
-              {allowFree ? '일치하는 항목이 없습니다 — 입력한 값으로 검색합니다.' : '일치하는 항목이 없습니다.'}
-            </li>
-          )}
         </ul>
       )}
     </div>
