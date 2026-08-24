@@ -63,9 +63,11 @@ export function SearchSelect({
   });
 
   const commitOrClose = () => {
+    // 적은 값이 있을 때만 확정한다. 칸을 눌렀다가 아무것도 치지 않고 나가면
+    // 고른 값이 그대로 남아야 한다(지우기는 X 버튼이나 '선택 해제'로 한다).
     if (allowFree) {
       const typed = query.trim();
-      if (typed !== selectedLabel) onChange(typed);
+      if (typed && typed !== selectedLabel) onChange(typed);
     }
     setOpen(false);
     setQuery('');
