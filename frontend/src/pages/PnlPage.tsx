@@ -101,7 +101,7 @@ export function PnlPage() {
             <StatCard label="매입비" value={pnl.purchaseCost} />
             <StatCard label="매각수입" value={pnl.salesRevenue} positive />
             <StatCard label="폐기물비용" value={pnl.wasteCost} />
-            <StatCard label="운송비" value={pnl.transportCost} />
+            <StatCard label="운반비" value={pnl.transportCost} />
             <StatCard label="인건비" value={pnl.laborCost} />
           </div>
 

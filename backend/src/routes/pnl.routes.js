@@ -22,7 +22,7 @@ router.get('/:projectId/pnl/export', async (req, res) => {
     `1. 실현손익 = 매각수입(${fmt(pnl.salesRevenue)}) - 총지출(${fmt(pnl.totalCost)}) = ${fmt(pnl.realizedPnl)}`,
     `   - 매입비: ${fmt(pnl.purchaseCost)}`,
     `   - 폐기물비용: ${fmt(pnl.wasteCost)}`,
-    `   - 운송비: ${fmt(pnl.transportCost)}`,
+    `   - 운반비: ${fmt(pnl.transportCost)}`,
     `   - 인건비: ${fmt(pnl.laborCost)}`,
     '',
     `2. 재고평가(미실현) = ${fmt(pnl.inventoryValuation)}`,
