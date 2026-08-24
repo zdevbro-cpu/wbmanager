@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { registerVehicleAfterSave } from '../lib/vehicleRegister';
 import { useProjects, useItemMasters, useCommonCodes } from '../hooks/useMasters';
 import { MasterSelect } from '../components/MasterSelect';
+import { SearchSelect } from '../components/SearchSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
 import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
@@ -196,66 +197,50 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
 
           <div>
             <label className={labelCls}>배출자</label>
-            <input
-              list="wi-dischargers"
+            <SearchSelect
+              ariaLabel="배출자"
+              options={dischargerOptions.map((o) => ({ value: o, label: o }))}
               value={dischargerName}
-              onChange={(e) => setDischargerName(e.target.value)}
-              placeholder="케이엠티엘에스 / 크로스특수 등"
-              className={inputCls}
+              onChange={setDischargerName}
+              placeholder="검색 또는 직접 입력"
+              allowFree
             />
-            <datalist id="wi-dischargers">
-              {dischargerOptions.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
           </div>
 
           <div>
             <label className={labelCls}>운반자</label>
-            <input
-              list="wi-transporters"
+            <SearchSelect
+              ariaLabel="운반자"
+              options={transporterOptions.map((o) => ({ value: o, label: o }))}
               value={transporterName}
-              onChange={(e) => setTransporterName(e.target.value)}
-              placeholder="운반 업체"
-              className={inputCls}
+              onChange={setTransporterName}
+              placeholder="검색 또는 직접 입력"
+              allowFree
             />
-            <datalist id="wi-transporters">
-              {transporterOptions.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
           </div>
 
           <div>
             <label className={labelCls}>처리자</label>
-            <input
-              list="wi-processors"
+            <SearchSelect
+              ariaLabel="처리자"
+              options={processorOptions.map((o) => ({ value: o, label: o }))}
               value={processorName}
-              onChange={(e) => setProcessorName(e.target.value)}
-              placeholder="처리 업체"
-              className={inputCls}
+              onChange={setProcessorName}
+              placeholder="검색 또는 직접 입력"
+              allowFree
             />
-            <datalist id="wi-processors">
-              {processorOptions.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
           </div>
 
           <div>
             <label className={labelCls}>하차지</label>
-            <input
-              list="wi-unloading-points"
+            <SearchSelect
+              ariaLabel="하차지"
+              options={unloadingPointOptions.map((o) => ({ value: o, label: o }))}
               value={unloadingPoint}
-              onChange={(e) => setUnloadingPoint(e.target.value)}
-              placeholder="투플러스 / 주원 / 도솔환경산업 등"
-              className={inputCls}
+              onChange={setUnloadingPoint}
+              placeholder="검색 또는 직접 입력"
+              allowFree
             />
-            <datalist id="wi-unloading-points">
-              {unloadingPointOptions.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
           </div>
 
 
