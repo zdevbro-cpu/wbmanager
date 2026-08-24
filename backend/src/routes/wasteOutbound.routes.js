@@ -11,6 +11,34 @@ const router = Router();
 const OMIT = ['id', 'createdAt', 'deletedAt', 'project', 'item', 'buyer', 'attachments'];
 const editable = (body) => Object.fromEntries(Object.entries(body).filter(([k]) => !OMIT.includes(k)));
 
+// 반출에 적은 운반비를 운반비 관리(Transport)에도 한 건으로 남긴다.
+// 손익의 운반비는 Transport 표만 합산하기 때문에, 여기서 만들어 두지 않으면
+// 현장이 적은 운반비가 원가에 잡히지 않는다. 반출 건을 고치면 같이 고쳐지고,
+// 운반비를 지우거나 반출을 삭제하면 짝이 된 건도 걷어낸다.
+async function syncTransportCost(tx, row) {
+  const cost = Number(row.transportCost ?? 0);
+  const existing = await tx.transport.findUnique({ where: { wasteOutboundId: row.id } });
+
+  if (cost > 0) {
+    const data = {
+      projectId: row.projectId,
+      transportDate: row.outboundDate,
+      vehicleNo: row.vehicleNo,
+      vehicleType: row.vehicleType,
+      origin: row.loadingPoint,
+      destination: row.unloadingPoint,
+      weight: row.weight,
+      supplyAmount: cost,
+      wasteOutboundId: row.id,
+    };
+    if (existing) await tx.transport.update({ where: { id: existing.id }, data });
+    else await tx.transport.create({ data });
+    return;
+  }
+
+  if (existing) await tx.transport.delete({ where: { id: existing.id } });
+}
+
 router.get('/', async (req, res) => {
   const {
     projectId,
@@ -128,6 +156,7 @@ router.post('/', async (req, res) => {
         tx,
       );
     }
+    await syncTransportCost(tx, created);
     return created;
   });
 
@@ -144,6 +173,7 @@ router.post('/', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const deleted = await prisma.$transaction(async (tx) => {
     await tx.inventoryLedger.deleteMany({ where: { refType: 'waste_outbound', refId: req.params.id } });
+    await tx.transport.deleteMany({ where: { wasteOutboundId: req.params.id } });
     return tx.wasteOutbound.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });
   });
   res.json(deleted);
@@ -219,6 +249,7 @@ router.patch('/:id', async (req, res) => {
         tx,
       );
     }
+    await syncTransportCost(tx, row);
     return row;
   });
 
