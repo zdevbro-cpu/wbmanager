@@ -287,6 +287,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             실중량 = 총중량 − 공차중량 · 정산중량 = 총중량 − 공차중량 − 감량
           </p>
 
+          {/* 공급가액 · 구분 · 입금일 · 직납을 한 줄에 둔다. */}
           <div>
             <label className={labelCls}>공급가액(원)</label>
             <NumberInput
@@ -297,13 +298,6 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             <p className="mt-1 text-[12px] text-text-faint">비우면 정산중량 × 단가</p>
           </div>
 
-          <p className="col-span-4 text-[13px] text-text-sub">
-            공급가액: <span className="tabular font-bold text-text-strong">{formatNumber(amountNum)}</span> 원
-            <span className="mx-2 text-text-faint">/</span>
-            부가세: <span className="tabular font-bold text-text-strong">{formatNumber(vatNum)}</span> 원
-          </p>
-
-          {/* 구분 · 입금일 · 직납을 한 줄에 둔다. */}
           <div>
             <label className={labelCls}>구분</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
@@ -336,6 +330,12 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
               직납
             </label>
           </div>
+
+          <p className="col-span-4 text-[13px] text-text-sub">
+            공급가액: <span className="tabular font-bold text-text-strong">{formatNumber(amountNum)}</span> 원
+            <span className="mx-2 text-text-faint">/</span>
+            부가세: <span className="tabular font-bold text-text-strong">{formatNumber(vatNum)}</span> 원
+          </p>
 
           <p className="col-span-4 text-[12px] text-text-faint">
             구분은 집계·보고서에서 묶어 보기 위한 분류입니다. 금액 계산에는 쓰이지 않습니다.
