@@ -283,6 +283,10 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             <NumberInput value={unitPrice} onChange={setUnitPrice} />
           </div>
 
+          <p className="col-span-4 text-[12.5px] text-text-faint">
+            실중량 = 총중량 − 공차중량 · 정산중량 = 총중량 − 공차중량 − 감량
+          </p>
+
           <div>
             <label className={labelCls}>공급가액(원)</label>
             <NumberInput
@@ -292,10 +296,6 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             />
             <p className="mt-1 text-[12px] text-text-faint">비우면 정산중량 × 단가</p>
           </div>
-
-          <p className="col-span-4 text-[12.5px] text-text-faint">
-            실중량 = 총중량 − 공차중량 · 정산중량 = 총중량 − 공차중량 − 감량
-          </p>
 
           <p className="col-span-4 text-[13px] text-text-sub">
             공급가액: <span className="tabular font-bold text-text-strong">{formatNumber(amountNum)}</span> 원
