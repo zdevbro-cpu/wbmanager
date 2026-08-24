@@ -18,6 +18,8 @@ const CATEGORIES: { id: string; label: string; groups: { group: string; hint: st
       { group: '하차지', hint: '폐기물 입고 등록' },
       { group: '차종', hint: '전 계근 등록 화면' },
       { group: '거래 구분', hint: '출고/이동/보류/기타' },
+      { group: '처리자', hint: '폐기물 입고·반출 등록' },
+      { group: '작업자', hint: '공수 등록' },
     ],
   },
   {
