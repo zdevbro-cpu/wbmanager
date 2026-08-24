@@ -93,6 +93,8 @@ const sortedTrainings = (emp: Employee) =>
   byUrgency(emp.trainings ?? [], (t) => t.nextDueDate ?? t.trainingDate);
 
 
+export const EMPLOYMENT_TYPES = ['정규직', '프리랜서', '현장직', '타사직원'];
+
 export function EmployeeManagementPage({ embedded = false }: { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [open, setOpen] = useState(false);
@@ -134,6 +136,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
               <th className={thCls}>성명</th>
               <th className={thCls}>연락처</th>
               <th className={thCls}>회사명</th>
+              <th className={thCls}>구분</th>
               <th className={thCls}>부서/직급</th>
               <th className={thCls}>입사일</th>
               <th className={thCls}>자격사항(만료일)</th>
@@ -148,6 +151,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                 <td className={tdCls}>{emp.name}</td>
                 <td className={`${tdCls} tabular`}>{emp.phone ?? '-'}</td>
                 <td className={tdCls}>{emp.companyName ?? '-'}</td>
+                <td className={tdCls}>{emp.employmentType ?? '-'}</td>
                 <td className={tdCls}>{[emp.department, emp.position].filter(Boolean).join(' / ') || '-'}</td>
                 <td className={`${tdCls} tabular`}>{emp.hireDate ? emp.hireDate.slice(0, 10) : '-'}</td>
                 <td className={`${tdCls} whitespace-nowrap`}>
@@ -212,7 +216,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
             ))}
             {employees.length === 0 && (
               <tr>
-                <td className={`${tdCls} text-text-faint`} colSpan={9}>
+                <td className={`${tdCls} text-text-faint`} colSpan={10}>
                   등록된 임직원이 없습니다.
                 </td>
               </tr>
@@ -251,6 +255,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [employmentType, setEmploymentType] = useState('정규직');
   const [department, setDepartment] = useState('');
   const [position, setPosition] = useState('');
   const [hireDate, setHireDate] = useState('');
@@ -262,6 +267,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
   const reset = () => {
     setName('');
     setPhone('');
+    setEmploymentType('정규직');
     setDepartment('');
     setPosition('');
     setHireDate('');
@@ -279,6 +285,7 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
         name,
         phone: phone || undefined,
         companyName: companyName || undefined,
+        employmentType: employmentType || undefined,
         department: department || undefined,
         position: position || undefined,
         hireDate: hireDate || undefined,
@@ -331,6 +338,21 @@ function EmployeeForm({ onCreated }: { onCreated: () => void }) {
                 placeholder="010-0000-0000"
                 className={inputCls}
               />
+            </div>
+            <div className="flex-1">
+              {/* 공수표·인건비 집계에서 갈라 보는 값이다. */}
+              <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">고용 구분</label>
+              <select
+                value={employmentType}
+                onChange={(e) => setEmploymentType(e.target.value)}
+                className={inputCls}
+              >
+                {EMPLOYMENT_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

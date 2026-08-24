@@ -72,6 +72,8 @@ export const AREAS: Area[] = [
           { to: '/ledger', label: '통합 원장 조회', icon: ListTree },
           { to: '/aggregation', label: '자동집계 현황', icon: BarChart3 },
           { to: '/inventory', label: '재고 / 재고평가', icon: Boxes },
+          { to: '/transports', label: '운반비 관리', icon: Truck },
+          { to: '/labors', label: '공수표 관리', icon: Users },
           { to: '/pnl', label: '손익보고서', icon: TrendingUp },
           { to: '/daily-report', label: '출고보고서', icon: FileText },
         ],

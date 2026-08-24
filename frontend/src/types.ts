@@ -381,6 +381,7 @@ export interface EmployeeTraining {
 }
 
 export interface Employee {
+  employmentType?: string | null;
   id: string;
   empCode?: string | null; // 자동 채번 사번 — 근태 QR 식별자
   name: string;

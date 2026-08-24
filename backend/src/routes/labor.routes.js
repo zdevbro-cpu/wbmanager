@@ -22,4 +22,20 @@ router.post('/', async (req, res) => {
   res.status(201).json(row);
 });
 
+router.patch('/:id', async (req, res) => {
+  const body = { ...req.body };
+  delete body.id;
+  delete body.project;
+  const row = await prisma.labor.update({
+    where: { id: req.params.id },
+    data: { ...body, ...(body.workDate ? { workDate: toISO(body.workDate) } : {}) },
+  });
+  res.json(row);
+});
+
+router.delete('/:id', async (req, res) => {
+  await prisma.labor.delete({ where: { id: req.params.id } });
+  res.status(204).end();
+});
+
 export default router;
