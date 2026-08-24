@@ -228,8 +228,8 @@ export function AssetManagementPage() {
           <thead>
             <tr className="border-y border-border">
               <th className={thCls}>자산번호</th>
-              <th className={thCls}>구분</th>
-              <th className={thCls}>유형</th>
+              <th className={`${thCls} whitespace-nowrap`}>구분</th>
+              <th className={`${thCls} whitespace-nowrap`}>유형</th>
               <th className={thCls}>분류</th>
               <th className={thCls}>자산명</th>
               <th className={thCls}>모델/규격</th>
@@ -249,10 +249,10 @@ export function AssetManagementPage() {
               return (
                 <tr key={a.id} className={trCls}>
                   <td className={`${tdCls} tabular whitespace-nowrap`}>{a.assetNo}</td>
-                  <td className={tdCls}>
+                  <td className={`${tdCls} whitespace-nowrap`}>
                     <Badge tone={a.isCompanyAsset === false ? 'slate' : 'blue'}>{COMPANY_LABEL(a.isCompanyAsset)}</Badge>
                   </td>
-                  <td className={tdCls}>
+                  <td className={`${tdCls} whitespace-nowrap`}>
                     <span className="inline-flex items-center gap-1">
                       {a.assetType === 'VEHICLE' ? <Car size={13} /> : <Wrench size={13} />}
                       {a.assetType === 'VEHICLE' ? '차량' : '장비'}
@@ -263,8 +263,8 @@ export function AssetManagementPage() {
                   <td className={tdCls}>{show(a.modelName ?? a.equipment?.spec)}</td>
                   <td className={`${tdCls} whitespace-nowrap`}>{show(a.vehicle?.plateNo ?? a.serialNo)}</td>
                   <td className={tdCls}>{show(a.ownershipType)}</td>
-                  <td className={tdCls}>{show(a.ownerDept)}</td>
-                  <td className={tdCls}>{show(a.manager?.name)}</td>
+                  <td className={`${tdCls} whitespace-nowrap`}>{show(a.ownerDept)}</td>
+                  <td className={`${tdCls} whitespace-nowrap`}>{show(a.manager?.name)}</td>
                   <td className={tdCls}>{show(a.location)}</td>
                   <td className={tdCls}>
                     <Badge tone={STATUS_TONE[a.status] ?? 'slate'}>{a.status}</Badge>
