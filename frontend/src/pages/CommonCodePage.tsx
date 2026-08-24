@@ -17,7 +17,6 @@ const CATEGORIES: { id: string; label: string; groups: { group: string; hint: st
       { group: '상차지', hint: '출고·폐기물 반출 등록' },
       { group: '하차지', hint: '폐기물 입고 등록' },
       { group: '차종', hint: '전 계근 등록 화면' },
-      { group: '거래 구분', hint: '출고/이동/보류/기타' },
       { group: '처리자', hint: '폐기물 입고·반출 등록' },
       { group: '작업자', hint: '공수 등록' },
     ],
@@ -47,6 +46,7 @@ const CATEGORIES: { id: string; label: string; groups: { group: string; hint: st
     groups: [
       { group: '정산주기', hint: '프로젝트 등록' },
       { group: '제출서류 종류', hint: '첨부파일 분류' },
+      { group: '거래 구분', hint: '출고/이동/보류/기타' },
     ],
   },
 ];
