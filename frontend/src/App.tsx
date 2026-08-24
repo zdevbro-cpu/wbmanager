@@ -16,6 +16,8 @@ import { EntryPage } from './pages/EntryPage';
 import { LedgerPage } from './pages/LedgerPage';
 import { AggregationPage } from './pages/AggregationPage';
 import { DailyReportPage } from './pages/DailyReportPage';
+import { TransportCostPage } from './pages/TransportCostPage';
+import { LaborPage } from './pages/LaborPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { PnlPage } from './pages/PnlPage';
 import { WasteManagementPage } from './pages/WasteManagementPage';
@@ -46,6 +48,8 @@ function Gate() {
         {/* 보고서 보관함(보기)과 일일 출고보고(발행)는 같은 화면을 쓰고 경로로 갈린다. */}
         <Route path="/reports" element={<DailyReportPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
+        <Route path="/transports" element={<TransportCostPage />} />
+        <Route path="/labors" element={<LaborPage />} />
         <Route path="/pnl" element={<PnlPage />} />
         <Route path="/waste" element={<WasteManagementPage />} />
         <Route path="/assets" element={<AssetManagementPage />} />
