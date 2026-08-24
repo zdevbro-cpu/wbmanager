@@ -289,6 +289,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             부가세: <span className="tabular font-bold text-text-strong">{formatNumber(vatNum)}</span> 원
           </p>
 
+          {/* 구분 · 입금일 · 직납을 한 줄에 둔다. */}
           <div>
             <label className={labelCls}>구분</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
@@ -299,24 +300,32 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-[12px] text-text-faint">
-              집계·보고서에서 묶어 보기 위한 분류입니다. 금액 계산에는 쓰이지 않습니다.
-            </p>
           </div>
+
           <div>
             <label className={labelCls}>입금일</label>
             <DateField value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className={inputCls} />
           </div>
 
-          <label className="flex items-end gap-2 pb-2 text-[13px] font-semibold text-text-mid">
-            <input
-              type="checkbox"
-              checked={isSubsidiary}
-              onChange={(e) => setIsSubsidiary(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            자회사 출고
-          </label>
+          <div>
+            <span className="mb-1.5 block text-[13px] font-semibold text-transparent select-none" aria-hidden>
+              직납
+            </span>
+            {/* 야적장을 거치지 않고 현장에서 매각처로 바로 보낸 건 */}
+            <label className="inline-flex h-[38px] items-center gap-2 text-[13px] font-semibold text-text-mid">
+              <input
+                type="checkbox"
+                checked={isSubsidiary}
+                onChange={(e) => setIsSubsidiary(e.target.checked)}
+                className="h-4 w-4 accent-primary"
+              />
+              직납
+            </label>
+          </div>
+
+          <p className="col-span-4 text-[12px] text-text-faint">
+            구분은 집계·보고서에서 묶어 보기 위한 분류입니다. 금액 계산에는 쓰이지 않습니다.
+          </p>
 
           <div className="col-span-4">
             <label className={labelCls}>비고(특이사항)</label>
