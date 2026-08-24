@@ -286,6 +286,15 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
             <NumberInput value={actualWeight} onChange={setActualWeight} decimals={3} />
             <p className="mt-1 text-[12px] text-text-faint">비우면 총중량 − 공차중량</p>
           </div>
+          <div>
+            <label className={labelCls}>정산중량(kg)</label>
+            <NumberInput value={settledWeight} onChange={setSettledWeight} decimals={3} />
+            <p className="mt-1 text-[12px] text-text-faint">비우면 입고량</p>
+          </div>
+          <div>
+            <label className={labelCls}>루베 적용(㎥)</label>
+            <NumberInput value={cubicMeter} onChange={setCubicMeter} decimals={3} />
+          </div>
 
           <VehicleDriverFields
             vehicleType={vehicleType}
@@ -297,15 +306,6 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
             driverPhone={driverPhone}
             setDriverPhone={setDriverPhone}
           />
-          <div>
-            <label className={labelCls}>정산중량(kg)</label>
-            <NumberInput value={settledWeight} onChange={setSettledWeight} decimals={3} />
-            <p className="mt-1 text-[12px] text-text-faint">비우면 입고량</p>
-          </div>
-          <div>
-            <label className={labelCls}>루베 적용(㎥)</label>
-            <NumberInput value={cubicMeter} onChange={setCubicMeter} decimals={3} />
-          </div>
           <p className="col-span-4 text-[13px] text-text-sub">
             입고량(자동계산): <span className="tabular font-bold text-text-strong">{netWeight}</span> kg
             <span className="ml-1 text-text-faint">= 총중량 − 공차중량 − 감량</span>
