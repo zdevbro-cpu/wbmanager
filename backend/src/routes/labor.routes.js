@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { toISO } from '../lib/date.js';
+import { rememberCodes } from '../lib/rememberCodes.js';
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.post('/', async (req, res) => {
   const row = await prisma.labor.create({
     data: { ...req.body, workDate: toISO(workDate) },
   });
+  await rememberCodes([['작업자', req.body.workerName]]);
   res.status(201).json(row);
 });
 
@@ -30,6 +32,7 @@ router.patch('/:id', async (req, res) => {
     where: { id: req.params.id },
     data: { ...body, ...(body.workDate ? { workDate: toISO(body.workDate) } : {}) },
   });
+  await rememberCodes([['작업자', req.body.workerName]]);
   res.json(row);
 });
 
