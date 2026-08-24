@@ -295,6 +295,16 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
             />
           </div>
 
+          <div className="col-span-4">
+            <MasterSelect
+              label="제품명(품목)"
+              options={items.map((i) => ({ value: i.itemCode, label: `${i.itemName} (${i.itemCode})`, isTemporary: i.isTemporary }))}
+              value={itemCode}
+              onChange={setItemCode}
+              onQuickCreate={quickCreateItem}
+            />
+          </div>
+
           <VehicleDriverFields
             vehicleType={vehicleType}
             setVehicleType={setVehicleType}
@@ -307,15 +317,6 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
           />
 
 
-          <div className="col-span-4">
-            <MasterSelect
-              label="제품명(품목)"
-              options={items.map((i) => ({ value: i.itemCode, label: `${i.itemName} (${i.itemCode})`, isTemporary: i.isTemporary }))}
-              value={itemCode}
-              onChange={setItemCode}
-              onQuickCreate={quickCreateItem}
-            />
-          </div>
 
           <div>
             <label className={labelCls}>공차중량(kg)</label>
