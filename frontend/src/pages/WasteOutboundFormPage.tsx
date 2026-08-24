@@ -285,6 +285,16 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
             </datalist>
           </div>
 
+          <div className="col-span-2">
+            <MasterSelect
+              label="처리자(거래처·폐기물업체)"
+              options={vendors.map((v) => ({ value: v.id, label: v.name, isTemporary: v.isTemporary }))}
+              value={buyerId}
+              onChange={setBuyerId}
+              onQuickCreate={quickCreateVendor}
+            />
+          </div>
+
           <VehicleDriverFields
             vehicleType={vehicleType}
             setVehicleType={setVehicleType}
@@ -296,15 +306,6 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
             setDriverPhone={setDriverPhone}
           />
 
-          <div className="col-span-2">
-            <MasterSelect
-              label="처리자(거래처·폐기물업체)"
-              options={vendors.map((v) => ({ value: v.id, label: v.name, isTemporary: v.isTemporary }))}
-              value={buyerId}
-              onChange={setBuyerId}
-              onQuickCreate={quickCreateVendor}
-            />
-          </div>
 
           <div className="col-span-4">
             <MasterSelect
