@@ -256,16 +256,6 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
             </datalist>
           </div>
 
-          <VehicleDriverFields
-            vehicleType={vehicleType}
-            setVehicleType={setVehicleType}
-            vehicleNo={vehicleNo}
-            setVehicleNo={setVehicleNo}
-            driverName={driverName}
-            setDriverName={setDriverName}
-            driverPhone={driverPhone}
-            setDriverPhone={setDriverPhone}
-          />
 
           <div className="col-span-2">
             <MasterSelect
@@ -296,6 +286,17 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
             <label className={labelCls}>재고반영중량(kg)</label>
             <NumberInput value={stockWeightValue} onChange={setStockWeight} decimals={3} />
           </div>
+
+          <VehicleDriverFields
+            vehicleType={vehicleType}
+            setVehicleType={setVehicleType}
+            vehicleNo={vehicleNo}
+            setVehicleNo={setVehicleNo}
+            driverName={driverName}
+            setDriverName={setDriverName}
+            driverPhone={driverPhone}
+            setDriverPhone={setDriverPhone}
+          />
 
           <p className="col-span-4 text-[13px] text-text-sub">
             입고량(자동계산): <span className="tabular font-bold text-text-strong">{netWeight}</span> kg
