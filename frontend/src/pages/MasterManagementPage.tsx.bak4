@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Settings, Building2, Package, Plus, Eye, Trash2, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
 import { CommonCodePage } from './CommonCodePage';
-import { ExternalVehicleSection } from '../components/ExternalVehicleSection';
 import { useVendors, useItemMasters } from '../hooks/useMasters';
 import { Badge } from '../components/ui/Badge';
 import { FormModal } from '../components/FormModal';
@@ -38,7 +37,7 @@ const iconBtnCls = 'rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-te
 // 공통코드와 한 화면에 있으면 목록이 길어질수록 아래로 밀려서 별도 탭으로 분리했다.
 // 마스터 관리 — 거래처·품목·공통코드를 기능별 탭으로 나눈다.
 // 한 화면에 모아 두면 목록이 길어질수록 아래 것이 밀려 내려가 찾기 어려워진다.
-type MasterTab = 'vendors' | 'items' | 'codes' | 'vehicles';
+type MasterTab = 'vendors' | 'items' | 'codes';
 
 export function MasterManagementPage({ embedded = false }: { embedded?: boolean }) {
   const { vendors, reload: reloadVendors } = useVendors();
@@ -64,14 +63,9 @@ export function MasterManagementPage({ embedded = false }: { embedded?: boolean 
         <MasterTabButton active={tab === 'codes'} onClick={() => setTab('codes')}>
           공통코드
         </MasterTabButton>
-        <MasterTabButton active={tab === 'vehicles'} onClick={() => setTab('vehicles')}>
-          계근 차량
-        </MasterTabButton>
       </div>
 
-      {tab === 'vehicles' ? (
-        <ExternalVehicleSection />
-      ) : tab === 'codes' ? (
+      {tab === 'codes' ? (
         <div>
           <p className="mb-4 text-[13px] text-text-sub">
             등록 화면에서 반복 입력되는 값 목록입니다. 기록 시점의 문자열로 저장되므로, 여기서 지워도 과거 데이터는 그대로
