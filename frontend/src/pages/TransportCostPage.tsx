@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Truck, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
-import { useProjects } from '../hooks/useMasters';
+import { useProjects, useVehicles, useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FilterField } from '../components/FilterField';
 import { SearchSelect } from '../components/SearchSelect';
@@ -15,7 +15,6 @@ import {
   cardPadCls,
   primaryBtnCls,
   outlineBtnCls,
-  inputCls,
   tableWrapCls,
   thCls,
   thNumCls,
@@ -197,6 +196,18 @@ function TransportForm({
   const [error, setError] = useState('');
 
   const set = (patch: Partial<typeof f>) => setF({ ...f, ...patch });
+
+  // 차량번호는 차량등록관리에서, 차종·상차지·하차지는 공통코드에서 가져온다.
+  // 목록에 없으면 그대로 적어 넣을 수 있고, 저장하면 다음부터 목록에 나온다.
+  const { vehicles } = useVehicles();
+  const { labels: vehicleTypes } = useCommonCodes('차종');
+  const { labels: origins } = useCommonCodes('상차지');
+  const { labels: destinations } = useCommonCodes('하차지');
+
+  const pickVehicle = (no: string) => {
+    const vehicle = vehicles.find((v) => v.vehicleNo === no);
+    set({ vehicleNo: no, ...(vehicle?.vehicleType ? { vehicleType: vehicle.vehicleType } : {}) });
+  };
   // 세액을 비워 두면 공급가액의 10%로 채운다 — 세금계산서와 맞추기 위해서다.
   const tax = f.taxAmount !== '' ? Number(f.taxAmount) : f.supplyAmount ? Math.round(Number(f.supplyAmount) * 0.1) : 0;
 
@@ -252,22 +263,50 @@ function TransportForm({
 
         <div>
           <label className={labelCls}>차량번호</label>
-          <input value={f.vehicleNo} onChange={(e) => set({ vehicleNo: e.target.value })} className={inputCls} />
+          <SearchSelect
+            ariaLabel="차량번호"
+            options={vehicles.map((v) => ({ value: v.vehicleNo, label: v.vehicleNo }))}
+            value={f.vehicleNo}
+            onChange={pickVehicle}
+            placeholder="검색 또는 직접 입력"
+            allowFree
+          />
         </div>
 
         <div>
           <label className={labelCls}>차종</label>
-          <input value={f.vehicleType} onChange={(e) => set({ vehicleType: e.target.value })} className={inputCls} />
+          <SearchSelect
+            ariaLabel="차종"
+            options={vehicleTypes.map((t) => ({ value: t, label: t }))}
+            value={f.vehicleType}
+            onChange={(v) => set({ vehicleType: v })}
+            placeholder="검색 또는 직접 입력"
+            allowFree
+          />
         </div>
 
         <div>
           <label className={labelCls}>상차지</label>
-          <input value={f.origin} onChange={(e) => set({ origin: e.target.value })} className={inputCls} />
+          <SearchSelect
+            ariaLabel="상차지"
+            options={origins.map((t) => ({ value: t, label: t }))}
+            value={f.origin}
+            onChange={(v) => set({ origin: v })}
+            placeholder="검색 또는 직접 입력"
+            allowFree
+          />
         </div>
 
         <div>
           <label className={labelCls}>하차지</label>
-          <input value={f.destination} onChange={(e) => set({ destination: e.target.value })} className={inputCls} />
+          <SearchSelect
+            ariaLabel="하차지"
+            options={destinations.map((t) => ({ value: t, label: t }))}
+            value={f.destination}
+            onChange={(v) => set({ destination: v })}
+            placeholder="검색 또는 직접 입력"
+            allowFree
+          />
         </div>
 
         <div>
