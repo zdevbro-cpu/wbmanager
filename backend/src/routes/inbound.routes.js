@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { postInboundLedger } from '../lib/ledger.js';
 import { toISO } from '../lib/date.js';
+import { rememberCodes } from '../lib/rememberCodes.js';
 
 const router = Router();
 
@@ -81,6 +82,7 @@ router.post('/', async (req, res) => {
     return created;
   });
 
+  await rememberCodes([['하차지', req.body.unloadingPoint]]);
   res.status(201).json(inbound);
 });
 
@@ -126,6 +128,7 @@ router.patch('/:id', async (req, res) => {
     return row;
   });
 
+  await rememberCodes([['하차지', patch.unloadingPoint]]);
   res.json(updated);
 });
 

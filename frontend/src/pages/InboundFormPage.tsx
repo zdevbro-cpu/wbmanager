@@ -3,7 +3,7 @@ import { Truck, CheckCircle2, AlertTriangle, ScanLine } from 'lucide-react';
 import { api, API_BASE_URL } from '../api/client';
 import { registerVehicleAfterSave } from '../lib/vehicleRegister';
 import { auth } from '../lib/firebase';
-import { useProjects, useItemMasters } from '../hooks/useMasters';
+import { useProjects, useItemMasters, useCommonCodes } from '../hooks/useMasters';
 import { MasterSelect } from '../components/MasterSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
 import { FileUpload } from '../components/FileUpload';
@@ -54,6 +54,7 @@ const OCR_LABEL: Record<keyof OcrFields, string> = {
 export function InboundFormPage({ embedded = false, onCreated, record = null, onSaved }: Props = {}) {
   const { projects } = useProjects();
   const { items, quickCreate: quickCreateItem } = useItemMasters();
+  const { labels: unloadingPointOptions } = useCommonCodes('하차지');
   const isEdit = !!record;
 
   const [projectId, setProjectId] = useState(record?.projectId ?? '');
@@ -240,12 +241,19 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
 
           <div>
             <label className={labelCls}>하차지</label>
+            {/* 등록할 때 적은 값은 저장 시 하차지 목록에 쌓여, 다음부터 골라 쓸 수 있다. */}
             <input
+              list="in-unloading-points"
               value={unloadingPoint}
               onChange={(e) => setUnloadingPoint(e.target.value)}
               placeholder="원방 / 세화철강 / 선진알앤디 등"
               className={inputCls}
             />
+            <datalist id="in-unloading-points">
+              {unloadingPointOptions.map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
           </div>
 
           <VehicleDriverFields
