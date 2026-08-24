@@ -65,9 +65,10 @@ export function VehicleDriverFields({
     !employees.some((e) => e.name === driverName.trim()) &&
     !drivers.some((d) => d.name === driverName.trim());
 
-  // 2열 그리드의 셀로 그대로 들어가도록 각 항목을 독립 블록으로 내보낸다.
+  // 차량번호·차종·운전자·연락처는 항상 한 줄로 붙어 다닌다.
+  // 앞에 놓인 칸 수와 상관없이 같은 줄에 서도록 4열 그리드를 통째로 차지한다.
   return (
-    <>
+    <div className="col-span-4 grid grid-cols-4 gap-x-3 gap-y-3.5">
       <div>
         <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">차량번호</label>
         {/* 목록에서 고르거나 직접 적는다. 새 번호는 이 건을 저장할 때 차량 목록에 올라간다. */}
@@ -134,6 +135,6 @@ export function VehicleDriverFields({
         />
       </div>
 
-    </>
+    </div>
   );
 }
