@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Plus, Paperclip, Eye, Trash2, X, RotateCcw, Download, type LucideIcon } from 'lucide-react';
 import { useProjects, useItemMasters, useVehicles, useEmployees } from '../hooks/useMasters';
 import { useEscapeClose } from '../hooks/useEscapeClose';
@@ -120,6 +120,15 @@ export function TransactionListLayout<T>({
   const { employees } = useEmployees();
   const [detail, setDetail] = useState<T | null>(null);
   const [detailEdit, setDetailEdit] = useState(false);
+
+  // 수정 후 목록이 새로 오면 열려 있는 상세도 새 값으로 갈아 끼운다.
+  // 이걸 하지 않으면 저장은 됐는데 상세에는 옛 값이 남아 반영이 안 된 것처럼 보인다.
+  useEffect(() => {
+    if (!detail) return;
+    const fresh = rows.find((r) => rowKey(r) === rowKey(detail));
+    if (fresh && fresh !== detail) setDetail(fresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
 
   // 마스터 목록과 화면에 실제로 들어온 값을 합쳐 후보로 쓴다. 수기로 넣은
   // 차량번호처럼 마스터에 없는 값도 검색할 수 있어야 한다.
