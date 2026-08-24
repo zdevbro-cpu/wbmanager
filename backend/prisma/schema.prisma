@@ -345,6 +345,8 @@ model OutboundSale {
   vatAmount        Decimal?   @map("vat_amount") @db.Decimal(14, 2) // 부가세
   category         String?    @map("category") // 구분: 출고/보류/기타
   isSubsidiary     Boolean    @default(false) @map("is_subsidiary") // 자회사 출고 여부
+  // 직납 — 야적장을 거치지 않고 현장에서 바로 매각한 건. 반입량 집계를 위해 입고를 함께 만들고 그 id를 여기 남긴다.
+  directInboundId String? @map("direct_inbound_id")
   memo             String?    @map("memo") // 비고(특이사항)
   taxInvoiceIssued Boolean    @default(false) @map("tax_invoice_issued")
   isPaid           Boolean    @default(false) @map("is_paid")
