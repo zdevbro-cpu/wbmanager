@@ -325,6 +325,11 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
 
           <p className="col-span-4 text-[12px] text-text-faint">
             구분은 집계·보고서에서 묶어 보기 위한 분류입니다. 금액 계산에는 쓰이지 않습니다.
+            {isSubsidiary && (
+              <span className="ml-1 text-primary">
+                직납으로 저장하면 같은 날·같은 물량의 입고가 함께 만들어집니다(재고 증감 없음).
+              </span>
+            )}
           </p>
 
           <div className="col-span-4">
