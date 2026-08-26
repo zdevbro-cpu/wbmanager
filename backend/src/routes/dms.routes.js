@@ -178,6 +178,23 @@ router.delete('/types/:id', async (req, res) => {
   const node = await prisma.documentType.findUnique({ where: { id: req.params.id } });
   if (!node) return res.status(404).json({ error: '분류를 찾을 수 없습니다.' });
 
+  // 업무 화면에서 만들어진 문서가 자동으로 들어가는 자리다. 지우면 그 연계가 조용히 끊긴다.
+  if (node.isSystem) {
+    return res.status(400).json({ error: '기본 분류는 삭제할 수 없습니다. 이름 변경과 하위 분류 추가는 가능합니다.' });
+  }
+
+  // 하위에 기본 분류가 섞여 있으면 통째로 지워지는 것도 막는다.
+  const kidsAll = await prisma.documentType.findMany({ where: { parentId: node.id }, select: { id: true } });
+  const grandAll = kidsAll.length
+    ? await prisma.documentType.findMany({ where: { parentId: { in: kidsAll.map((k) => k.id) } }, select: { id: true } })
+    : [];
+  const systemInside = await prisma.documentType.count({
+    where: { id: { in: [...kidsAll.map((k) => k.id), ...grandAll.map((g) => g.id)] }, isSystem: true },
+  });
+  if (systemInside > 0) {
+    return res.status(400).json({ error: `하위에 기본 분류 ${systemInside}개가 있어 삭제할 수 없습니다.` });
+  }
+
   // 자기 자신과 후손 전체를 모은다(3단 고정이라 두 번만 내려가면 된다).
   const kids = await prisma.documentType.findMany({ where: { parentId: node.id }, select: { id: true } });
   const grandKids = kids.length
