@@ -18,6 +18,7 @@ import {
   X,
   Save,
   PackageCheck,
+  Lock,
 } from 'lucide-react';
 import { api, API_BASE_URL } from '../api/client';
 import { auth } from '../lib/firebase';
@@ -38,6 +39,8 @@ export interface DocType {
   name: string;
   docCount: number;
   origin: string;
+  /** 업무 화면에서 만들어진 문서가 자동으로 들어가는 자리 — 삭제할 수 없다. */
+  isSystem?: boolean;
   retentionMonths: number | null;
   children: DocType[];
 }
@@ -405,6 +408,9 @@ export function DmsPage() {
               <Folder size={14} className={`shrink-0 ${style.icon}`} />
             )}
             <span className={`truncate ${style.text}`}>{node.name}</span>
+            {node.isSystem && (
+              <Lock size={11} className="shrink-0 text-text-faint" aria-label="기본 분류 — 삭제할 수 없음" />
+            )}
             {node.docCount > 0 && <span className="shrink-0 text-[11.5px] text-text-faint">{node.docCount}</span>}
           </button>
 
@@ -434,14 +440,17 @@ export function DmsPage() {
                 <Plus size={13} />
               </button>
             )}
-            <button
-              type="button"
-              title="분류 삭제"
-              onClick={() => removeType(node)}
-              className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-danger"
-            >
-              <Trash2 size={13} />
-            </button>
+            {/* 기본 분류는 지울 수 없다. 서버에서도 막지만 버튼부터 두지 않는다. */}
+            {!node.isSystem && (
+              <button
+                type="button"
+                title="분류 삭제"
+                onClick={() => removeType(node)}
+                className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-danger"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
           </div>
         </div>
 

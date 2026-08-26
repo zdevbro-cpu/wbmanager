@@ -785,6 +785,9 @@ model DocumentType {
   requirePhysicalCopy Boolean  @default(false) @map("require_physical_copy")
   defaultAclLevel     String?  @map("default_acl_level")
   origin              String   @default("UPLOAD") @map("origin") // SYSTEM / UPLOAD
+  // 업무 화면에서 만들어진 문서가 자동으로 들어가는 자리. 지워지면 그 연계가 끊기므로 삭제를 막는다.
+  // 이름 변경과 하위 추가는 그대로 허용한다.
+  isSystem            Boolean  @default(false) @map("is_system")
   isActive            Boolean  @default(true) @map("is_active")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
