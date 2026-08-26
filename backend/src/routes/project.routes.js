@@ -7,8 +7,12 @@ const router = Router();
 const num = (v) => (v === '' || v == null ? undefined : Number(v));
 
 // 프로젝트 코드 자동 채번 — P-{연도}-{3자리}
+// 계약 시작일을 비우면 빈 문자열이 온다. 그대로 날짜로 읽으면 연도가 NaN이 되어
+// P-NaN-001 같은 코드가 붙으므로, 읽히지 않는 값은 오늘 연도로 매긴다.
 async function nextProjectCode(tx, startDate) {
-  const year = String(new Date(startDate ?? Date.now()).getFullYear());
+  const parsed = startDate ? new Date(startDate) : null;
+  const base = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date();
+  const year = String(base.getFullYear());
   const prefix = `P-${year}-`;
   const last = await tx.project.findFirst({
     where: { projectCode: { startsWith: prefix } },
