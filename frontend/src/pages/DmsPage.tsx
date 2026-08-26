@@ -12,13 +12,13 @@ import {
   Upload,
   History,
   Eye,
-  Printer,
   Paperclip,
   Check,
   X,
   Save,
   PackageCheck,
   Lock,
+  FileSearch,
 } from 'lucide-react';
 import { api, API_BASE_URL } from '../api/client';
 import { auth } from '../lib/firebase';
@@ -26,6 +26,7 @@ import { useProjects } from '../hooks/useMasters';
 import { kstStamp } from '../lib/datetime';
 import { FormModal } from '../components/FormModal';
 import { FileDropField } from '../components/FileDropField';
+import { DocumentPreview, type PreviewDoc } from '../components/DocumentPreview';
 import { StagedFileUpload } from '../components/StagedFileUpload';
 import { pageTitleCls, cardCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import { DateField } from '../components/ui/DateField';
@@ -96,6 +97,7 @@ const ACTION_LABEL: Record<string, string> = {
   doc_create: '등록',
   doc_version: '새 버전',
   doc_update: '메타 수정',
+  doc_view: '열람',
   doc_download: '내려받기',
   doc_delete: '삭제',
 };
@@ -167,116 +169,27 @@ async function downloadDoc(doc: Doc) {
 }
 
 // 인쇄 첫 장에 붙일 문서 정보 표지. 무엇을 출력한 문서인지 종이만 보고 알 수 있게 한다.
-function coverHtml(doc: Doc) {
-  const v = doc.versions[0];
-  const rows: [string, string][] = [
-    ['문서번호', doc.docNo ?? '-'],
-    ['제목', doc.title],
-    ['분류', doc.type?.name ?? '-'],
-    ['프로젝트', doc.projects.map((x) => x.name).filter(Boolean).join(', ') || '-'],
-    ['문서일자', doc.meta?.docDate ?? '-'],
-    ['등록일', day(doc.createdAt)],
-    ['버전', `v${v?.versionNo ?? 1}`],
-    ['파일', v?.fileName ?? '-'],
-    ['크기', size(v?.byteSize ?? null)],
-    ['실물 문서', doc.meta?.physicalStatus ?? '미확인'],
-    ['보관 위치', doc.meta?.physicalLocation ?? '-'],
-    ['보존 만료', doc.retentionUntil ? day(doc.retentionUntil) : '미지정'],
-    ['비고', doc.description ?? '-'],
-  ];
-  const escape = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return (
-    '<section class="cover">' +
-    `<h1>${escape(doc.title)}</h1>` +
-    `<p class="sub">${escape(doc.docNo ?? '')}</p>` +
-    '<table>' +
-    rows.map(([k, val]) => `<tr><th>${k}</th><td>${escape(String(val))}</td></tr>`).join('') +
-    '</table>' +
-    `<p class="foot">출력 ${new Date().toLocaleString('ko-KR')}</p>` +
-    '</section>'
-  );
-}
-
 // 인쇄 — 숨긴 iframe에 띄우고 브라우저 인쇄 대화상자를 연다.
 // 거기서 프린터로 뽑거나 "PDF로 저장"을 고르면 된다.
-function printBlob(blob: Blob, fileName: string, cover?: string) {
-  const isPdf = blob.type === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf');
-  const isImage = blob.type.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp)$/i.test(fileName);
-
-  const frame = document.createElement('iframe');
-  frame.style.position = 'fixed';
-  frame.style.right = '0';
-  frame.style.bottom = '0';
-  frame.style.width = '0';
-  frame.style.height = '0';
-  frame.style.border = '0';
-  document.body.appendChild(frame);
-
-  // onload와 타이머가 둘 다 걸려 인쇄 창이 두 번 뜨던 문제 — 한 번만 열리게 잠근다.
-  let opened = false;
-  const openPrint = () => {
-    if (opened) return;
-    opened = true;
-    frame.contentWindow?.focus();
-    frame.contentWindow?.print();
-    window.setTimeout(() => frame.remove(), 60_000);
-  };
-
-  // PDF는 브라우저가 원본을 그대로 인쇄한다. 표지를 앞에 끼우려면 PDF를 합쳐야 해서 여기서는 원본만 낸다.
-  if (isPdf) {
-    const url = URL.createObjectURL(blob);
-    frame.src = url;
-    frame.onload = openPrint;
-    return;
-  }
-
-  // 이미지·텍스트는 인쇄용 문서로 감싼다. 여백과 배율을 잡아 주지 않으면 잘린다.
-  const finish = (body: string) => {
-    const doc = frame.contentWindow?.document;
-    if (!doc) return;
-    doc.open();
-    doc.write(
-      `<!doctype html><html><head><meta charset="utf-8"><title>${fileName}</title>` +
-        '<style>@page{margin:12mm}body{margin:0;font-family:"맑은 고딕",sans-serif;color:#000}' +
-        'img{max-width:100%}pre{white-space:pre-wrap;word-break:break-all;font-size:12px;line-height:1.6}' +
-        // 표지 다음에 원본이 새 장에서 시작하도록 끊는다.
-        '.cover{page-break-after:always}.cover h1{font-size:20px;margin:0 0 4px}' +
-        '.cover .sub{margin:0 0 16px;color:#555;font-size:12px}' +
-        '.cover table{width:100%;border-collapse:collapse;font-size:12px}' +
-        '.cover th{width:110px;text-align:left;padding:6px 8px;background:#f2f2f2;border:1px solid #ddd;font-weight:600}' +
-        '.cover td{padding:6px 8px;border:1px solid #ddd}' +
-        '.cover .foot{margin-top:14px;color:#777;font-size:11px}' +
-        `</style></head><body>${cover ?? ''}${body}</body></html>`,
-    );
-    doc.close();
-    // document.write로 채운 iframe은 onload가 안 오는 경우가 있어 타이머로 연다.
-    window.setTimeout(openPrint, 300);
-  };
-
-  if (isImage) {
-    const reader = new FileReader();
-    reader.onload = () => finish(`<img src="${reader.result}" alt="${fileName}">`);
-    reader.readAsDataURL(blob);
-    return;
-  }
-
-  blob.text().then((text) => {
-    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    finish(`<pre>${escaped}</pre>`);
-  });
-}
-
 // 문서를 받아 곧바로 인쇄 미리보기를 연다. 거기서 프린터로 뽑거나 PDF로 저장한다.
-async function printDoc(doc: Doc) {
-  const token = await auth.currentUser?.getIdToken();
-  const res = await fetch(contentUrl(doc), {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) {
-    window.alert('파일을 불러오지 못했습니다.');
-    return;
-  }
-  printBlob(await res.blob(), doc.versions[0]?.fileName ?? doc.title, coverHtml(doc));
+// 미리보기 창에 넘길 값 — 화면에서 열 수 없는 형식일 때 요약으로 보여 줄 항목을 함께 담는다.
+function previewOf(doc: Doc): PreviewDoc {
+  const v = doc.versions[0];
+  return {
+    id: doc.id,
+    docNo: doc.docNo,
+    title: doc.title,
+    fileName: v?.fileName ?? (isReport(doc) ? `${doc.title}.xlsx` : null),
+    byteSize: v?.byteSize ?? null,
+    contentUrl: contentUrl(doc),
+    facts: [
+      { label: '분류', value: doc.type?.name ?? '-' },
+      { label: '프로젝트', value: doc.projects.map((x) => x.name).filter(Boolean).join(', ') || '-' },
+      { label: '문서일자', value: doc.meta?.docDate ?? '-' },
+      { label: '등록일', value: day(doc.createdAt) },
+      { label: '실물 문서', value: doc.meta?.physicalStatus ?? '미확인' },
+    ],
+  };
 }
 
 export function DmsPage() {
@@ -292,6 +205,7 @@ export function DmsPage() {
   const [uploadFor, setUploadFor] = useState<DocType | null>(null);
   const [versionFor, setVersionFor] = useState<Doc | null>(null);
   const [detailFor, setDetailFor] = useState<Doc | null>(null);
+  const [previewFor, setPreviewFor] = useState<PreviewDoc | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -711,11 +625,11 @@ export function DmsPage() {
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
-                            title="인쇄 미리보기 · PDF 저장"
-                            onClick={() => printDoc(d)}
+                            title="미리보기"
+                            onClick={() => setPreviewFor(previewOf(d))}
                             className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-primary"
                           >
-                            <Printer size={15} />
+                            <FileSearch size={15} />
                           </button>
                           {!isReport(d) && (
                             <button
@@ -781,6 +695,8 @@ export function DmsPage() {
           />
         </FormModal>
       )}
+
+      {previewFor && <DocumentPreview doc={previewFor} onClose={() => setPreviewFor(null)} />}
 
       {detailFor && (
         <FormModal title={detailFor.title} icon={Eye} onClose={() => setDetailFor(null)}>
