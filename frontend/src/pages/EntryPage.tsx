@@ -22,7 +22,7 @@ export function EntryPage() {
             W
           </div>
           <div>
-            <div className="text-[15px] font-extrabold text-text-strong">wbmanager</div>
+            <div className="text-[15px] font-extrabold text-text-strong">WBmanager</div>
             <div className="text-[11px] text-[#5f7ba6]">원방 스크랩 업무지원</div>
           </div>
         </div>
