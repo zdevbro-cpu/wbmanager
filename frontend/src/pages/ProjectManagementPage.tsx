@@ -4,6 +4,9 @@ import { api } from '../api/client';
 import { useVendors, useEmployees } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { EntityDocuments } from '../components/EntityDocuments';
+import { FileDropField } from '../components/FileDropField';
+import { StagedFileUpload } from '../components/StagedFileUpload';
+import { findDocTypeId } from '../lib/docType';
 import { FilterField, DateRangeField } from '../components/FilterField';
 import { SearchSelect } from '../components/SearchSelect';
 import { Badge } from '../components/ui/Badge';
@@ -374,6 +377,9 @@ function ProjectForm({
     status: project?.status ?? '진행',
   });
   const [vatIncluded, setVatIncluded] = useState(project?.vatIncluded ?? false);
+  // 계약서는 등록하면서 같이 받는다. 나중에 상세를 다시 열어 붙이게 하면 대개 빠뜨린다.
+  const [contractFile, setContractFile] = useState<File | null>(null);
+  const [extraFiles, setExtraFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -390,6 +396,24 @@ function ProjectForm({
     </>
   );
 
+  // 계약서를 프로젝트 문서로 붙인다. 분류는 「현장 관리 > 프로젝트(차수) > 매입계약서」로 정해져 있어 묻지 않는다.
+  // 파일이 없으면 아무 일도 하지 않는다 — 계약서가 아직 없는 채로 차수를 여는 경우가 있다.
+  const saveContract = async (projectId: string) => {
+    if (!contractFile) return;
+    const typeId = await findDocTypeId(['현장 관리', '프로젝트(차수)', '매입계약서']);
+    if (!typeId) {
+      setError('프로젝트는 등록됐지만 문서 분류를 찾지 못해 계약서를 붙이지 못했습니다. 상세에서 다시 올려 주세요.');
+      return;
+    }
+    const form = new FormData();
+    form.append('file', contractFile);
+    extraFiles.forEach((file) => form.append('attachments', file));
+    form.append('typeId', typeId);
+    form.append('title', `${f.roundName} 계약서`);
+    form.append('projectId', projectId);
+    await api.post('/api/dms/documents', form);
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!f.roundName.trim()) return;
@@ -401,8 +425,12 @@ function ProjectForm({
     setSubmitting(true);
     try {
       const payload = { ...f, vatIncluded };
-      if (project) await api.patch(`/api/projects/${project.id}`, payload);
-      else await api.post('/api/projects', payload);
+      if (project) {
+        await api.patch(`/api/projects/${project.id}`, payload);
+      } else {
+        const created = await api.post<{ id: string }>('/api/projects', payload);
+        await saveContract(created.id);
+      }
       onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 실패');
@@ -535,6 +563,18 @@ function ProjectForm({
           <label className={labelCls}>비고</label>
           <input value={f.memo} onChange={(e) => set({ memo: e.target.value })} className={inputCls} />
         </div>
+
+        {/* 등록할 때만 받는다. 이미 있는 프로젝트는 상세의 문서함에서 다룬다. */}
+        {!project && (
+          <>
+            <div className="col-span-2">
+              <FileDropField label="계약서" file={contractFile} setFile={setContractFile} />
+            </div>
+            <div>
+              <StagedFileUpload label="첨부서류 (선택)" files={extraFiles} setFiles={setExtraFiles} />
+            </div>
+          </>
+        )}
       </div>
 
       {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
