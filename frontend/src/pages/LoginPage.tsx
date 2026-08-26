@@ -44,7 +44,7 @@ export function LoginPage() {
             W
           </div>
           <div>
-            <div className="text-[16px] font-extrabold text-text-strong">WBmanager</div>
+            <div className="text-[16px] font-extrabold text-text-strong">WB manager</div>
             <div className="text-[11px] text-text-faint">원방 스크랩 업무지원</div>
           </div>
         </div>
