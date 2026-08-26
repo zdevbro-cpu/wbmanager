@@ -34,12 +34,16 @@ export function Layout() {
     <div className="flex min-h-screen bg-bg">
       <aside className="sticky top-0 flex h-screen w-[236px] shrink-0 flex-col bg-sidebar">
         {/* 이름을 누르면 시작 화면으로 돌아가 다른 업무 영역을 고른다. */}
-        <NavLink to="/" title="업무 영역 변경" className="flex items-center gap-2 px-5 py-5 no-underline">
+        <NavLink
+          to="/"
+          title="업무 영역 변경"
+          className="flex h-[60px] shrink-0 items-center gap-2 px-7 no-underline"
+        >
           <div className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-primary text-sm font-extrabold text-white">
             W
           </div>
           <div>
-            <div className="text-[15px] font-extrabold text-text-strong">WBmanager</div>
+            <div className="text-[15px] font-extrabold text-text-strong">WB manager</div>
             <div className="text-[11px] text-[#5f7ba6]">{area.title}</div>
           </div>
         </NavLink>
@@ -114,7 +118,7 @@ export function Layout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex h-[60px] items-center justify-between border-b border-border-top bg-sidebar px-7">
           <div className="text-[14px] font-semibold text-text-sub">
-            WBmanager <span className="mx-1 text-text-faint">/</span>{' '}
+            WB manager <span className="mx-1 text-text-faint">/</span>{' '}
             <span className="text-text-strong">{current?.label ?? ''}</span>
           </div>
           <div className="flex items-center gap-4">
