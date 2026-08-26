@@ -27,22 +27,38 @@ router.get('/', async (req, res) => {
   res.json(projects);
 });
 
+// 화면은 고르지 않은 칸을 빈 문자열로 보낸다. 거래처·담당자는 빈 문자열이 오면
+// 존재하지 않는 id를 가리키게 되어 저장이 통째로 거부된다. 비운 칸은 비운 채로 저장한다.
+const orNull = (v) => (v === '' || v === undefined ? null : v);
+
 router.post('/', async (req, res) => {
-  const { roundName } = req.body;
-  if (!roundName) return res.status(400).json({ error: 'roundName은 필수입니다.' });
+  const b = req.body;
+  if (!b.roundName) return res.status(400).json({ error: 'roundName은 필수입니다.' });
 
   const project = await prisma.$transaction(async (tx) =>
     tx.project.create({
       data: {
-        ...req.body,
-        projectCode: req.body.projectCode || (await nextProjectCode(tx, req.body.startDate)),
-        contractAmount: num(req.body.contractAmount),
-        purchasePrice: num(req.body.purchasePrice),
-        contractWeight: num(req.body.contractWeight),
-        deposit: num(req.body.deposit),
-        advancePayment: num(req.body.advancePayment),
-        startDate: toISO(req.body.startDate),
-        endDate: toISO(req.body.endDate),
+        roundName: b.roundName,
+        roundNo: orNull(b.roundNo),
+        ordererId: orNull(b.ordererId),
+        contractorId: orNull(b.contractorId),
+        buyerId: orNull(b.buyerId),
+        managerEmpId: orNull(b.managerEmpId),
+        siteName: orNull(b.siteName),
+        region: orNull(b.region),
+        dischargerName: orNull(b.dischargerName),
+        settlementCycle: orNull(b.settlementCycle),
+        memo: orNull(b.memo),
+        status: b.status || '진행',
+        vatIncluded: Boolean(b.vatIncluded),
+        projectCode: b.projectCode || (await nextProjectCode(tx, b.startDate)),
+        contractAmount: num(b.contractAmount),
+        purchasePrice: num(b.purchasePrice),
+        contractWeight: num(b.contractWeight),
+        deposit: num(b.deposit),
+        advancePayment: num(b.advancePayment),
+        startDate: toISO(b.startDate),
+        endDate: toISO(b.endDate),
       },
     }),
   );
