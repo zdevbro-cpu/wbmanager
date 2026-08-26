@@ -499,7 +499,13 @@ router.get('/documents/:id/content', async (req, res) => {
     const encoded = encodeURIComponent(version.fileName ?? 'document');
     res.setHeader('Content-Type', mimeType || version.mimeType || 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="document"; filename*=UTF-8''${encoded}`);
-    recordDocAudit(req, { documentId: doc.id, action: 'doc_download', detail: `v${version.versionNo} ${version.fileName ?? ''}`.trim() });
+    // 화면에서 열어 본 것도 남긴다. 계약서·근로계약서는 누가 언제 봤는지가 내려받기만큼 중요하다.
+    const viewing = req.query.mode === 'view';
+    recordDocAudit(req, {
+      documentId: doc.id,
+      action: viewing ? 'doc_view' : 'doc_download',
+      detail: `v${version.versionNo} ${version.fileName ?? ''}`.trim(),
+    });
     stream.pipe(res);
   } catch (err) {
     console.error('[dms] 다운로드 실패:', err.message);
