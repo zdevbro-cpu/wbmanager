@@ -88,6 +88,8 @@ export interface Project {
 }
 
 export interface Inbound {
+  /** 모바일에서 올려 사무실 확인을 기다리는 건 */
+  isDraft?: boolean;
   id: string;
   projectId: string;
   inboundDate: string;
@@ -110,6 +112,8 @@ export interface Inbound {
 }
 
 export interface WasteInbound {
+  /** 모바일에서 올려 사무실 확인을 기다리는 건 */
+  isDraft?: boolean;
   id: string;
   projectId: string;
   receiveDate: string;
@@ -143,6 +147,8 @@ export interface WasteInbound {
 }
 
 export interface OutboundSale {
+  /** 모바일에서 올려 사무실 확인을 기다리는 건 */
+  isDraft?: boolean;
   id: string;
   projectId: string;
   itemCode: string;
@@ -174,6 +180,8 @@ export interface OutboundSale {
 }
 
 export interface WasteOutbound {
+  /** 모바일에서 올려 사무실 확인을 기다리는 건 */
+  isDraft?: boolean;
   id: string;
   projectId: string;
   outboundDate: string;

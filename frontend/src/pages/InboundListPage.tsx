@@ -80,6 +80,10 @@ export function InboundListPage() {
         onAdd={() => setOpen(true)}
         onDelete={remove}
         reload={load}
+        isDraft={(r) => r.isDraft === true}
+        onConfirm={async (r) => {
+          await api.patch(`/api/inbounds/${r.id}`, { isDraft: false });
+        }}
         editForm={(row, done) => (
           <InboundFormPage
             embedded

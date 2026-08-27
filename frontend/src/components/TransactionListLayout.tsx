@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Plus, Paperclip, Eye, Trash2, X, RotateCcw, Download, type LucideIcon } from 'lucide-react';
+import { Plus, Paperclip, Eye, Trash2, X, RotateCcw, Download, Check, type LucideIcon } from 'lucide-react';
 import { useProjects, useItemMasters, useVehicles, useEmployees } from '../hooks/useMasters';
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import { downloadFile } from '../lib/download';
@@ -27,6 +27,7 @@ export interface TxFilter {
   driverName: string;
   itemCode: string;
   olbaro: string;
+  draft: string;
   dischargerName: string;
   transporterName: string;
   processorName: string;
@@ -41,6 +42,7 @@ export const EMPTY_FILTER: TxFilter = {
   driverName: '',
   itemCode: '',
   olbaro: '',
+  draft: '',
   dischargerName: '',
   transporterName: '',
   processorName: '',
@@ -55,11 +57,12 @@ export type FilterKey =
   | 'vehicleNo'
   | 'driverName'
   | 'olbaro'
+  | 'draft'
   | 'dischargerName'
   | 'transporterName'
   | 'processorName';
 
-const DEFAULT_FILTER_KEYS: FilterKey[] = ['projectId', 'date', 'itemCode', 'vehicleType', 'vehicleNo', 'driverName'];
+const DEFAULT_FILTER_KEYS: FilterKey[] = ['projectId', 'date', 'itemCode', 'vehicleType', 'vehicleNo', 'driverName', 'draft'];
 
 export interface Column<T> {
   header: string;
@@ -95,6 +98,10 @@ interface Props<T> {
   editForm?: (row: T, done: () => void) => ReactNode;
   /** 첨부를 지운 뒤 목록을 다시 읽는다. */
   reload?: () => void;
+  /** 모바일에서 올라온 건인지. 목록에 「임시저장」으로 표시하고 상세에서 확정할 수 있게 한다. */
+  isDraft?: (row: T) => boolean;
+  /** 「정상등록」 처리 — 확인이 끝난 건의 임시저장 표시를 뗀다. */
+  onConfirm?: (row: T) => Promise<void> | void;
   emptyText: string;
 }
 
@@ -118,6 +125,8 @@ export function TransactionListLayout<T>({
   suggestions,
   editForm,
   reload,
+  isDraft,
+  onConfirm,
   emptyText,
 }: Props<T>) {
   const { projects } = useProjects();
@@ -304,6 +313,17 @@ export function TransactionListLayout<T>({
             </div>
           )}
 
+          {filterKeys.includes('draft') && (
+            <div>
+              <FilterLabel>등록 상태</FilterLabel>
+              <select value={filter.draft} onChange={(e) => set({ draft: e.target.value })} className={`${inputCls} px-2`}>
+                <option value="">전체</option>
+                <option value="true">임시저장</option>
+                <option value="false">정상등록</option>
+              </select>
+            </div>
+          )}
+
           {filterKeys.includes('dischargerName') && (
             <div>
               <FilterLabel>배출자</FilterLabel>
@@ -379,6 +399,14 @@ export function TransactionListLayout<T>({
                 ))}
                 <td className={`${tdBase} whitespace-nowrap`}>
                   <div className="flex items-center gap-1.5">
+                    {isDraft?.(row) && (
+                      <span
+                        title="모바일에서 올라온 건 — 사무실 확인 대기"
+                        className="shrink-0 rounded-[5px] bg-warning/15 px-1.5 py-0.5 text-[11px] font-bold text-warning"
+                      >
+                        임시저장
+                      </span>
+                    )}
                     <button
                       type="button"
                       title="상세"
@@ -544,11 +572,32 @@ export function TransactionListLayout<T>({
               )}
             </div>
 
-            {editForm && (
-              <div className="mt-5 flex justify-end border-t border-border pt-3">
-                <button type="button" onClick={() => setDetailEdit(true)} className={primaryBtnCls}>
-                  수정
-                </button>
+            {(editForm || (isDraft?.(detail) && onConfirm)) && (
+              <div className="mt-5 flex items-center justify-end gap-2 border-t border-border pt-3">
+                {/* 모바일에서 올라온 건은 값을 확인한 뒤 여기서 정상등록으로 바꾼다. */}
+                {isDraft?.(detail) && onConfirm && (
+                  <>
+                    <span className="mr-auto text-[12.5px] text-text-sub">
+                      모바일에서 올라온 건입니다. 값을 확인한 뒤 정상등록으로 바꿔 주세요.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await onConfirm(detail);
+                        setDetail(null);
+                        reload?.();
+                      }}
+                      className={outlineBtnCls}
+                    >
+                      <Check size={15} /> 정상등록
+                    </button>
+                  </>
+                )}
+                {editForm && (
+                  <button type="button" onClick={() => setDetailEdit(true)} className={primaryBtnCls}>
+                    수정
+                  </button>
+                )}
               </div>
             )}
               </>
