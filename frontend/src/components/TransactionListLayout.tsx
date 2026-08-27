@@ -383,6 +383,7 @@ export function TransactionListLayout<T>({
                   {c.header}
                 </th>
               ))}
+              {isDraft && <th className={`${thCls} whitespace-nowrap`}>상태</th>}
               <th className={`${thCls} whitespace-nowrap`}>관리</th>
             </tr>
           </thead>
@@ -397,16 +398,24 @@ export function TransactionListLayout<T>({
                     {c.render(row)}
                   </td>
                 ))}
-                <td className={`${tdBase} whitespace-nowrap`}>
-                  <div className="flex items-center gap-1.5">
-                    {isDraft?.(row) && (
+                {isDraft && (
+                  <td className={`${tdBase} whitespace-nowrap`}>
+                    {isDraft(row) ? (
                       <span
                         title="모바일에서 올라온 건 — 사무실 확인 대기"
-                        className="shrink-0 rounded-[5px] bg-warning/15 px-1.5 py-0.5 text-[11px] font-bold text-warning"
+                        className="rounded-[5px] bg-warning/15 px-1.5 py-0.5 text-[11px] font-bold text-warning"
                       >
                         임시저장
                       </span>
+                    ) : (
+                      <span className="rounded-[5px] bg-success/15 px-1.5 py-0.5 text-[11px] font-bold text-success">
+                        정상등록
+                      </span>
                     )}
+                  </td>
+                )}
+                <td className={`${tdBase} whitespace-nowrap`}>
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       title="상세"
@@ -445,7 +454,7 @@ export function TransactionListLayout<T>({
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={columns.length + 1} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={columns.length + (isDraft ? 2 : 1)} className="py-10 text-center text-[13px] text-text-faint">
                   {emptyText}
                 </td>
               </tr>
@@ -466,6 +475,7 @@ export function TransactionListLayout<T>({
                         : ''}
                   </td>
                 ))}
+                {isDraft && <td className={tdBase} />}
                 <td className={tdBase} />
               </tr>
             </tfoot>
