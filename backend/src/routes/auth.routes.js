@@ -82,8 +82,45 @@ router.patch('/users/:id/status', requireAuth, requireAdmin, async (req, res) =>
     where: { id: req.params.id },
     data: { status, approvedAt: status === 'approved' ? new Date() : null },
   });
-  res.json(user);
+
+  // 승인만 해서는 그 계정이 누구인지 알 수 없어, 현장에서 출퇴근을 찍으면
+  // "관리자에게 연결을 요청하세요"만 뜬다. 승인과 동시에 사람을 잇는다.
+  const linked = status === 'approved' && !user.employeeId ? await linkEmployee(user) : null;
+  res.json(linked ?? user);
 });
+
+// 같은 이름의 임직원이 있으면 그 사람으로, 없으면 계정 정보로 한 명 만들어 잇는다.
+// 승인은 "이 사람을 들이겠다"는 결정이므로, 임직원 기록이 없다는 이유로 막지 않는다.
+// 고용 구분은 기본값으로 들어가니 임직원 관리에서 확인해 고친다.
+async function linkEmployee(user) {
+  const name = (user.name ?? '').trim();
+  if (!name) return null;
+
+  const found = await prisma.employee.findFirst({ where: { name } });
+  const employee =
+    found ??
+    (await prisma.employee.create({
+      data: {
+        name,
+        phone: user.phone ?? null,
+        empCode: await nextEmpCode(),
+      },
+    }));
+
+  return prisma.appUser.update({ where: { id: user.id }, data: { employeeId: employee.id } });
+}
+
+// 사번 채번 — 임직원 관리와 같은 규칙(EMP-{연도}-{3자리})을 쓴다.
+async function nextEmpCode() {
+  const prefix = `EMP-${new Date().getFullYear()}-`;
+  const last = await prisma.employee.findFirst({
+    where: { empCode: { startsWith: prefix } },
+    orderBy: { empCode: 'desc' },
+    select: { empCode: true },
+  });
+  const seq = last ? Number(last.empCode.slice(prefix.length)) + 1 : 1;
+  return `${prefix}${String(seq).padStart(3, '0')}`;
+}
 
 // 관리자: 역할 변경
 // 계정이 누구인지 — 모바일 출퇴근은 이 연결을 보고 찍는 사람을 정한다.
@@ -98,6 +135,17 @@ router.patch('/users/:id/employee', requireAuth, requireAdmin, async (req, res) 
     data: { employeeId: employeeId || null },
   });
   res.json(user);
+});
+
+// 이미 승인된 계정에 임직원이 없을 때, 관리자가 한 번 눌러 잇는다.
+router.post('/users/:id/employee', requireAuth, requireAdmin, async (req, res) => {
+  const user = await prisma.appUser.findUnique({ where: { id: req.params.id } });
+  if (!user) return res.status(404).json({ error: '계정을 찾을 수 없습니다.' });
+  if (user.employeeId) return res.json(user);
+
+  const linked = await linkEmployee(user);
+  if (!linked) return res.status(400).json({ error: '계정에 이름이 없어 임직원을 만들 수 없습니다.' });
+  res.json(linked);
 });
 
 router.patch('/users/:id/role', requireAuth, requireAdmin, async (req, res) => {

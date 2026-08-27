@@ -47,6 +47,18 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
     load();
   };
 
+  // 임직원 기록이 아직 없는 사람 — 계정 정보로 한 명 만들어 잇는다.
+  const makeEmployee = async (u: AppUser) => {
+    if (!window.confirm(`${u.name ?? u.email} 님을 임직원으로 등록하고 이 계정에 연결할까요?
+고용 구분은 임직원 관리에서 확인해 주세요.`)) return;
+    try {
+      await api.post(`/api/auth/users/${u.id}/employee`);
+      load();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '연결하지 못했습니다.');
+    }
+  };
+
   const setRole = async (id: string, role: string) => {
     await api.patch(`/api/auth/users/${id}/role`, { role });
     load();
@@ -97,6 +109,16 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
                       </option>
                     ))}
                   </select>
+                  {!u.employeeId && (
+                    <button
+                      type="button"
+                      onClick={() => makeEmployee(u)}
+                      title="계정 정보로 임직원을 만들어 연결합니다"
+                      className="ml-1.5 text-[12px] font-bold text-primary underline"
+                    >
+                      임직원 등록
+                    </button>
+                  )}
                 </td>
                 <td className={tdCls}>
                   <select
