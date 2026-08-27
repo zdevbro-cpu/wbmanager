@@ -74,7 +74,7 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
 
 // 관리자: 승인/거절
 router.patch('/users/:id/status', requireAuth, requireAdmin, async (req, res) => {
-  const { status } = req.body;
+  const { status, employeeId, employmentType } = req.body;
   if (!['approved', 'rejected', 'pending'].includes(status)) {
     return res.status(400).json({ error: 'status는 approved/rejected/pending 중 하나여야 합니다.' });
   }
@@ -85,27 +85,46 @@ router.patch('/users/:id/status', requireAuth, requireAdmin, async (req, res) =>
 
   // 승인만 해서는 그 계정이 누구인지 알 수 없어, 현장에서 출퇴근을 찍으면
   // "관리자에게 연결을 요청하세요"만 뜬다. 승인과 동시에 사람을 잇는다.
-  const linked = status === 'approved' && !user.employeeId ? await linkEmployee(user) : null;
+  // 승인하는 사람이 고른 임직원·고용 구분을 그대로 쓴다.
+  const linked =
+    status === 'approved' && !user.employeeId ? await linkEmployee(user, { employeeId, employmentType }) : null;
   res.json(linked ?? user);
 });
 
 // 같은 이름의 임직원이 있으면 그 사람으로, 없으면 계정 정보로 한 명 만들어 잇는다.
 // 승인은 "이 사람을 들이겠다"는 결정이므로, 임직원 기록이 없다는 이유로 막지 않는다.
 // 고용 구분은 기본값으로 들어가니 임직원 관리에서 확인해 고친다.
-async function linkEmployee(user) {
+async function linkEmployee(user, opts = {}) {
+  // 승인 화면에서 사람을 고른 경우 — 그 사람으로 잇는다. 구분을 함께 골랐으면 그것도 반영한다.
+  if (opts.employeeId) {
+    const picked = await prisma.employee.findUnique({ where: { id: opts.employeeId } });
+    if (!picked) return null;
+    if (opts.employmentType && opts.employmentType !== picked.employmentType) {
+      await prisma.employee.update({ where: { id: picked.id }, data: { employmentType: opts.employmentType } });
+    }
+    return prisma.appUser.update({ where: { id: user.id }, data: { employeeId: picked.id } });
+  }
+
   const name = (user.name ?? '').trim();
   if (!name) return null;
 
   const found = await prisma.employee.findFirst({ where: { name } });
-  const employee =
-    found ??
-    (await prisma.employee.create({
-      data: {
-        name,
-        phone: user.phone ?? null,
-        empCode: await nextEmpCode(),
-      },
-    }));
+  if (found) {
+    if (opts.employmentType && opts.employmentType !== found.employmentType) {
+      await prisma.employee.update({ where: { id: found.id }, data: { employmentType: opts.employmentType } });
+    }
+    return prisma.appUser.update({ where: { id: user.id }, data: { employeeId: found.id } });
+  }
+
+  const employee = await prisma.employee.create({
+    data: {
+      name,
+      phone: user.phone ?? null,
+      empCode: await nextEmpCode(),
+      // 승인하는 사람이 고른 구분. 고르지 않았으면 기본값이 들어간다.
+      ...(opts.employmentType ? { employmentType: opts.employmentType } : {}),
+    },
+  });
 
   return prisma.appUser.update({ where: { id: user.id }, data: { employeeId: employee.id } });
 }
@@ -143,7 +162,7 @@ router.post('/users/:id/employee', requireAuth, requireAdmin, async (req, res) =
   if (!user) return res.status(404).json({ error: '계정을 찾을 수 없습니다.' });
   if (user.employeeId) return res.json(user);
 
-  const linked = await linkEmployee(user);
+  const linked = await linkEmployee(user, { employeeId: req.body?.employeeId, employmentType: req.body?.employmentType });
   if (!linked) return res.status(400).json({ error: '계정에 이름이 없어 임직원을 만들 수 없습니다.' });
   res.json(linked);
 });

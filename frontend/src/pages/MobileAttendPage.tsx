@@ -50,6 +50,10 @@ export function MobileAttendPage() {
   const [preview, setPreview] = useState('');
   const [kind, setKind] = useState<'in' | 'out'>('in');
   const cameraRef = useRef<HTMLInputElement>(null);
+  // 앞 카메라를 화면 안에서 직접 연다. 사진 앱으로 넘기면 기기마다 뒤 카메라가 열린다.
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [camOpen, setCamOpen] = useState(false);
 
   const [place, setPlace] = useState<{ lat: number; lng: number } | null>(null);
   const [placeNote, setPlaceNote] = useState('');
@@ -68,6 +72,8 @@ export function MobileAttendPage() {
       setMe(r);
       // 오늘 이미 찍은 현장이 있으면 그것을 따른다.
       if (r.today?.projectId) setProjectId((prev) => prev || r.today!.projectId!);
+      // 출근을 이미 찍었고 퇴근이 없으면, 다음에 할 일은 퇴근이다.
+      if (r.today?.checkInAt && !r.today?.checkOutAt) setKind('out');
     });
   }, []);
 
@@ -99,6 +105,53 @@ export function MobileAttendPage() {
   useEffect(() => {
     locate();
   }, [locate]);
+
+  const stopCam = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setCamOpen(false);
+  }, []);
+
+  useEffect(() => stopCam, [stopCam]);
+
+  const openCam = async () => {
+    setError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'user' }, width: { ideal: 1280 }, height: { ideal: 960 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      setCamOpen(true);
+      // 화면에 <video>가 놓인 뒤에 물린다.
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => undefined);
+        }
+      }, 0);
+    } catch {
+      // 카메라를 열 수 없는 기기·브라우저에서는 사진 앱으로 넘긴다.
+      cameraRef.current?.click();
+    }
+  };
+
+  const shoot = () => {
+    const v = videoRef.current;
+    if (!v || !v.videoWidth) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = v.videoWidth;
+    canvas.height = v.videoHeight;
+    canvas.getContext('2d')?.drawImage(v, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (blob) pick(new File([blob], 'selfie.jpg', { type: 'image/jpeg' }));
+        stopCam();
+      },
+      'image/jpeg',
+      0.85,
+    );
+  };
 
   const pick = (f: File | null) => {
     setPhoto(f);
@@ -157,6 +210,8 @@ export function MobileAttendPage() {
           : `퇴근으로 올렸습니다.${saved.outside ? ` 현장에서 ${saved.radius}m 밖에서 찍혔습니다.` : ''}`,
       );
       pick(null);
+      // 출근을 올렸으면 다음은 퇴근이다. 손으로 다시 고르게 두지 않는다.
+      if (kind === 'in') setKind('out');
       loadMe();
     } catch (e) {
       setError(e instanceof Error ? e.message : '등록하지 못했습니다.');
@@ -229,18 +284,22 @@ export function MobileAttendPage() {
 
       {/* 출근인지 퇴근인지 — 큼직하게 둘 중 하나 */}
       <div className="mb-4 grid grid-cols-2 gap-2">
-        {(['in', 'out'] as const).map((k) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => setKind(k)}
-            className={`rounded-[12px] border px-3 py-3 text-[15px] font-bold ${
-              kind === k ? 'border-primary bg-primary/15 text-primary' : 'border-border text-text-sub'
-            }`}
-          >
-            {k === 'in' ? '출근' : '퇴근'}
-          </button>
-        ))}
+        {(['in', 'out'] as const).map((k) => {
+          const at = k === 'in' ? hhmm(me?.today?.checkInAt) : hhmm(me?.today?.checkOutAt);
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setKind(k)}
+              className={`rounded-[12px] border px-3 py-3 text-[15px] font-bold ${
+                kind === k ? 'border-primary bg-primary/15 text-primary' : 'border-border text-text-sub'
+              }`}
+            >
+              {k === 'in' ? '출근' : '퇴근'}
+              {at && <span className="ml-1.5 text-[12.5px] font-normal">{at} 완료</span>}
+            </button>
+          );
+        })}
       </div>
 
       {!me?.consented && (
@@ -267,15 +326,46 @@ export function MobileAttendPage() {
         onChange={(e) => pick(e.target.files?.[0] ?? null)}
         className="hidden"
       />
-      <button
-        type="button"
-        onClick={() => cameraRef.current?.click()}
-        className="mb-3 flex w-full items-center justify-center gap-2 rounded-[12px] border border-primary bg-primary/10 px-3 py-4 text-[16px] font-bold text-primary"
-      >
-        <Camera size={18} /> {photo ? '다시 찍기' : '셀카 찍기'}
-      </button>
+      {camOpen ? (
+        <div className="mb-3">
+          {/* 거울처럼 보여야 얼굴을 맞추기 쉽다. 저장되는 사진은 그대로다. */}
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            className="mb-2 w-full rounded-[12px] border border-border"
+            style={{ transform: 'scaleX(-1)' }}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={stopCam}
+              className="rounded-[12px] border border-border px-3 py-3 text-[15px] font-bold text-text-sub"
+            >
+              닫기
+            </button>
+            <button
+              type="button"
+              onClick={shoot}
+              className="rounded-[12px] bg-primary px-3 py-3 text-[15px] font-extrabold text-white"
+            >
+              촬영
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={openCam}
+          className="mb-3 flex w-full items-center justify-center gap-2 rounded-[12px] border border-primary bg-primary/10 px-3 py-4 text-[16px] font-bold text-primary"
+        >
+          <Camera size={18} /> {photo ? '다시 찍기' : '셀카 찍기'}
+        </button>
+      )}
 
-      {preview && <img src={preview} alt="찍은 사진" className="mb-3 w-full rounded-[12px] border border-border" />}
+      {preview && !camOpen && (
+        <img src={preview} alt="찍은 사진" className="mb-3 w-full rounded-[12px] border border-border" />
+      )}
 
       <p className="mb-3 flex items-center gap-1.5 text-[12.5px] text-text-sub">
         <MapPin size={13} className={place ? 'text-success' : 'text-text-faint'} />
@@ -297,11 +387,11 @@ export function MobileAttendPage() {
       <button
         type="button"
         onClick={send}
-        disabled={sending}
+        disabled={sending || !photo}
         className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-primary px-3 py-4 text-[17px] font-extrabold text-white disabled:opacity-50"
       >
         {sending ? <Loader2 size={18} className="animate-spin" /> : null}
-        {kind === 'in' ? '출근 등록' : '퇴근 등록'}
+        {!photo ? '셀카를 먼저 찍어 주세요' : kind === 'in' ? '출근 등록' : '퇴근 등록'}
       </button>
 
       <p className="mt-3 text-[12px] leading-relaxed text-text-faint">
