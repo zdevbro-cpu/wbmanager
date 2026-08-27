@@ -123,22 +123,27 @@ export function MobileAttendPage() {
       });
       streamRef.current = stream;
       setCamOpen(true);
-      // 화면에 <video>가 놓인 뒤에 물린다.
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => undefined);
-        }
-      }, 0);
     } catch {
       // 카메라를 열 수 없는 기기·브라우저에서는 사진 앱으로 넘긴다.
       cameraRef.current?.click();
     }
   };
 
+  // 화면에 <video>가 놓인 뒤에 물린다.
+  useEffect(() => {
+    if (!camOpen) return;
+    const v = videoRef.current;
+    if (!v || !streamRef.current) return;
+    v.srcObject = streamRef.current;
+    v.play().catch(() => undefined);
+  }, [camOpen]);
+
   const shoot = () => {
     const v = videoRef.current;
-    if (!v || !v.videoWidth) return;
+    if (!v || !v.videoWidth) {
+      setError('카메라가 아직 준비되지 않았습니다. 잠시 뒤 다시 눌러 주세요.');
+      return;
+    }
     const canvas = document.createElement('canvas');
     canvas.width = v.videoWidth;
     canvas.height = v.videoHeight;
