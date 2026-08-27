@@ -47,30 +47,40 @@ const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
 const weekdayOf = (date: string) => new Date(`${date}T00:00:00`).getDay();
 const dayNo = (date: string) => Number(date.slice(8, 10));
 
-// 투입 공수는 크기다 — 같은 색을 옅게에서 짙게로 다섯 단계로 나눈다.
-// 색을 여러 가지로 쓰면 "주황이 초록보다 많은가"를 외워야 하지만, 농담은 보면 안다.
+// 색은 고용 구분, 짙기는 공수다.
+// 어느 구분이 어느 날 몰렸는지는 색으로 보고, 얼마나 몰렸는지는 짙기로 본다.
 // 계획은 윤곽만, 실행은 채워서 둘을 한눈에 가른다.
-const STEPS = [
-  { upto: 0.5, plan: 'bg-primary/10', actual: 'bg-primary/25' },
-  { upto: 1, plan: 'bg-primary/20', actual: 'bg-primary/45' },
-  { upto: 2, plan: 'bg-primary/30', actual: 'bg-primary/65' },
-  { upto: 3, plan: 'bg-primary/40', actual: 'bg-primary/80' },
-  { upto: Infinity, plan: 'bg-primary/50', actual: 'bg-primary' },
-];
-const stepOf = (v: number) => STEPS.find((s) => v <= s.upto) ?? STEPS[STEPS.length - 1];
+const TYPE_COLOR: Record<string, string> = {
+  정규직: '37, 99, 235', // 파랑
+  현장직: '22, 163, 74', // 초록
+  계약직: '245, 158, 11', // 주황
+  일용직: '147, 51, 234', // 보라
+  프리랜서: '219, 39, 119', // 자주
+  타사직원: '100, 116, 139', // 회청
+  아르바이트: '13, 148, 136', // 청록
+  미지정: '100, 116, 139',
+};
+const colorOf = (type: string) => TYPE_COLOR[type] ?? TYPE_COLOR.미지정;
 
-function Cell({ value, tone }: { value: number; tone: 'plan' | 'actual' }) {
+// 공수 다섯 단계 — 값이 클수록 짙다.
+const ALPHA = [0.25, 0.45, 0.65, 0.85, 1];
+const levelOf = (v: number) => (v <= 0.5 ? 0 : v <= 1 ? 1 : v <= 2 ? 2 : v <= 3 ? 3 : 4);
+
+function Cell({ value, type, tone }: { value: number; type: string; tone: 'plan' | 'actual' }) {
   if (!value) return <div className="h-[16px]" />;
-  const step = stepOf(value);
+  const rgb = colorOf(type);
+  const a = ALPHA[levelOf(value)];
+  const solid = tone === 'actual';
   return (
     <div className="px-[2px] py-[1px]">
       <div
-        title={`${tone === 'plan' ? '계획' : '실행'} ${formatNumber(value)}공수`}
-        className={`flex h-[16px] items-center justify-center rounded-[3px] text-[9.5px] font-bold ${
-          tone === 'plan'
-            ? `${step.plan} text-text-mid ring-1 ring-inset ring-primary/40`
-            : `${step.actual} text-white`
-        }`}
+        title={`${type} ${tone === 'plan' ? '계획' : '실행'} ${formatNumber(value)}공수`}
+        className="flex h-[16px] items-center justify-center rounded-[3px] text-[9.5px] font-bold"
+        style={{
+          backgroundColor: `rgba(${rgb}, ${solid ? a : a * 0.35})`,
+          boxShadow: solid ? undefined : `inset 0 0 0 1px rgba(${rgb}, 0.75)`,
+          color: solid && a >= 0.65 ? '#fff' : `rgb(${rgb})`,
+        }}
       >
         {formatNumber(value)}
       </div>
@@ -149,14 +159,28 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
             <span className="ml-1 text-text-faint">(달성 {Math.round((totals.actual / totals.plan) * 100)}%)</span>
           )}
         </span>
-        <span className="ml-3 flex items-center gap-1 text-[11px] text-text-faint">
-          공수
-          {['0.5', '1', '2', '3', '4+'].map((label, i) => (
-            <span key={label} className="flex items-center gap-0.5">
-              <span className={`inline-block h-[10px] w-[14px] rounded-[2px] ${STEPS[i].actual}`} />
-              {label}
+        <span className="ml-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-text-faint">
+          {rows.map((r) => (
+            <span key={r.employmentType} className="flex items-center gap-1">
+              <span
+                className="inline-block h-[10px] w-[10px] rounded-[2px]"
+                style={{ backgroundColor: `rgb(${colorOf(r.employmentType)})` }}
+              />
+              {r.employmentType}
             </span>
           ))}
+          <span className="ml-1 flex items-center gap-0.5">
+            공수
+            {[0.5, 1, 2, 3, 4].map((v) => (
+              <span
+                key={v}
+                className="inline-block h-[10px] w-[12px] rounded-[2px]"
+                style={{ backgroundColor: `rgba(100, 116, 139, ${ALPHA[levelOf(v)]})` }}
+                title={`${v}공수`}
+              />
+            ))}
+            <span className="ml-0.5">적음 → 많음</span>
+          </span>
         </span>
         <button type="button" onClick={() => setAdding(true)} className={`${primaryBtnCls} ml-auto`}>
           <Plus size={15} /> 구간 추가
@@ -232,8 +256,8 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                         className={`p-0 align-bottom ${w === 0 || w === 6 ? 'bg-hover/40' : ''}`}
                         style={{ width: DAY_W, minWidth: DAY_W }}
                       >
-                        <Cell value={r.plan[d] ?? 0} tone="plan" />
-                        <Cell value={r.actual[d] ?? 0} tone="actual" />
+                        <Cell value={r.plan[d] ?? 0} type={r.employmentType} tone="plan" />
+                        <Cell value={r.actual[d] ?? 0} type={r.employmentType} tone="actual" />
                       </td>
                     );
                   })}
