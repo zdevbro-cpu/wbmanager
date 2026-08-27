@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Settings, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Settings, ChevronUp, ChevronDown, Trash2, Upload, Download } from 'lucide-react';
 import { api } from '../api/client';
-import { pageTitleCls, sectionTitleCls, cardPadCls, primaryBtnCls, inputCls } from '../components/ui/classes';
+import { downloadFile } from '../lib/download';
+import { pageTitleCls, sectionTitleCls, cardPadCls, primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { CommonCode } from '../types';
+
+// 업로드 결과 — 열마다 몇 건이 들어갔고 몇 건이 이미 있었는지 돌려준다.
+interface BulkResult {
+  추가: number;
+  열: { 열: string; 그룹: string; 추가: number; 중복: number }[];
+  모르는열: string[];
+}
 
 // 화면에 항상 노출할 그룹 — 각 등록 화면에서 실제로 쓰이는 값 목록
 // 공통코드가 15종까지 늘어 한 화면에 늘어놓으면 찾기 어렵다.
@@ -57,6 +65,11 @@ export function CommonCodePage({ embedded = false }: { embedded?: boolean }) {
   const [codes, setCodes] = useState<CommonCode[]>([]);
 
   const [tab, setTab] = useState(CATEGORIES[0].id);
+  // 엑셀 한 장으로 여러 목록을 한 번에 채운다. 손으로 하나씩 넣기엔 항목이 너무 많다.
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadResult, setUploadResult] = useState<BulkResult | null>(null);
+  const [uploadError, setUploadError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const reload = useCallback(() => {
     api.get<CommonCode[]>('/api/common-codes?includeInactive=true').then(setCodes);
@@ -65,6 +78,24 @@ export function CommonCodePage({ embedded = false }: { embedded?: boolean }) {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  const upload = async (file: File) => {
+    setUploadBusy(true);
+    setUploadError('');
+    setUploadResult(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await api.post<BulkResult>('/api/common-codes/bulk-upload', form);
+      setUploadResult(res);
+      reload();
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : '업로드에 실패했습니다.');
+    } finally {
+      setUploadBusy(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
 
   // 정의에 없는 그룹이 DB에 있으면 기타 탭 끝에 붙여 빠뜨리지 않는다.
   const extraGroups = [...new Set(codes.map((c) => c.group))]
@@ -91,6 +122,58 @@ export function CommonCodePage({ embedded = false }: { embedded?: boolean }) {
           등록 화면에서 반복 입력되는 값(배출자·운반자·상차지·차종·구분 등)을 이곳에서 한 번에 관리합니다. 여기에 등록한
           항목이 각 등록 폼의 선택 목록으로 표시됩니다.
         </p>
+      )}
+
+      {/* 엑셀 업로드 — 첫 줄에 그룹 이름을 적고 그 아래로 값을 채운 파일을 그대로 받는다. */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".xlsx"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) upload(file);
+          }}
+        />
+        <button type="button" disabled={uploadBusy} onClick={() => fileRef.current?.click()} className={primaryBtnCls}>
+          <Upload size={15} /> {uploadBusy ? '올리는 중…' : '엑셀 업로드'}
+        </button>
+        <button
+          type="button"
+          onClick={() => downloadFile('/api/common-codes/bulk-template', '공통코드_양식.xlsx')}
+          className={outlineBtnCls}
+        >
+          <Download size={15} /> 양식 내려받기
+        </button>
+        <span className="text-[12.5px] text-text-faint">
+          첫 줄에 그룹 이름(배출자 · 처리자 · 작업자 · 운반자 · 상차지 · 하차지 · 자격증 종류 · 교육 과정 · 부서 · 직급 …),
+          그 아래에 값을 적습니다. 이미 있는 값은 건너뜁니다.
+        </span>
+      </div>
+
+      {uploadError && <p className="mb-3 text-[13px] text-danger">{uploadError}</p>}
+
+      {uploadResult && (
+        <div className="mb-4 rounded-[10px] border border-border bg-input p-3">
+          <p className="mb-2 text-[13px] font-bold text-text-strong">{uploadResult.추가}건을 새로 넣었습니다.</p>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-x-4 gap-y-1">
+            {uploadResult.열.map((c) => (
+              <div key={c.열} className="flex justify-between gap-2 border-b border-border pb-1 text-[12.5px]">
+                <span className="text-text-sub">{c.그룹}</span>
+                <span className="text-text-strong">
+                  추가 {c.추가}
+                  {c.중복 > 0 && <span className="ml-1 text-text-faint">· 중복 {c.중복}</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+          {uploadResult.모르는열.length > 0 && (
+            <p className="mt-2 text-[12.5px] text-warning">
+              알아보지 못한 열: {uploadResult.모르는열.join(', ')} — 이름이 그룹과 같은지 확인하세요.
+            </p>
+          )}
+        </div>
       )}
 
       <div className="mb-4 flex flex-wrap gap-1.5">
