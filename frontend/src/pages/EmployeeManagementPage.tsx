@@ -96,7 +96,14 @@ const sortedTrainings = (emp: Employee) =>
 
 
 // 공수표는 이 구분과 상관없이 모두 담는다. 정규직은 근태로, 그 밖은 공수로 센다.
-export const EMPLOYMENT_TYPES = ['정규직', '계약직', '일용직', '프리랜서', '현장직', '타사직원'];
+export const EMPLOYMENT_TYPES = ['정규직', '계약직', '일용직', '아르바이트', '프리랜서', '현장직', '타사직원'];
+
+// 목록을 세울 순서 — 정규직부터 아르바이트까지 위 차례를 따른다.
+// 목록에 없는 구분(옛 자료 등)은 맨 뒤로 보낸다.
+export function employmentRank(type?: string | null) {
+  const i = EMPLOYMENT_TYPES.indexOf(type ?? '');
+  return i < 0 ? EMPLOYMENT_TYPES.length : i;
+}
 
 export function EmployeeManagementPage({ embedded = false }: { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);

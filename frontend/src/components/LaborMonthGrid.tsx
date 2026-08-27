@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { FormModal } from './FormModal';
 import { SearchSelect } from './SearchSelect';
 import { NumberInput } from './ui/NumberInput';
+import { employmentRank } from '../pages/EmployeeManagementPage';
 import { formatNumber } from '../lib/number';
 import type { Employee } from '../types';
 import { kstToday, kstStamp } from '../lib/datetime';
@@ -161,7 +162,10 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
       ...tally(mine),
     }));
 
-    return [...linked, ...unlinked];
+    // 정규직 → 계약직 → 일용직 → 아르바이트 차례로 세우고, 같은 구분 안에서는 이름순이다.
+    return [...linked, ...unlinked].sort(
+      (a, b) => employmentRank(a.type) - employmentRank(b.type) || a.name.localeCompare(b.name),
+    );
   }, [employees, rows]);
 
   const totals = useMemo(
