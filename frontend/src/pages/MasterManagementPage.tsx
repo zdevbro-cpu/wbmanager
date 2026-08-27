@@ -3,6 +3,7 @@ import { Settings, Building2, Package, Plus, Eye, Trash2, RotateCcw } from 'luci
 import { api } from '../api/client';
 import { CommonCodePage } from './CommonCodePage';
 import { ExternalVehicleSection } from '../components/ExternalVehicleSection';
+import { ExternalDriverSection } from '../components/ExternalDriverSection';
 import { useVendors, useItemMasters } from '../hooks/useMasters';
 import { Badge } from '../components/ui/Badge';
 import { FormModal } from '../components/FormModal';
@@ -38,7 +39,7 @@ const iconBtnCls = 'rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-te
 // 공통코드와 한 화면에 있으면 목록이 길어질수록 아래로 밀려서 별도 탭으로 분리했다.
 // 마스터 관리 — 거래처·품목·공통코드를 기능별 탭으로 나눈다.
 // 한 화면에 모아 두면 목록이 길어질수록 아래 것이 밀려 내려가 찾기 어려워진다.
-type MasterTab = 'vendors' | 'items' | 'codes' | 'vehicles';
+type MasterTab = 'vendors' | 'items' | 'codes' | 'vehicles' | 'drivers';
 
 export function MasterManagementPage({ embedded = false }: { embedded?: boolean }) {
   const { vendors, reload: reloadVendors } = useVendors();
@@ -67,9 +68,14 @@ export function MasterManagementPage({ embedded = false }: { embedded?: boolean 
         <MasterTabButton active={tab === 'vehicles'} onClick={() => setTab('vehicles')}>
           계근 차량
         </MasterTabButton>
+        <MasterTabButton active={tab === 'drivers'} onClick={() => setTab('drivers')}>
+          운전자
+        </MasterTabButton>
       </div>
 
-      {tab === 'vehicles' ? (
+      {tab === 'drivers' ? (
+        <ExternalDriverSection />
+      ) : tab === 'vehicles' ? (
         <ExternalVehicleSection />
       ) : tab === 'codes' ? (
         <div>
