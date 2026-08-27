@@ -9,6 +9,7 @@ import { FormModal } from '../components/FormModal';
 import { EntityDocuments } from '../components/EntityDocuments';
 import { QrCode } from '../components/QrCode';
 import { NumberInput } from '../components/ui/NumberInput';
+import { formatNumber } from '../lib/number';
 import { Badge } from '../components/ui/Badge';
 import { primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { Employee, EmployeeCertification, EmployeeTraining } from '../types';
@@ -42,6 +43,8 @@ function DDay({ due }: { due?: string | null }) {
 }
 
 const day = (v?: string | null) => (v ? v.slice(0, 10) : '-');
+// 정해 둔 값이 없으면 비어 있음을 그대로 알린다 — 0원과 구별해야 한다.
+const won = (v?: string | null) => (v == null || v === '' ? '-' : `${formatNumber(v)}원`);
 
 // 상세 — 최근 내용 카드 + 히스토리(접이식) + 이력 추가.
 // 자격 갱신·보수교육 재이수는 기존 행을 고치지 않고 새 행을 쌓아 이력을 남긴다.
@@ -158,6 +161,15 @@ export function EmployeeDetailModal({
                   { label: '입사일', value: day(emp.hireDate) },
                   { label: '부서', value: emp.department ?? '-' },
                   { label: '직급', value: emp.position ?? '-' },
+                  { label: '고용 구분', value: emp.employmentType ?? '-' },
+                  // 정규직은 근태로 세고 단가를 쓰지 않아 보여 줄 것이 없다.
+                  ...(emp.employmentType && emp.employmentType !== '정규직'
+                    ? [
+                        { label: '1공수 단가', value: won(emp.unitCost) },
+                        { label: '하루 식대', value: won(emp.mealCost) },
+                        { label: '하루 기타비용', value: won(emp.etcCost) },
+                      ]
+                    : []),
                 ].map((f) => (
                   <div key={f.label} className="flex justify-between gap-3 border-b border-border pb-1.5">
                     <dt className="text-[12.5px] text-text-sub">{f.label}</dt>

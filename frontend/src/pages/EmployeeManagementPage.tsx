@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Users, Plus, Trash2, CheckCircle2, Eye, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
+import { formatNumber } from '../lib/number';
 import { formatPhone } from '../lib/phone';
 import { useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
@@ -249,6 +250,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
               <th className={thCls}>회사명</th>
               <th className={thCls}>구분</th>
               <th className={thCls}>부서/직급</th>
+              <th className={thCls}>품값(단가 · 식대 · 기타)</th>
               <th className={thCls}>입사일</th>
               <th className={thCls}>자격사항(만료일)</th>
               <th className={thCls}>교육(구분 · 다음 예정)</th>
@@ -278,6 +280,16 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                   </select>
                 </td>
                 <td className={tdCls}>{[emp.department, emp.position].filter(Boolean).join(' / ') || '-'}</td>
+                {/* 정규직은 근태로 세고 단가를 쓰지 않는다. 그 밖은 여기 값이 공수표에 채워진다. */}
+                <td className={`${tdCls} tabular whitespace-nowrap`}>
+                  {emp.employmentType === '정규직'
+                    ? '-'
+                    : [emp.unitCost, emp.mealCost, emp.etcCost].every((v) => v == null || v === '')
+                      ? '미정'
+                      : [emp.unitCost, emp.mealCost, emp.etcCost]
+                          .map((v) => (v == null || v === '' ? '-' : formatNumber(v)))
+                          .join(' · ')}
+                </td>
                 <td className={`${tdCls} tabular`}>{emp.hireDate ? emp.hireDate.slice(0, 10) : '-'}</td>
                 <td className={`${tdCls} whitespace-nowrap`}>
                   {(() => {
@@ -341,7 +353,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
             ))}
             {visible.length === 0 && (
               <tr>
-                <td className={`${tdCls} text-text-faint`} colSpan={10}>
+                <td className={`${tdCls} text-text-faint`} colSpan={11}>
                   {employees.length === 0 ? '등록된 임직원이 없습니다.' : '조건에 맞는 임직원이 없습니다.'}
                 </td>
               </tr>
