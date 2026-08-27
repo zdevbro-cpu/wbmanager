@@ -313,10 +313,10 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                 </td>
               </tr>
             ))}
-            {employees.length === 0 && (
+            {visible.length === 0 && (
               <tr>
                 <td className={`${tdCls} text-text-faint`} colSpan={10}>
-                  등록된 임직원이 없습니다.
+                  {employees.length === 0 ? '등록된 임직원이 없습니다.' : '조건에 맞는 임직원이 없습니다.'}
                 </td>
               </tr>
             )}
