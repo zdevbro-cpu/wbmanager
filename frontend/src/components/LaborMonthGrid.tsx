@@ -76,8 +76,9 @@ const ATTEND_TONE: Record<string, string> = {
 const NAME_W = 116;
 const TYPE_W = 72;
 const SUM_W = 68;
-// 합계 열 다섯을 오른쪽부터 붙인다.
-const sumRight = (i: number) => (4 - i) * SUM_W;
+// 합계 열 여섯을 오른쪽부터 붙인다 — 맨 끝이 그 사람의 가로합계다.
+const SUM_COLS = 6;
+const sumRight = (i: number) => (SUM_COLS - 1 - i) * SUM_W;
 const stickyL = 'sticky z-20 bg-card';
 const stickyR = 'sticky z-20 bg-card';
 
@@ -290,7 +291,7 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
                   </th>
                 );
               })}
-              {['출근', '공수', '인건비', '식대', '기타'].map((label, i) => (
+              {['출근', '공수', '인건비', '식대', '기타', '합계'].map((label, i) => (
                 <th
                   key={label}
                   className={`${thNumCls} ${stickyR} whitespace-nowrap`}
@@ -362,10 +363,10 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
                     </td>
                   );
                 })}
-                {[p.presentDays, p.manDays, p.laborCost, p.mealCost, p.etcCost].map((v, i) => (
+                {[p.presentDays, p.manDays, p.laborCost, p.mealCost, p.etcCost, p.laborCost + p.mealCost + p.etcCost].map((v, i) => (
                   <td
                     key={i}
-                    className={`${tdNumCls} ${stickyR}`}
+                    className={`${tdNumCls} ${stickyR} ${i === SUM_COLS - 1 ? 'font-extrabold text-text-strong' : ''}`}
                     style={{ right: sumRight(i), width: SUM_W, minWidth: SUM_W }}
                   >
                     {v ? formatNumber(v) : ''}
@@ -375,7 +376,7 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
             ))}
             {people.length === 0 && (
               <tr>
-                <td colSpan={days + 7} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={days + 8} className="py-10 text-center text-[13px] text-text-faint">
                   임직원 관리에 등록된 사람이 없습니다.
                 </td>
               </tr>
@@ -391,7 +392,14 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
               </td>
               <td className={stickyL} style={{ left: NAME_W, width: TYPE_W, minWidth: TYPE_W }} />
               <td colSpan={days} />
-              {[totals.presentDays, totals.manDays, totals.laborCost, totals.mealCost, totals.etcCost].map((v, i) => (
+              {[
+                totals.presentDays,
+                totals.manDays,
+                totals.laborCost,
+                totals.mealCost,
+                totals.etcCost,
+                totals.laborCost + totals.mealCost + totals.etcCost,
+              ].map((v, i) => (
                 <td
                   key={i}
                   className={`${tdNumCls} ${stickyR} font-extrabold`}

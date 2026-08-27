@@ -85,8 +85,9 @@ export async function buildLaborWorkbook(month, projectId) {
     { width: 11 },
     { width: 9 },
     { width: 9 },
+    { width: 11 },
   ];
-  const lastCol = 2 + days + 5;
+  const lastCol = 2 + days + 6;
 
   const title = ws.addRow([`${month} 공수표${settlement?.status === 'closed' ? ' (마감)' : ''}`]);
   ws.mergeCells(1, 1, 1, lastCol);
@@ -95,9 +96,9 @@ export async function buildLaborWorkbook(month, projectId) {
   ws.addRow([]);
 
   // 머리 두 줄 — 날짜와 요일.
-  const h1 = ws.addRow(['이름', '구분', ...Array.from({ length: days }, (_, i) => i + 1), '출근', '공수', '인건비', '식대', '기타']);
+  const h1 = ws.addRow(['이름', '구분', ...Array.from({ length: days }, (_, i) => i + 1), '출근', '공수', '인건비', '식대', '기타', '합계']);
   const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
-  const h2 = ws.addRow(['', '', ...Array.from({ length: days }, (_, i) => WEEK[weekdayOf(month, i + 1)]), '', '', '', '', '']);
+  const h2 = ws.addRow(['', '', ...Array.from({ length: days }, (_, i) => WEEK[weekdayOf(month, i + 1)]), '', '', '', '', '', '']);
   for (const [c, label] of [[1, '이름'], [2, '구분']]) {
     ws.mergeCells(h1.number, c, h2.number, c);
     h1.getCell(c).value = label;
@@ -127,6 +128,7 @@ export async function buildLaborWorkbook(month, projectId) {
       p.labor || '',
       p.meal || '',
       p.etc || '',
+      p.labor + p.meal + p.etc || '',
     ]);
     row.height = 13;
     for (let c = 1; c <= lastCol; c++) {
@@ -160,6 +162,7 @@ export async function buildLaborWorkbook(month, projectId) {
     totals.labor || '',
     totals.meal || '',
     totals.etc || '',
+    totals.labor + totals.meal + totals.etc || '',
   ]);
   foot.height = 15;
   for (let c = 1; c <= lastCol; c++) {
