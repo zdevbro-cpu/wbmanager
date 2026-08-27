@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Download, Printer, FileWarning } from 'lucide-react';
+import { X, Download, Printer, FileWarning, ChevronLeft, ChevronRight } from 'lucide-react';
 import { API_BASE_URL } from '../api/client';
 import { auth } from '../lib/firebase';
 import { useEscapeClose } from '../hooks/useEscapeClose';
@@ -34,28 +34,50 @@ function kindOf(fileName: string, mime: string): Kind {
 // 큰 파일은 통째로 받아야 열 수 있어 오래 걸린다. 그 앞에서는 내려받기를 권한다.
 const MAX_PREVIEW_BYTES = 20 * 1024 * 1024;
 
-export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc; onClose: () => void }) {
+export function DocumentPreview({
+  doc,
+  items,
+  startIndex = 0,
+  onClose,
+}: {
+  doc?: PreviewDoc;
+  /** 한 건에 붙은 파일이 여럿일 때 — 창 안에서 넘겨 본다. */
+  items?: PreviewDoc[];
+  startIndex?: number;
+  onClose: () => void;
+}) {
   useEscapeClose(onClose);
+  const list = items?.length ? items : doc ? [doc] : [];
+  const [index, setIndex] = useState(Math.min(startIndex, Math.max(list.length - 1, 0)));
+  const current = list[index];
+  const move = (step: number) => {
+    if (list.length < 2) return;
+    setIndex((i) => (i + step + list.length) % list.length);
+    setState('loading');
+    setText('');
+    setUrl('');
+  };
   const [state, setState] = useState<'loading' | 'ready' | 'toobig' | 'error'>('loading');
   const [kind, setKind] = useState<Kind>('other');
   const [url, setUrl] = useState('');
   const [text, setText] = useState('');
 
-  const fileName = doc.fileName ?? doc.title;
+  const fileName = current?.fileName ?? current?.title ?? '';
 
   useEffect(() => {
     let objectUrl = '';
     let cancelled = false;
 
     const load = async () => {
-      if ((doc.byteSize ?? 0) > MAX_PREVIEW_BYTES) {
+      if ((current?.byteSize ?? 0) > MAX_PREVIEW_BYTES) {
         setState('toobig');
         return;
       }
       try {
         const token = await auth.currentUser?.getIdToken();
         // mode=view — 내려받기와 구분해 열람으로 이력에 남는다.
-        const res = await fetch(`${doc.contentUrl}${doc.contentUrl.includes('?') ? '&' : '?'}mode=view`, {
+        const url = current?.contentUrl ?? '';
+        const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}mode=view`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error('불러오지 못했습니다.');
@@ -81,11 +103,11 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc; onClose: ()
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [doc.contentUrl, doc.byteSize, fileName]);
+  }, [current?.contentUrl, current?.byteSize, fileName]);
 
   const download = async () => {
     const token = await auth.currentUser?.getIdToken();
-    const res = await fetch(doc.contentUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    const res = await fetch(current?.contentUrl ?? '', { headers: token ? { Authorization: `Bearer ${token}` } : {} });
     if (!res.ok) {
       window.alert('파일을 내려받지 못했습니다.');
       return;
@@ -101,17 +123,17 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc; onClose: ()
   // 인쇄 첫 장에 붙일 문서 정보 표지. 종이만 보고 무엇을 출력한 것인지 알 수 있게 한다.
   const coverHtml = () => {
     const rows: [string, string][] = [
-      ['문서번호', doc.docNo ?? '-'],
-      ['제목', doc.title],
+      ['문서번호', current?.docNo ?? '-'],
+      ['제목', current?.title ?? ''],
       ['파일', fileName],
-      ['크기', size(doc.byteSize)],
-      ...((doc.facts ?? []).map((f) => [f.label, f.value] as [string, string])),
+      ['크기', size(current?.byteSize)],
+      ...((current?.facts ?? []).map((f) => [f.label, f.value] as [string, string])),
     ];
     const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return (
       '<section class="cover">' +
-      `<h1>${esc(doc.title)}</h1>` +
-      `<p class="sub">${esc(doc.docNo ?? '')}</p>` +
+      `<h1>${esc(current?.title ?? '')}</h1>` +
+      `<p class="sub">${esc(current?.docNo ?? '')}</p>` +
       '<table>' +
       rows.map(([k, v]) => `<tr><th>${k}</th><td>${esc(String(v))}</td></tr>`).join('') +
       '</table>' +
@@ -178,11 +200,11 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc; onClose: ()
       </div>
       <dl className="w-full max-w-[420px] text-left">
         {[
-          { label: '문서번호', value: doc.docNo ?? '-' },
-          { label: '제목', value: doc.title },
+          { label: '문서번호', value: current?.docNo ?? '-' },
+          { label: '제목', value: current?.title ?? '' },
           { label: '파일', value: fileName },
-          { label: '크기', value: size(doc.byteSize) },
-          ...(doc.facts ?? []),
+          { label: '크기', value: size(current?.byteSize) },
+          ...(current?.facts ?? []),
         ].map((f) => (
           <div key={f.label} className="flex justify-between gap-3 border-b border-border py-1.5">
             <dt className="shrink-0 text-[12.5px] text-text-sub">{f.label}</dt>
@@ -196,18 +218,33 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc; onClose: ()
     </div>
   );
 
+  if (!current) return null;
+
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/60 p-5">
       <div className="flex h-[88vh] w-full max-w-[1100px] flex-col rounded-[14px] border border-border bg-card">
         <div className="flex items-center gap-2 border-b border-border px-5 py-3">
           <div className="min-w-0">
-            <p className="truncate text-[15px] font-extrabold text-text-strong">{doc.title}</p>
+            <p className="truncate text-[15px] font-extrabold text-text-strong">{current?.title ?? ''}</p>
             <p className="truncate text-[12px] text-text-faint">
-              {doc.docNo ? `${doc.docNo} · ` : ''}
-              {fileName} · {size(doc.byteSize)}
+              {current?.docNo ? `${current?.docNo} · ` : ''}
+              {fileName} · {size(current?.byteSize)}
             </p>
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            {list.length > 1 && (
+              <span className="mr-1 flex items-center gap-1">
+                <button type="button" title="이전 파일" onClick={() => move(-1)} className={`${outlineBtnCls} h-8 px-2`}>
+                  <ChevronLeft size={15} />
+                </button>
+                <span className="tabular text-[12.5px] text-text-sub">
+                  {index + 1} / {list.length}
+                </span>
+                <button type="button" title="다음 파일" onClick={() => move(1)} className={`${outlineBtnCls} h-8 px-2`}>
+                  <ChevronRight size={15} />
+                </button>
+              </span>
+            )}
             {state === 'ready' && kind !== 'other' && (
               <button type="button" title="인쇄 · PDF 저장" onClick={print} className={`${outlineBtnCls} h-8 px-2.5`}>
                 <Printer size={15} />
@@ -232,7 +269,7 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc; onClose: ()
           {state === 'toobig' && (
             <div className="py-20 text-center">
               <p className="text-[13px] text-text-sub">
-                파일이 커서({size(doc.byteSize)}) 화면에서 열지 않습니다. 내려받아 확인하세요.
+                파일이 커서({size(current?.byteSize)}) 화면에서 열지 않습니다. 내려받아 확인하세요.
               </p>
               <button type="button" onClick={download} className={`${primaryBtnCls} mt-4`}>
                 <Download size={15} /> 내려받기

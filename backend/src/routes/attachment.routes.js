@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { prisma } from '../lib/prisma.js';
-import { uploadToDrive } from '../lib/drive.js';
+import { uploadToDrive, downloadFromDrive } from '../lib/drive.js';
 import { decodeUploadName } from '../lib/fileName.js';
 
 const router = Router();
@@ -46,6 +46,24 @@ router.post('/', upload.single('file'), async (req, res) => {
   });
 
   res.status(201).json(attachment);
+});
+
+// 증빙 파일 열람·내려받기 — 앱이 중계한다.
+// 드라이브 파일은 의뢰자 계정 소유라, 링크를 그대로 주면 드라이브 접근 권한이 없는 사용자는 열지 못한다.
+router.get('/:id/content', async (req, res) => {
+  const item = await prisma.attachment.findUnique({ where: { id: req.params.id } });
+  if (!item?.driveFileId) return res.status(404).json({ error: '첨부를 찾을 수 없습니다.' });
+
+  try {
+    const { stream, mimeType } = await downloadFromDrive(item.driveFileId);
+    const encoded = encodeURIComponent(item.fileName ?? 'attachment');
+    res.setHeader('Content-Type', mimeType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="attachment"; filename*=UTF-8''${encoded}`);
+    stream.pipe(res);
+  } catch (err) {
+    console.error('[attachment] 내려받기 실패:', err.message);
+    res.status(502).json({ error: '드라이브에서 파일을 가져오지 못했습니다.' });
+  }
 });
 
 export default router;
