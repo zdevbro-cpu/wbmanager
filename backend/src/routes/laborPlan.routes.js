@@ -107,6 +107,38 @@ router.post('/', async (req, res) => {
   res.status(201).json(row);
 });
 
+// 한 구간에 여러 고용구분을 한 번에 잡는다.
+// 현장은 "9월 1~14일 정규직 2, 현장직 1, 계약직 3"처럼 한 호흡으로 정하지,
+// 구분마다 구간을 다시 고르지 않는다. 공수가 0인 구분은 건너뛴다.
+router.post('/bulk', async (req, res) => {
+  const { projectId, startDate, endDate, memo, items } = req.body ?? {};
+  if (!projectId || !startDate || !endDate) {
+    return res.status(400).json({ error: '프로젝트와 기간은 필수입니다.' });
+  }
+  if (toISO(endDate) < toISO(startDate)) {
+    return res.status(400).json({ error: '종료일이 시작일보다 빠를 수 없습니다.' });
+  }
+  const rows = (items ?? []).filter((i) => Number(i?.manDays) > 0);
+  if (!rows.length) return res.status(400).json({ error: '공수를 적은 구분이 없습니다.' });
+
+  const created = await prisma.$transaction(
+    rows.map((i) =>
+      prisma.laborPlan.create({
+        data: {
+          projectId,
+          employmentType: i.employmentType || null,
+          startDate: toISO(startDate),
+          endDate: toISO(endDate),
+          manDays: Number(i.manDays),
+          unitCost: i.unitCost ? Number(i.unitCost) : null,
+          memo: memo || null,
+        },
+      }),
+    ),
+  );
+  res.status(201).json(created);
+});
+
 router.patch('/:id', async (req, res) => {
   const b = req.body ?? {};
   const row = await prisma.laborPlan.update({

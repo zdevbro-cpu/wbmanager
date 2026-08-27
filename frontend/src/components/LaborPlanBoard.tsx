@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { SearchSelect } from './SearchSelect';
@@ -360,6 +360,7 @@ function RangeCalendar({
   );
 }
 
+
 function PlanForm({
   projectId,
   projectLabel,
@@ -375,15 +376,16 @@ function PlanForm({
 }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [f, setF] = useState({
-    employmentType: EMPLOYMENT_TYPES[0],
-    manDays: '1',
-    unitCost: '',
-    memo: '',
-  });
+  // 구간 하나에 구분별 공수를 함께 적는다 — 구분마다 구간을 다시 고르지 않는다.
+  const [lines, setLines] = useState<Record<string, { manDays: string; unitCost: string }>>(
+    Object.fromEntries(EMPLOYMENT_TYPES.map((t) => [t, { manDays: '', unitCost: '' }])),
+  );
+  const [memo, setMemo] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const set = (patch: Partial<typeof f>) => setF((prev) => ({ ...prev, ...patch }));
+
+  const setLine = (type: string, patch: Partial<{ manDays: string; unitCost: string }>) =>
+    setLines((prev) => ({ ...prev, [type]: { ...prev[type], ...patch } }));
 
   // 처음 누르면 시작일, 두 번째로 누르면 종료일. 이미 둘 다 잡혀 있으면 다시 시작한다.
   const pick = (d: string) => {
@@ -401,7 +403,8 @@ function PlanForm({
 
   const days = from && to ? Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1 : from ? 1 : 0;
   const endDate = to || from;
-  const total = days * Number(f.manDays || 0);
+  const perDay = EMPLOYMENT_TYPES.reduce((sum, t) => sum + Number(lines[t].manDays || 0), 0);
+  const total = days * perDay;
 
   const save = async () => {
     if (!projectId) {
@@ -412,17 +415,23 @@ function PlanForm({
       setError('달력에서 구간을 고르세요.');
       return;
     }
+    if (perDay <= 0) {
+      setError('공수를 적은 구분이 없습니다.');
+      return;
+    }
     setError('');
     setBusy(true);
     try {
-      await api.post('/api/labor-plans', {
+      await api.post('/api/labor-plans/bulk', {
         projectId,
-        employmentType: f.employmentType,
         startDate: from,
         endDate,
-        manDays: Number(f.manDays || 0),
-        unitCost: f.unitCost ? Number(f.unitCost) : undefined,
-        memo: f.memo || undefined,
+        memo: memo || undefined,
+        items: EMPLOYMENT_TYPES.map((t) => ({
+          employmentType: t,
+          manDays: Number(lines[t].manDays || 0),
+          unitCost: lines[t].unitCost ? Number(lines[t].unitCost) : undefined,
+        })),
       });
       onSaved();
     } catch (e) {
@@ -446,46 +455,48 @@ function PlanForm({
             {from ? (
               <span className="ml-2">
                 {from} ~ {endDate} · {days}일
-                {total > 0 && <span className="ml-1 text-text-faint">= 계획 {formatNumber(total)}공수</span>}
+                {perDay > 0 && (
+                  <span className="ml-1 text-text-faint">
+                    · 하루 {formatNumber(perDay)}공수 = 계획 {formatNumber(total)}공수
+                  </span>
+                )}
               </span>
             ) : (
               <span className="ml-2 text-text-faint">구간을 고르지 않았습니다.</span>
             )}
           </p>
 
-          {/* 한 줄로 세운다 — 구간은 달력이 맡았으니 남은 것은 네 칸뿐이다. */}
-          <div className="grid items-end gap-2 [grid-template-columns:minmax(0,1fr)_minmax(0,90px)_minmax(0,110px)_minmax(0,1.4fr)]">
-            <div>
-              <label className={labelCls}>고용 구분</label>
-              <select
-                value={f.employmentType}
-                onChange={(e) => set({ employmentType: e.target.value })}
-                className={inputCls}
-              >
-                {EMPLOYMENT_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>하루 공수</label>
-              <NumberInput value={f.manDays} onChange={(v) => set({ manDays: v })} decimals={2} />
-            </div>
-            <div>
-              <label className={labelCls}>계획 단가(원)</label>
-              <NumberInput value={f.unitCost} onChange={(v) => set({ unitCost: v })} />
-            </div>
-            <div>
-              <label className={labelCls}>비고</label>
-              <input value={f.memo} onChange={(e) => set({ memo: e.target.value })} className={inputCls} />
-            </div>
+          {/* 이 구간에 어느 구분을 하루 몇 공수 쓸지 — 적은 구분만 저장된다. */}
+          <div className="grid grid-cols-[minmax(0,1fr)_90px_110px] gap-x-2 gap-y-1">
+            <span className="text-[12px] font-semibold text-text-faint">고용 구분</span>
+            <span className="text-right text-[12px] font-semibold text-text-faint">하루 공수</span>
+            <span className="text-right text-[12px] font-semibold text-text-faint">계획 단가(원)</span>
+            {EMPLOYMENT_TYPES.map((t) => (
+              <Fragment key={t}>
+                <span className="flex items-center text-[13px] font-semibold text-text-mid">{t}</span>
+                <NumberInput
+                  value={lines[t].manDays}
+                  onChange={(v) => setLine(t, { manDays: v })}
+                  decimals={2}
+                  placeholder="0"
+                />
+                <NumberInput
+                  value={lines[t].unitCost}
+                  onChange={(v) => setLine(t, { unitCost: v })}
+                  placeholder={t === '정규직' ? '해당 없음' : '0'}
+                />
+              </Fragment>
+            ))}
+          </div>
+
+          <div className="mt-2">
+            <label className={labelCls}>비고</label>
+            <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
           </div>
 
           <p className="mt-2 text-[12px] text-text-faint">
-            1명이 하루 나오면 1공수입니다 — 정규직 2명이면 2, 반나절이 섞이면 2.5로 적습니다. 구분을 나눠 잡으려면
-            저장한 뒤 구간을 다시 골라 한 줄 더 넣습니다.
+            1명이 하루 나오면 1공수입니다 — 정규직 2명이면 2, 반나절이 섞이면 2.5로 적습니다. 정규직은 인건비를
+            프로젝트 원가에 넣지 않으므로 단가를 비워 둡니다.
           </p>
 
           {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
