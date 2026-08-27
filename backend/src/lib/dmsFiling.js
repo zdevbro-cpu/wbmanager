@@ -24,7 +24,8 @@ const FILING_RULES = [
   { parent: 'waste_outbound', fileType: '올바로', code: 'DOC-01-03-003' },
   { parent: 'asset', fileType: '차량등록증', code: 'DOC-03-01-001' },
   { parent: 'asset', fileType: '보험증권', code: 'DOC-03-01-002' },
-  { parent: 'asset', fileType: '계약서', code: 'DOC-03-02-002' },
+  // 계약서는 자산이 아니라 계약서끼리 모인다. 문서가 자산에도 연결되므로 자산 문서함에서는 그대로 보인다.
+  { parent: 'asset', fileType: '계약서', code: 'DOC-05-01-005' },
   { parent: 'asset_maintenance', fileType: null, code: 'DOC-03-01-003' },
   { parent: 'vehicle_maintenance', fileType: null, code: 'DOC-03-01-003' },
   { parent: 'employee', fileType: null, code: 'DOC-04-03-002' },
