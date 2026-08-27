@@ -81,6 +81,7 @@ export function ExternalVehicleSection() {
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-y border-border">
+              <th className={`${thCls} w-[52px]`}>번호</th>
               <th className={thCls}>차량번호</th>
               <th className={thCls}>차종</th>
               <th className={thCls}>등록일</th>
@@ -88,8 +89,9 @@ export function ExternalVehicleSection() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((a) => (
+            {rows.map((a, i) => (
               <tr key={a.id} className={trCls}>
+                <td className={`${tdCls} tabular text-text-faint`}>{i + 1}</td>
                 <td className={`${tdCls} tabular whitespace-nowrap`}>
                   {editing === a.id ? (
                     <input
@@ -175,7 +177,7 @@ export function ExternalVehicleSection() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={5} className="py-10 text-center text-[13px] text-text-faint">
                   계근 등록에서 직접 입력된 차량번호가 없습니다.
                 </td>
               </tr>

@@ -81,6 +81,7 @@ export function ExternalDriverSection() {
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-y border-border">
+              <th className={`${thCls} w-[52px]`}>번호</th>
               <th className={thCls}>이름</th>
               <th className={thCls}>연락처</th>
               <th className={thCls}>비고</th>
@@ -89,8 +90,9 @@ export function ExternalDriverSection() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((d) => (
+            {rows.map((d, i) => (
               <tr key={d.id} className={trCls}>
+                <td className={`${tdCls} tabular text-text-faint`}>{i + 1}</td>
                 <td className={`${tdCls} whitespace-nowrap`}>
                   {editing === d.id ? (
                     <input value={name} onChange={(e) => setName(e.target.value)} className={`${inputCls} h-8 w-[130px] px-2`} />
@@ -165,7 +167,7 @@ export function ExternalDriverSection() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={6} className="py-10 text-center text-[13px] text-text-faint">
                   계근 등록에서 직접 입력된 운전자가 없습니다.
                 </td>
               </tr>
