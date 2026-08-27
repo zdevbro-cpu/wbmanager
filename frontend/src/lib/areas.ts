@@ -4,6 +4,7 @@ import {
   PackageMinus,
   Trash2,
   ListTree,
+  CalendarRange,
   BarChart3,
   FileText,
   FileArchive,
@@ -71,6 +72,7 @@ export const AREAS: Area[] = [
         items: [
           { to: '/ledger', label: '통합 원장 조회', icon: ListTree },
           { to: '/aggregation', label: '자동집계 현황', icon: BarChart3 },
+          { to: '/labor-plan', label: '현장인력계획', icon: CalendarRange },
           { to: '/inventory', label: '재고 / 재고평가', icon: Boxes },
           { to: '/transports', label: '운반비 관리', icon: Truck },
           { to: '/labors', label: '공수표 관리', icon: Users },
