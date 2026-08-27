@@ -253,7 +253,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                   </div>
 
                   {/* 막대 — 길이가 기간, 채움이 달성률이다. */}
-                  <div className="relative h-[16px] flex-1 rounded-[4px] bg-hover/50">
+                  <div className="relative h-[11px] flex-1 rounded-[3px] bg-hover/50">
                     {/* 주말 자리를 옅게 깔아 주 단위가 보이게 한다. */}
                     {chart.days.map((d, i) =>
                       weekdayOf(d) === 0 || weekdayOf(d) === 6 ? (
@@ -265,7 +265,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                       ) : null,
                     )}
                     <div
-                      className="absolute top-0 bottom-0 overflow-hidden rounded-[4px]"
+                      className="absolute top-0 bottom-0 overflow-hidden rounded-[3px]"
                       style={{
                         left: `${(p.offset / dayCount) * 100}%`,
                         width: `${(p.days / dayCount) * 100}%`,
@@ -280,7 +280,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                           backgroundColor: `rgba(${colorOf(p.employmentType ?? '미지정')}, 0.85)`,
                         }}
                       />
-                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white drop-shadow">
+                      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold leading-none text-white drop-shadow">
                         {p.rate > 0 ? `${Math.round(p.rate * 100)}%` : ''}
                       </span>
                     </div>
@@ -305,28 +305,26 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                 하루 합계
                 <span className="block text-[11px] font-normal text-text-faint">계획 옅은 주황 · 실행 진한 주황</span>
               </div>
-              <div className="flex h-[30px] flex-1 items-end justify-between gap-[2px]">
+              <div className="flex h-[30px] flex-1 items-end gap-[1px]">
                 {chart.days.map((d) => {
                   const plan = dayTotals.plan[d] ?? 0;
                   const actual = dayTotals.actual[d] ?? 0;
                   const short = actual < plan;
                   return (
-                    <div
-                      key={d}
-                      className="relative flex-1"
-                      style={{ maxWidth: 7 }}
-                      title={`${d} · 계획 ${plan} · 실행 ${actual}공수`}
-                    >
+                    <div key={d} className="relative flex-1" title={`${d} · 계획 ${plan} · 실행 ${actual}공수`}>
                       <div className="flex h-[30px] items-end">
                         <div
-                          className="w-full rounded-t-[2px] bg-warning/25"
-                          style={{ height: `${(plan / dayMax) * 100}%` }}
+                          className="w-full rounded-t-[2px]"
+                          style={{ height: `${(plan / dayMax) * 100}%`, backgroundColor: 'rgba(251, 146, 60, 0.3)' }}
                         />
                       </div>
                       <div className="absolute inset-x-0 bottom-0 flex h-[30px] items-end">
                         <div
-                          className={`w-full rounded-t-[2px] ${short ? 'bg-danger' : 'bg-warning'}`}
-                          style={{ height: `${(actual / dayMax) * 100}%` }}
+                          className="w-full rounded-t-[2px]"
+                          style={{
+                            height: `${(actual / dayMax) * 100}%`,
+                            backgroundColor: short ? 'rgb(239, 68, 68)' : 'rgb(251, 146, 60)',
+                          }}
                         />
                       </div>
                     </div>
