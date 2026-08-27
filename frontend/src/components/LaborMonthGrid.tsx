@@ -7,7 +7,7 @@ import { FormModal } from './FormModal';
 import { SearchSelect } from './SearchSelect';
 import { NumberInput } from './ui/NumberInput';
 import { formatNumber } from '../lib/number';
-import { kstToday } from '../lib/datetime';
+import { kstToday, kstStamp } from '../lib/datetime';
 import {
   cardCls,
   cardPadCls,
@@ -426,8 +426,8 @@ function DayEditor({
         )}
         {(row?.checkInAt || row?.checkOutAt) && (
           <p className="mb-3 text-[12.5px] text-text-sub">
-            출근 {row.checkInAt ? row.checkInAt.slice(11, 16) : '-'} · 퇴근{' '}
-            {row.checkOutAt ? row.checkOutAt.slice(11, 16) : '-'}
+            출근 {row.checkInAt ? kstStamp(row.checkInAt).slice(11, 16) : '-'} · 퇴근{' '}
+            {row.checkOutAt ? kstStamp(row.checkOutAt).slice(11, 16) : '-'}
             {row.checkInDistance != null && ` · 현장에서 ${formatNumber(row.checkInDistance)}m`}
           </p>
         )}
