@@ -21,6 +21,7 @@ import { DailyReportPage } from './pages/DailyReportPage';
 import { TransportCostPage } from './pages/TransportCostPage';
 import { LaborPage } from './pages/LaborPage';
 import { LaborPlanPage } from './pages/LaborPlanPage';
+import { AttendGatePage } from './pages/AttendGatePage';
 import { InventoryPage } from './pages/InventoryPage';
 import { PnlPage } from './pages/PnlPage';
 import { WasteManagementPage } from './pages/WasteManagementPage';
@@ -45,6 +46,8 @@ function Gate() {
       {/* 현장에서 휴대폰으로 쓰는 화면 — 사이드바 없이 한 화면만 쓴다. */}
       {/* 현장에서 여는 첫 화면은 출퇴근이다. 계근 등록은 관리자만 들어간다. */}
       <Route path="/mobile" element={<MobileAttendPage />} />
+      {/* 사무실 출퇴근 단말 — 사이드바 없이 전체화면으로 종일 띄워 둔다. */}
+      <Route path="/attend-gate" element={<AttendGatePage />} />
       <Route
         path="/mobile/weigh"
         element={appUser.role === 'admin' ? <MobileWeighPage /> : <Navigate to="/mobile" replace />}
