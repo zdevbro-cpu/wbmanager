@@ -183,7 +183,8 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
           type="month"
           value={month}
           onChange={(e) => e.target.value && setMonth(e.target.value)}
-          className={`${inputCls} w-[150px]`}
+          className={inputCls}
+          style={{ width: 150 }}
           aria-label="정산 월"
         />
         <button type="button" onClick={() => setMonth(shiftMonth(month, 1))} className={`${outlineBtnCls} px-2`}>
@@ -216,11 +217,11 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
       </div>
 
       <div className={`${tableWrapCls} overflow-x-auto`}>
-        <table className="w-full border-collapse">
+        <table className="w-max min-w-full border-collapse">
           <thead>
             <tr className="border-y border-border">
-              <th className={`${thCls} sticky left-0 z-10 bg-card`}>이름</th>
-              <th className={thCls}>구분</th>
+              <th className={`${thCls} sticky left-0 z-10 whitespace-nowrap bg-card`}>이름</th>
+              <th className={`${thCls} whitespace-nowrap`}>구분</th>
               {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
                 const w = weekdayOf(month, d);
                 return (
@@ -235,11 +236,11 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
                   </th>
                 );
               })}
-              <th className={thNumCls}>출근</th>
-              <th className={thNumCls}>공수</th>
-              <th className={thNumCls}>인건비</th>
-              <th className={thNumCls}>식대</th>
-              <th className={thNumCls}>기타</th>
+              <th className={`${thNumCls} whitespace-nowrap`}>출근</th>
+              <th className={`${thNumCls} whitespace-nowrap`}>공수</th>
+              <th className={`${thNumCls} whitespace-nowrap`}>인건비</th>
+              <th className={`${thNumCls} whitespace-nowrap`}>식대</th>
+              <th className={`${thNumCls} whitespace-nowrap`}>기타</th>
             </tr>
           </thead>
           <tbody>
