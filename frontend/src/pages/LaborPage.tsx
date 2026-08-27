@@ -27,7 +27,7 @@ import {
 import type { Project } from '../types';
 import { LaborMonthGrid } from '../components/LaborMonthGrid';
 
-export const WORKER_TYPES = ['정규직', '프리랜서', '현장직', '타사직원'];
+export const WORKER_TYPES = ['정규직', '계약직', '일용직', '프리랜서', '현장직', '타사직원'];
 
 interface Labor {
   id: string;

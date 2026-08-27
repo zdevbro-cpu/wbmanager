@@ -85,6 +85,8 @@ function shiftMonth(month: string, by: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 const dayKey = (month: string, day: number) => `${month}-${String(day).padStart(2, '0')}`;
+// 임직원에 연결된 줄은 그 사람으로, 이름만 있는 옛 줄은 이름으로 찾는다.
+const keyOf = (r: LaborRow) => r.employeeId || `name:${r.workerName ?? '이름 없음'}`;
 
 // 월 근태·공수 — 행이 사람, 열이 날짜다. 한 칸이 그 사람의 하루다.
 // 급여를 계산하지는 않는다. 근태와 공수를 모아 월로 집계하는 데까지다.
@@ -117,34 +119,47 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
   const cells = useMemo(() => {
     const map = new Map<string, LaborRow>();
     for (const r of rows) {
-      if (!r.employeeId) continue;
-      map.set(`${r.employeeId}|${(r.workDate ?? '').slice(0, 10)}`, r);
+      map.set(`${keyOf(r)}|${(r.workDate ?? '').slice(0, 10)}`, r);
     }
     return map;
   }, [rows]);
 
-  // 이름만 적혀 있고 임직원에 연결되지 않은 지난 자료 — 달력에는 담기지 않는다.
-  const unlinked = rows.filter((r) => !r.employeeId).length;
+  // 고용 구분과 상관없이 모두 담는다 — 정규직·계약직·일용직·프리랜서·현장직·타사직원.
+  // 임직원에 연결되지 않은 지난 자료는 이름만으로 한 줄을 만들어 합계에서 빠지지 않게 한다.
+  const people = useMemo(() => {
+    const tally = (mine: LaborRow[]) => ({
+      presentDays: mine.filter((r) => PRESENT.has(r.attendCode ?? '')).length,
+      manDays: mine.reduce((s, r) => s + num(r.totalManDays), 0),
+      laborCost: mine.reduce((s, r) => s + num(r.laborCost), 0),
+      mealCost: mine.reduce((s, r) => s + num(r.mealCost), 0),
+      etcCost: mine.reduce((s, r) => s + num(r.toolCost) + num(r.fuelCost) + num(r.suppliesCost), 0),
+      draft: mine.filter((r) => r.isDraft).length,
+    });
 
-  const people = useMemo(
-    () =>
-      employees.map((e) => {
-        const mine = rows.filter((r) => r.employeeId === e.id);
-        return {
-          id: e.id,
-          name: e.name,
-          type: e.employmentType ?? '정규직',
-          department: e.department ?? '',
-          presentDays: mine.filter((r) => PRESENT.has(r.attendCode ?? '')).length,
-          manDays: mine.reduce((s, r) => s + num(r.totalManDays), 0),
-          laborCost: mine.reduce((s, r) => s + num(r.laborCost), 0),
-          mealCost: mine.reduce((s, r) => s + num(r.mealCost), 0),
-          etcCost: mine.reduce((s, r) => s + num(r.toolCost) + num(r.fuelCost) + num(r.suppliesCost), 0),
-          draft: mine.filter((r) => r.isDraft).length,
-        };
-      }),
-    [employees, rows],
-  );
+    const linked = employees.map((e) => ({
+      key: e.id,
+      employeeId: e.id,
+      name: e.name,
+      type: e.employmentType ?? '정규직',
+      ...tally(rows.filter((r) => r.employeeId === e.id)),
+    }));
+
+    const loose = new Map<string, LaborRow[]>();
+    for (const r of rows) {
+      if (r.employeeId) continue;
+      const name = r.workerName ?? '이름 없음';
+      loose.set(name, [...(loose.get(name) ?? []), r]);
+    }
+    const unlinked = [...loose.entries()].map(([name, mine]) => ({
+      key: `name:${name}`,
+      employeeId: '',
+      name,
+      type: mine[0]?.workerType ?? '-',
+      ...tally(mine),
+    }));
+
+    return [...linked, ...unlinked];
+  }, [employees, rows]);
 
   const totals = useMemo(
     () => ({
@@ -244,15 +259,16 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
           </thead>
           <tbody>
             {people.map((p) => (
-              <tr key={p.id} className="border-b border-border">
+              <tr key={p.key} className="border-b border-border">
                 <td className="sticky left-0 z-10 whitespace-nowrap bg-card px-3 py-1.5 text-[13px] font-semibold text-text-strong">
                   {p.name}
+                  {!p.employeeId && <span className="ml-1 text-[11px] font-normal text-text-faint">미연결</span>}
                   {p.draft > 0 && <span className="ml-1 text-[11px] font-bold text-warning">임시 {p.draft}</span>}
                 </td>
                 <td className="whitespace-nowrap px-3 py-1.5 text-[12.5px] text-text-sub">{p.type}</td>
                 {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
                   const date = dayKey(month, d);
-                  const cell = cells.get(`${p.id}|${date}`);
+                  const cell = cells.get(`${p.key}|${date}`);
                   const w = weekdayOf(month, d);
                   return (
                     <td
@@ -261,7 +277,10 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
                     >
                       <button
                         type="button"
-                        onClick={() => setEditing({ employeeId: p.id, name: p.name, type: p.type, date })}
+                        onClick={() =>
+                          p.employeeId && setEditing({ employeeId: p.employeeId, name: p.name, type: p.type, date })
+                        }
+                        disabled={!p.employeeId}
                         title={`${date} ${p.name}`}
                         className={`h-[26px] w-full text-[12px] font-bold hover:bg-hover ${
                           cell?.attendCode ? ATTEND_TONE[cell.attendCode] ?? 'text-text' : 'text-text'
@@ -307,7 +326,9 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
 
       <p className="mt-2 text-[12px] text-text-faint">
         칸을 누르면 그 사람의 하루를 적습니다. 정규직은 근태(출·반·특·연·병·결·휴), 그 외는 공수를 넣습니다.
-        {unlinked > 0 && ` 임직원에 연결되지 않은 지난 자료 ${unlinked}건은 「날짜별 목록」 탭에서 봅니다.`}
+        정규직·계약직·일용직·프리랜서·현장직·타사직원을 모두 담습니다 — 임직원 관리에 등록된 사람이 여기에 나옵니다.
+        {people.some((p) => !p.employeeId) &&
+          ' 임직원에 연결되지 않은 지난 자료는 이름만으로 아래에 두었고, 합계에는 들어갑니다(칸은 고칠 수 없습니다).'}
       </p>
 
       {editing && (

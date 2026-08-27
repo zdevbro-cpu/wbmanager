@@ -4,6 +4,7 @@ import { api, API_BASE_URL } from '../api/client';
 import { auth } from '../lib/firebase';
 import { formatPhone } from '../lib/phone';
 import { useCommonCodes } from '../hooks/useMasters';
+import { EMPLOYMENT_TYPES } from './EmployeeManagementPage';
 import { FormModal } from '../components/FormModal';
 import { EntityDocuments } from '../components/EntityDocuments';
 import { QrCode } from '../components/QrCode';
@@ -298,6 +299,7 @@ function BasicInfoForm({
   const [department, setDepartment] = useState(emp.department ?? '');
   const [position, setPosition] = useState(emp.position ?? '');
   const [hireDate, setHireDate] = useState(emp.hireDate ? emp.hireDate.slice(0, 10) : '');
+  const [employmentType, setEmploymentType] = useState(emp.employmentType ?? '정규직');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -367,7 +369,7 @@ function BasicInfoForm({
     setError('');
     setSaving(true);
     try {
-      await api.patch(`/api/employees/${emp.id}`, { name, phone, department, position, hireDate });
+      await api.patch(`/api/employees/${emp.id}`, { name, phone, department, position, hireDate, employmentType });
       onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장하지 못했습니다.');
@@ -417,6 +419,17 @@ function BasicInfoForm({
               <option key={o} value={o} />
             ))}
           </datalist>
+        </div>
+        <div>
+          {/* 공수표가 이 값으로 갈린다 — 정규직은 근태, 그 밖은 공수. */}
+          <label className={label}>고용 구분</label>
+          <select value={employmentType} onChange={(e) => setEmploymentType(e.target.value)} className={inputCls}>
+            {EMPLOYMENT_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className={label}>직급</label>

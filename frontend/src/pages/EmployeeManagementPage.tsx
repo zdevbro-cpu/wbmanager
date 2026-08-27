@@ -94,7 +94,8 @@ const sortedTrainings = (emp: Employee) =>
   byUrgency(emp.trainings ?? [], (t) => t.nextDueDate ?? t.trainingDate);
 
 
-export const EMPLOYMENT_TYPES = ['정규직', '프리랜서', '현장직', '타사직원'];
+// 공수표는 이 구분과 상관없이 모두 담는다. 정규직은 근태로, 그 밖은 공수로 센다.
+export const EMPLOYMENT_TYPES = ['정규직', '계약직', '일용직', '프리랜서', '현장직', '타사직원'];
 
 export function EmployeeManagementPage({ embedded = false }: { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
