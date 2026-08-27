@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { SearchSelect } from './SearchSelect';
 import { NumberInput } from './ui/NumberInput';
@@ -44,6 +44,13 @@ const SUM_W = 72;
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
 
 const weekdayOf = (date: string) => new Date(`${date}T00:00:00`).getDay();
+
+// 'YYYY-MM' 을 앞뒤로 옮긴다. 12월에서 한 칸 더 가면 다음 해 1월이다.
+function shiftMonth(month: string, step: number) {
+  const [y, m] = month.split('-').map(Number);
+  const d = new Date(y, m - 1 + step, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
 
 // 봐야 할 것은 계획과 실행 두 값이 아니라 그 차이다 —
 // 모자란 날, 맞은 날, 넘친 날. 그래서 칸 색은 달성 상태를 뜻한다.
@@ -163,14 +170,41 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
   return (
     <div>
       <div className={`${cardCls} mb-3 flex flex-wrap items-center gap-2 px-3 py-2`}>
-        <input
-          type="month"
-          value={month}
-          onChange={(e) => e.target.value && setMonth(e.target.value)}
-          className={inputCls}
-          style={{ width: 150 }}
-          aria-label="계획 월"
-        />
+        <div
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft') {
+              e.preventDefault();
+              setMonth(shiftMonth(month, -1));
+            }
+            if (e.key === 'ArrowRight') {
+              e.preventDefault();
+              setMonth(shiftMonth(month, 1));
+            }
+          }}
+          title="화살표 단추나 키보드 ← → 로 달을 옮깁니다"
+          className={`${inputCls} flex w-[190px] shrink-0 items-center justify-between gap-1 px-1 focus:border-primary`}
+        >
+          <button
+            type="button"
+            onClick={() => setMonth(shiftMonth(month, -1))}
+            aria-label="이전 달"
+            className="rounded-[6px] px-1.5 py-1 text-text-sub hover:bg-hover hover:text-text-strong"
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <span className="tabular text-[13px] font-bold text-text-strong">
+            {month.slice(0, 4)}년 {month.slice(5, 7)}월
+          </span>
+          <button
+            type="button"
+            onClick={() => setMonth(shiftMonth(month, 1))}
+            aria-label="다음 달"
+            className="rounded-[6px] px-1.5 py-1 text-text-sub hover:bg-hover hover:text-text-strong"
+          >
+            <ChevronRight size={15} />
+          </button>
+        </div>
         <div style={{ width: 260 }}>
           <SearchSelect
             ariaLabel="프로젝트"
@@ -302,8 +336,8 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
             {/* 하루 합계 — 하루 단위는 여기 한 줄에서만 본다. */}
             <div className="mt-3 flex items-end gap-3 border-t border-border pt-3">
               <div className="shrink-0 text-[12px] font-semibold text-text-mid" style={{ width: LABEL_W }}>
-                하루 합계
-                <span className="block text-[11px] font-normal text-text-faint">계획 옅은 주황 · 실행 진한 주황</span>
+                합계
+                <span className="block text-[11px] font-normal text-text-faint">계획 윤곽 · 실행 채움</span>
               </div>
               <div className="flex h-[30px] flex-1 items-end gap-[1px]">
                 {chart.days.map((d) => {
@@ -315,7 +349,11 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                       <div className="flex h-[30px] items-end">
                         <div
                           className="w-full rounded-t-[2px]"
-                          style={{ height: `${(plan / dayMax) * 100}%`, backgroundColor: 'rgba(251, 146, 60, 0.3)' }}
+                          style={{
+                            height: `${(plan / dayMax) * 100}%`,
+                            backgroundColor: 'rgba(253, 186, 116, 0.18)',
+                            boxShadow: 'inset 0 0 0 1px rgba(253, 186, 116, 0.85)',
+                          }}
                         />
                       </div>
                       <div className="absolute inset-x-0 bottom-0 flex h-[30px] items-end">
@@ -323,7 +361,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                           className="w-full rounded-t-[2px]"
                           style={{
                             height: `${(actual / dayMax) * 100}%`,
-                            backgroundColor: short ? 'rgb(239, 68, 68)' : 'rgb(251, 146, 60)',
+                            backgroundColor: short ? 'rgb(248, 113, 113)' : 'rgb(253, 186, 116)',
                           }}
                         />
                       </div>
