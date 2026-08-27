@@ -12,7 +12,7 @@ import { pageTitleCls, primaryBtnCls, inputCls, tableWrapCls, thCls,
 import type { InventoryValuation, InventoryValuationRow, LedgerEntry } from '../types';
 import { DateField } from '../components/ui/DateField';
 
-const SOURCE_LABEL: Record<string, string> = { project: '차수전용', global: '전체적용', base: '기준단가' };
+const SOURCE_LABEL: Record<string, string> = { project: '프로젝트전용', global: '전체적용', base: '기준단가' };
 
 const REF_TYPE_LABEL: Record<string, string> = {
   inbound: '입고',

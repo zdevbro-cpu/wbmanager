@@ -224,7 +224,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
       <form onSubmit={handleSubmit} className={cardPadCls}>
         <div className="grid grid-cols-4 gap-x-3 gap-y-3.5">
           <div>
-            <label className={labelCls}>프로젝트(차수)</label>
+            <label className={labelCls}>프로젝트</label>
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required className={inputCls}>
               <option value="">선택</option>
               {projects.map((p) => (

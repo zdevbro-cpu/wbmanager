@@ -43,7 +43,6 @@ router.post('/', async (req, res) => {
     tx.project.create({
       data: {
         roundName: b.roundName,
-        roundNo: orNull(b.roundNo),
         ordererId: orNull(b.ordererId),
         contractorId: orNull(b.contractorId),
         buyerId: orNull(b.buyerId),
@@ -78,7 +77,6 @@ router.patch('/:id', async (req, res) => {
     where: { id: req.params.id },
     data: {
       ...set('roundName', b.roundName),
-      ...set('roundNo', b.roundNo || null),
       ...set('ordererId', b.ordererId || null),
       ...set('contractorId', b.contractorId || null),
       ...set('siteName', b.siteName || null),

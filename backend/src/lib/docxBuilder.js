@@ -135,7 +135,7 @@ export async function buildPnlDocx(payload) {
     inventoryDetail: payload?.inventoryDetail ?? [],
   };
   const children = [
-    title(`${p.roundName}${p.roundNo ? ` ${p.roundNo}` : ''} 손익 현황 보고`),
+    title(`${p.roundName} 손익 현황 보고`),
     subtitle('손익 현황 보고 — 대표이사 보고용'),
     meta(`보고일: ${p.reportDate}   |   작성: 크로스특수   |   기준: 반입·반출·인건비·운송 등록 데이터`),
 
