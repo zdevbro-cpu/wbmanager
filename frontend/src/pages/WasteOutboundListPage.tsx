@@ -105,10 +105,15 @@ export function WasteOutboundListPage() {
         filter={filter}
         setFilter={setFilter}
         suggestions={suggestions}
-        filterKeys={['projectId', 'date', 'itemCode', 'vehicleNo', 'olbaro', 'dischargerName', 'transporterName', 'processorName']}
+        filterKeys={['projectId', 'date', 'itemCode', 'vehicleNo', 'olbaro',
+          'draft', 'dischargerName', 'transporterName', 'processorName']}
         onAdd={() => setOpen(true)}
         onDelete={remove}
         reload={load}
+        isDraft={(r) => r.isDraft === true}
+        onConfirm={async (r) => {
+          await api.patch(`/api/waste-outbounds/${r.id}`, { isDraft: false });
+        }}
         editForm={(row, done) => (
           <WasteOutboundFormPage
             embedded

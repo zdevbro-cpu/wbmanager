@@ -94,6 +94,10 @@ export function OutboundListPage() {
         onAdd={() => setOpen(true)}
         onDelete={remove}
         reload={load}
+        isDraft={(r) => r.isDraft === true}
+        onConfirm={async (r) => {
+          await api.patch(`/api/outbounds/${r.id}`, { isDraft: false });
+        }}
         editForm={(row, done) => (
           <OutboundFormPage
             embedded

@@ -232,6 +232,8 @@ model Inbound {
   stockWeight    Decimal?    @map("stock_weight") @db.Decimal(12, 3) // 재고반영중량(ecount 필수) — 기본값은 입고량과 동기화
   storageZone    String?     @map("storage_zone")
   memo           String?     @map("memo") // 비고
+  // 모바일에서 올린 건은 임시저장으로 들어온다. 사무실에서 확인하고 정상등록으로 바꾼다.
+  isDraft         Boolean   @default(false) @map("is_draft")
   createdAt      DateTime    @default(now()) @map("created_at")
   deletedAt      DateTime?   @map("deleted_at") // 소프트 삭제
 
@@ -263,6 +265,8 @@ model WasteInbound {
   lossWeight     Decimal?    @map("loss_weight") @db.Decimal(12, 3)
   netWeight      Decimal     @map("net_weight") @db.Decimal(12, 3) // 입고량 = 총중량 - 공차중량 - 감량
   memo           String?     @map("memo")
+  // 모바일에서 올린 건은 임시저장으로 들어온다. 사무실에서 확인하고 정상등록으로 바꾼다.
+  isDraft         Boolean   @default(false) @map("is_draft")
   createdAt      DateTime    @default(now()) @map("created_at")
   deletedAt      DateTime?   @map("deleted_at") // 소프트 삭제
 
@@ -350,6 +354,8 @@ model OutboundSale {
   taxInvoiceIssued Boolean    @default(false) @map("tax_invoice_issued")
   isPaid           Boolean    @default(false) @map("is_paid")
   paidDate         DateTime?  @map("paid_date") // 입금일
+  // 모바일에서 올린 건은 임시저장으로 들어온다. 사무실에서 확인하고 정상등록으로 바꾼다.
+  isDraft         Boolean   @default(false) @map("is_draft")
   createdAt        DateTime   @default(now()) @map("created_at")
   deletedAt        DateTime?  @map("deleted_at") // 소프트 삭제
 
@@ -394,6 +400,8 @@ model WasteOutbound {
   olbaroReported  Boolean     @default(false) @map("olbaro_reported") // 올바로 신고 상태(O/X)
   handoverDate    DateTime?   @map("handover_date") // 인계일
   olbaroMemo      String?     @map("olbaro_memo") // 기준업체량 등 메모
+  // 모바일에서 올린 건은 임시저장으로 들어온다. 사무실에서 확인하고 정상등록으로 바꾼다.
+  isDraft         Boolean   @default(false) @map("is_draft")
   createdAt       DateTime    @default(now()) @map("created_at")
   deletedAt       DateTime?   @map("deleted_at") // 소프트 삭제
 

@@ -54,6 +54,8 @@ router.get('/', async (req, res) => {
     transporterName,
     processorName,
   } = req.query;
+  // 임시저장만 보거나(true), 정상등록만 보거나(false). 없으면 둘 다 본다.
+  const draft = req.query.draft;
   const range = {};
   if (from) range.gte = new Date(from);
   if (to) range.lte = new Date(to);
@@ -64,6 +66,7 @@ router.get('/', async (req, res) => {
   const wasteOutbounds = await prisma.wasteOutbound.findMany({
     where: {
       deletedAt: null,
+      ...(draft === 'true' ? { isDraft: true } : draft === 'false' ? { isDraft: false } : {}),
       ...(projectId ? { projectId } : {}),
       ...(Object.keys(range).length ? { outboundDate: range } : {}),
       ...(vehicleType ? { vehicleType } : {}),

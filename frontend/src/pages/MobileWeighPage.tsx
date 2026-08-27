@@ -126,6 +126,8 @@ export function MobileWeighPage() {
         tareWeight: Number(tareWeight),
         lossWeight: lossWeight ? Number(lossWeight) : undefined,
         memo: memo || undefined,
+        // 사진에서 읽은 값이 섞여 있다. 사무실에서 확인하기 전까지 임시저장으로 둔다.
+        isDraft: true,
       };
       const created = await api.post<{ id: string }>(spec.path, payload);
 
@@ -165,7 +167,7 @@ export function MobileWeighPage() {
         <Check size={44} className="text-success" />
         <p className="text-[17px] font-extrabold text-text-strong">{spec.label} 등록을 마쳤습니다.</p>
         <p className="text-[13px] text-text-sub">
-          찍은 계량증명서도 함께 올라갔습니다. 사무실 화면에서 바로 확인할 수 있습니다.
+          「임시저장」으로 올라갔습니다. 사무실에서 값을 확인하고 정상등록으로 바꾸면 끝납니다.
         </p>
         <button type="button" onClick={reset} className="w-full rounded-[12px] bg-primary py-4 text-[16px] font-bold text-white">
           다음 건 등록
