@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Settings, Building2, Package, Plus, Eye, Trash2, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
 import { CommonCodePage } from './CommonCodePage';
@@ -44,7 +44,24 @@ type MasterTab = 'vendors' | 'items' | 'codes' | 'vehicles' | 'drivers';
 export function MasterManagementPage({ embedded = false }: { embedded?: boolean }) {
   const { vendors, reload: reloadVendors } = useVendors();
   const { items, reload: reloadItems } = useItemMasters();
-  const [tab, setTab] = useState<MasterTab>('vendors');
+  const [tab, setTab] = useState<MasterTab>('codes');
+  // 탭마다 몇 건인지 보여 준다. 목록을 열지 않고도 어디에 무엇이 쌓였는지 알 수 있어야 한다.
+  const [counts, setCounts] = useState({ codes: 0, vehicles: 0, drivers: 0 });
+
+  const loadCounts = useCallback(() => {
+    Promise.all([
+      api.get<unknown[]>('/api/common-codes?includeInactive=true'),
+      api.get<unknown[]>('/api/assets?assetType=VEHICLE&isCompany=false'),
+      api.get<unknown[]>('/api/external-drivers'),
+    ]).then(([codes, vehicles, drivers]) =>
+      setCounts({ codes: codes.length, vehicles: vehicles.length, drivers: drivers.length }),
+    );
+  }, []);
+
+  // 탭을 옮길 때마다 다시 센다 — 방금 지우거나 고친 것이 숫자에 바로 반영되어야 한다.
+  useEffect(() => {
+    loadCounts();
+  }, [loadCounts, tab]);
 
   return (
     <div>
@@ -56,20 +73,20 @@ export function MasterManagementPage({ embedded = false }: { embedded?: boolean 
       )}
 
       <div className="mb-5 flex gap-1 border-b border-border">
+        <MasterTabButton active={tab === 'codes'} onClick={() => setTab('codes')}>
+          공통코드 <span className="ml-1 font-semibold text-text-faint">{counts.codes}</span>
+        </MasterTabButton>
         <MasterTabButton active={tab === 'vendors'} onClick={() => setTab('vendors')}>
           거래처 <span className="ml-1 font-semibold text-text-faint">{vendors.length}</span>
         </MasterTabButton>
         <MasterTabButton active={tab === 'items'} onClick={() => setTab('items')}>
           품목 <span className="ml-1 font-semibold text-text-faint">{items.length}</span>
         </MasterTabButton>
-        <MasterTabButton active={tab === 'codes'} onClick={() => setTab('codes')}>
-          공통코드
-        </MasterTabButton>
         <MasterTabButton active={tab === 'vehicles'} onClick={() => setTab('vehicles')}>
-          계근 차량
+          계근 차량 <span className="ml-1 font-semibold text-text-faint">{counts.vehicles}</span>
         </MasterTabButton>
         <MasterTabButton active={tab === 'drivers'} onClick={() => setTab('drivers')}>
-          운전자
+          운전자 <span className="ml-1 font-semibold text-text-faint">{counts.drivers}</span>
         </MasterTabButton>
       </div>
 
