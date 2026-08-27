@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BellRing, Truck, Award, GraduationCap, Boxes, AlertTriangle, Clock, CalendarClock, ArrowUpRight, History } from 'lucide-react';
+import { BellRing, Truck, Award, GraduationCap, Boxes, AlertTriangle, Clock, CalendarClock, ArrowUpRight, History, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { kstStamp } from '../lib/datetime';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import {
@@ -282,6 +283,10 @@ interface FeedItem {
 }
 
 const ACTION_LABEL: Record<string, string> = { create: '등록', update: '수정', delete: '삭제' };
+// 로그 줄 위 조건·쪽 이동 단추는 표보다 작게 두어 표가 주인공이 되게 한다.
+const feedCtlCls =
+  'rounded-[8px] border border-border bg-input px-2 py-1 text-[12.5px] text-input-text';
+
 const ACTION_TONE: Record<string, string> = {
   create: 'bg-success/15 text-success',
   update: 'bg-primary/15 text-primary',
@@ -310,29 +315,118 @@ const TARGET_LABEL: Record<string, string> = {
 };
 
 function RecentFeed() {
+  const { appUser } = useAuth();
+  const isAdmin = appUser?.role === 'admin';
+
   const [items, setItems] = useState<FeedItem[]>([]);
+  const [total, setTotal] = useState(0);
   const [days, setDays] = useState(2);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [size, setSize] = useState(30);
+  const [page, setPage] = useState(0);
+  const [busy, setBusy] = useState(false);
+
+  // 날짜 구간을 적으면 그 구간이 기준이 된다. 비우면 위의 기간 선택을 따른다.
+  const ranged = Boolean(from || to);
+  const query = `${ranged ? `from=${from}&to=${to}` : `days=${days}`}&size=${size}&offset=${page * size}`;
+
+  const load = () => {
+    api
+      .get<{ items: FeedItem[]; total: number } | FeedItem[]>(`/api/audit-logs/recent?paged=1&${query}`)
+      .then((r) => {
+        // 서버가 아직 이전 판이면 배열만 온다. 그때는 받은 것을 한 쪽으로 보여 준다.
+        const list = Array.isArray(r) ? r : r.items;
+        setItems(list);
+        setTotal(Array.isArray(r) ? list.length : r.total);
+      });
+  };
 
   useEffect(() => {
-    api.get<FeedItem[]>(`/api/audit-logs/recent?days=${days}`).then(setItems);
-  }, [days]);
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days, from, to, size, page]);
+
+  // 조건이 바뀌면 첫 쪽으로 돌아간다. 3쪽을 보다 조건을 좁히면 빈 쪽이 나온다.
+  useEffect(() => {
+    setPage(0);
+  }, [days, from, to, size]);
+
+  const lastPage = Math.max(Math.ceil(total / size) - 1, 0);
+
+  const remove = async () => {
+    if (!from || !to) {
+      alert('삭제할 기간의 시작일과 종료일을 모두 지정해 주세요.');
+      return;
+    }
+    if (!confirm(`${from} ~ ${to} 구간의 변경 로그 ${total}건을 삭제합니다.\n삭제한 로그는 되돌릴 수 없습니다. 진행할까요?`)) return;
+
+    setBusy(true);
+    try {
+      const r = await api.del<{ count: number }>(`/api/audit-logs/recent?from=${from}&to=${to}`);
+      alert(`${r.count}건을 삭제했습니다.`);
+      setPage(0);
+      load();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '삭제하지 못했습니다.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="mt-6">
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
         <History size={16} className="text-primary" />
-        <h2 className={`${sectionTitleCls} text-[15px]`}>최근 변경</h2>
-        <span className="text-[13px] text-text-sub">{items.length}건</span>
-        <select
-          value={days}
-          onChange={(e) => setDays(Number(e.target.value))}
-          className="ml-auto rounded-[8px] border border-border bg-input px-2 py-1 text-[12.5px] text-input-text"
-        >
-          <option value={1}>오늘</option>
-          <option value={2}>어제부터</option>
-          <option value={7}>최근 7일</option>
-          <option value={30}>최근 30일</option>
-        </select>
+        <h2 className={`${sectionTitleCls} text-[15px]`}>최근 변경 로그</h2>
+        <span className="text-[13px] text-text-sub">{total}건</span>
+
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <select
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+            disabled={ranged}
+            className={`${feedCtlCls} disabled:opacity-40`}
+          >
+            <option value={1}>오늘</option>
+            <option value={2}>어제부터</option>
+            <option value={7}>최근 7일</option>
+            <option value={30}>최근 30일</option>
+          </select>
+
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={feedCtlCls} />
+          <span className="text-text-faint">~</span>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={feedCtlCls} />
+          {ranged && (
+            <button
+              type="button"
+              onClick={() => {
+                setFrom('');
+                setTo('');
+              }}
+              className={`${feedCtlCls} text-text-sub`}
+            >
+              구간 해제
+            </button>
+          )}
+
+          <select value={size} onChange={(e) => setSize(Number(e.target.value))} className={feedCtlCls}>
+            <option value={30}>30건씩</option>
+            <option value={50}>50건씩</option>
+            <option value={100}>100건씩</option>
+          </select>
+
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={remove}
+              disabled={busy || !from || !to || total === 0}
+              className={`${feedCtlCls} inline-flex items-center gap-1 text-danger disabled:opacity-40`}
+            >
+              <Trash2 size={13} /> 구간 삭제
+            </button>
+          )}
+        </div>
       </div>
 
       <div className={tableWrapCls}>
@@ -370,6 +464,30 @@ function RecentFeed() {
           </tbody>
         </table>
       </div>
+
+      {total > size && (
+        <div className="mt-2 flex items-center justify-center gap-2 text-[12.5px] text-text-sub">
+          <button
+            type="button"
+            onClick={() => setPage((n) => Math.max(n - 1, 0))}
+            disabled={page === 0}
+            className={`${feedCtlCls} inline-flex items-center gap-0.5 disabled:opacity-40`}
+          >
+            <ChevronLeft size={13} /> 이전
+          </button>
+          <span className="tabular">
+            {page + 1} / {lastPage + 1} 쪽
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((n) => Math.min(n + 1, lastPage))}
+            disabled={page >= lastPage}
+            className={`${feedCtlCls} inline-flex items-center gap-0.5 disabled:opacity-40`}
+          >
+            다음 <ChevronRight size={13} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
