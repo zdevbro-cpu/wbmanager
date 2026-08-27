@@ -40,9 +40,11 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-bg">
       <div className="w-[360px] rounded-[14px] border border-border bg-card p-7">
         <div className="mb-6 flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-primary text-sm font-extrabold text-white">
-            W
-          </div>
+          <img
+            src="/원방로고.png"
+            alt="원방"
+            className="h-9 w-9 shrink-0 rounded-[9px] bg-white object-contain p-0.5"
+          />
           <div>
             <div className="text-[16px] font-extrabold text-text-strong">WB manager</div>
             <div className="text-[11px] text-text-faint">원방 스크랩 업무지원</div>

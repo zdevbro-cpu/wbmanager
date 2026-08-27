@@ -39,9 +39,11 @@ export function Layout() {
           title="업무 영역 변경"
           className="flex h-[60px] shrink-0 items-center gap-2 px-7 no-underline"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-primary text-sm font-extrabold text-white">
-            W
-          </div>
+          <img
+            src="/원방로고.png"
+            alt="원방"
+            className="h-8 w-8 shrink-0 rounded-[9px] bg-white object-contain p-0.5"
+          />
           <div>
             <div className="text-[15px] font-extrabold text-text-strong">WB manager</div>
             <div className="text-[11px] text-[#5f7ba6]">{area.title}</div>
