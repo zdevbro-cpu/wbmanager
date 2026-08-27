@@ -3,9 +3,13 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const apiKey = process.env.GEMINI_API_KEY;
+// 모델은 공급사 사정으로 사라진다 — 2.5-flash는 신규 사용이 막혀 인식이 전부 실패했다.
+// 다음에 또 바뀌어도 배포 없이 넘어갈 수 있게 환경변수로 뺀다.
+const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 let model = null;
 if (apiKey) {
-  model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: 'gemini-2.5-flash' });
+  model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: MODEL_NAME });
+  console.log(`[ocr] 모델 ${MODEL_NAME}`);
 } else {
   console.warn('[ocr] GEMINI_API_KEY 미설정 — OCR은 빈 결과를 반환합니다.');
 }
