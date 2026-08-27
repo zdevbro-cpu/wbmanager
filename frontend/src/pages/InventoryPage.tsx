@@ -198,22 +198,22 @@ export function InventoryPage() {
           </div>
 
           <div className={`${tableWrapCls} overflow-x-auto`}>
-            <table className="w-full border-collapse">
+            <table className="w-max min-w-full border-collapse">
               <thead>
                 <tr className="border-y border-border">
-                  <th className={thCls}>일자</th>
-                  <th className={thCls}>구분</th>
-                  <th className={thCls}>상/하차지</th>
-                  <th className={thCls}>거래처</th>
-                  <th className={thCls}>차종</th>
-                  <th className={thCls}>차량번호</th>
-                  <th className={thCls}>운전자</th>
-                  <th className={thCls}>연락처</th>
-                  <th className={thNumCls}>총중량</th>
-                  <th className={thNumCls}>공차중량</th>
-                  <th className={thNumCls}>감량</th>
-                  <th className={thNumCls}>반영중량</th>
-                  <th className={thCls}>비고</th>
+                  <th className={`${thCls} whitespace-nowrap`}>일자</th>
+                  <th className={`${thCls} whitespace-nowrap`}>구분</th>
+                  <th className={`${thCls} whitespace-nowrap`}>상/하차지</th>
+                  <th className={`${thCls} whitespace-nowrap`}>거래처</th>
+                  <th className={`${thCls} whitespace-nowrap`}>차종</th>
+                  <th className={`${thCls} whitespace-nowrap`}>차량번호</th>
+                  <th className={`${thCls} whitespace-nowrap`}>운전자</th>
+                  <th className={`${thCls} whitespace-nowrap`}>연락처</th>
+                  <th className={`${thNumCls} whitespace-nowrap`}>총중량</th>
+                  <th className={`${thNumCls} whitespace-nowrap`}>공차중량</th>
+                  <th className={`${thNumCls} whitespace-nowrap`}>감량</th>
+                  <th className={`${thNumCls} whitespace-nowrap`}>반영중량</th>
+                  <th className={`${thCls} whitespace-nowrap`}>비고</th>
                 </tr>
               </thead>
               <tbody>
@@ -229,11 +229,11 @@ export function InventoryPage() {
                           {e.direction === 'IN' ? '+' : '−'} {REF_TYPE_LABEL[e.refType ?? ''] ?? e.refType}
                         </span>
                       </td>
-                      <td className={tdCls}>{d?.place ?? '-'}</td>
-                      <td className={tdCls}>{d?.counterparty ?? '-'}</td>
-                      <td className={tdCls}>{d?.vehicleType ?? '-'}</td>
+                      <td className={`${tdCls} whitespace-nowrap`}>{d?.place ?? '-'}</td>
+                      <td className={`${tdCls} whitespace-nowrap`}>{d?.counterparty ?? '-'}</td>
+                      <td className={`${tdCls} whitespace-nowrap`}>{d?.vehicleType ?? '-'}</td>
                       <td className={`${tdCls} whitespace-nowrap`}>{d?.vehicleNo ?? '-'}</td>
-                      <td className={tdCls}>{d?.driverName ?? '-'}</td>
+                      <td className={`${tdCls} whitespace-nowrap`}>{d?.driverName ?? '-'}</td>
                       <td className={`${tdCls} whitespace-nowrap`}>{d?.driverPhone ?? '-'}</td>
                       <td className={tdNumCls}>{formatNumber(d?.grossWeight)}</td>
                       <td className={tdNumCls}>{formatNumber(d?.tareWeight)}</td>
@@ -344,7 +344,7 @@ function DrilldownPanel({ onClose, children }: { onClose: () => void; children: 
     <div className="fixed inset-0 z-30" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="absolute top-0 right-0 h-screen w-[860px] max-w-full overflow-y-auto border-l border-border bg-card p-5 shadow-[-8px_0_24px_rgba(0,0,0,0.35)]"
+        className="absolute top-0 right-0 h-screen w-[min(1320px,96vw)] overflow-y-auto border-l border-border bg-card p-5 shadow-[-8px_0_24px_rgba(0,0,0,0.35)]"
       >
         {children}
       </div>
