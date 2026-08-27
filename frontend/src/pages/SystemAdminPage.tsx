@@ -5,11 +5,13 @@ import { useAuth } from '../context/AuthContext';
 import { MasterManagementPage } from './MasterManagementPage';
 import { UserApprovalPage } from './UserApprovalPage';
 import { AuditLogPage } from './AuditLogPage';
+import { RecentChangeFeed } from '../components/RecentChangeFeed';
 import { pageTitleCls } from '../components/ui/classes';
 
-type Tab = 'masters' | 'users' | 'audit';
+type Tab = 'masters' | 'changes' | 'users' | 'audit';
 
 function initialTab(param: string | null, isAdmin: boolean): Tab {
+  if (param === 'changes') return 'changes';
   if (param === 'users' && isAdmin) return 'users';
   if (param === 'audit' && isAdmin) return 'audit';
   return 'masters';
@@ -36,6 +38,10 @@ export function SystemAdminPage() {
         <TabButton active={tab === 'masters'} onClick={() => setTab('masters')}>
           마스터 관리
         </TabButton>
+        {/* 최근 변경 로그 — 알림 현황에 있던 것을 마스터 관리 다음으로 옮겼다. */}
+        <TabButton active={tab === 'changes'} onClick={() => setTab('changes')}>
+          최근 변경 로그
+        </TabButton>
         {isAdmin && (
           <TabButton active={tab === 'users'} onClick={() => setTab('users')}>
             사용자 승인 관리
@@ -48,7 +54,9 @@ export function SystemAdminPage() {
         )}
       </div>
 
-      {tab === 'users' && isAdmin ? (
+      {tab === 'changes' ? (
+        <RecentChangeFeed />
+      ) : tab === 'users' && isAdmin ? (
         <UserApprovalPage embedded />
       ) : tab === 'audit' && isAdmin ? (
         <AuditLogPage embedded />
