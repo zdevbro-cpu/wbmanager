@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarRange, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { CalendarRange, ChevronDown, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { FormModal } from './FormModal';
 import { SearchSelect } from './SearchSelect';
@@ -68,6 +68,13 @@ const TYPE_COLOR: Record<string, string> = {
 };
 const colorOf = (type: string) => TYPE_COLOR[type] ?? TYPE_COLOR.미지정;
 
+// 하루 실적을 계획과 견준 판정 — 막대 색이 곧 답이다.
+const DAY_TONE: Record<'short' | 'ok' | 'over', string> = {
+  short: 'rgb(248, 113, 113)', // 미달
+  ok: 'rgb(253, 186, 116)', // 적정
+  over: 'rgb(96, 165, 250)', // 초과
+};
+
 
 
 
@@ -81,6 +88,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
   const [adding, setAdding] = useState(false);
   // 막대나 구분을 누르면 그 계획 한 건을 자세히 본다.
   const [detail, setDetail] = useState<string | null>(null);
+  const [listOpen, setListOpen] = useState(false);
 
   const load = useCallback(() => {
     const q = projectId ? `?projectId=${projectId}` : '';
@@ -186,7 +194,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
             }
           }}
           title="화살표 단추나 키보드 ← → 로 달을 옮깁니다"
-          className={`${inputCls} flex w-[190px] shrink-0 items-center justify-between gap-1 px-1 focus:border-primary`}
+          className={`${inputCls} flex w-[168px] shrink-0 items-center justify-between gap-0.5 px-1 focus:border-primary`}
         >
           <button
             type="button"
@@ -208,7 +216,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
             <ChevronRight size={15} />
           </button>
         </div>
-        <div className="shrink-0" style={{ width: 240 }}>
+        <div className="min-w-[150px] max-w-[240px] flex-1">
           <SearchSelect
             ariaLabel="프로젝트"
             options={projects.map((p) => ({ value: p.id, label: p.roundName }))}
@@ -341,35 +349,65 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
               ))}
             </div>
 
-            {/* 하루 합계 — 하루 단위는 여기 한 줄에서만 본다. */}
+            {/* 합계 — 하루 단위는 여기서만 본다. 막대 색이 그날의 판정이다. */}
             <div className="mt-3 flex items-end gap-3 border-t border-border pt-3">
               <div className="shrink-0 text-[12px] font-semibold text-text-mid" style={{ width: LABEL_W }}>
                 합계
-                <span className="block text-[11px] font-normal text-text-faint">계획 윤곽 · 실행 채움</span>
+                <span className="block text-[11px] font-normal text-text-faint">
+                  계획 윤곽 · 실행 채움
+                  <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    {[
+                      ['미달', DAY_TONE.short],
+                      ['적정', DAY_TONE.ok],
+                      ['초과', DAY_TONE.over],
+                    ].map(([label, rgb]) => (
+                      <span key={label} className="flex items-center gap-0.5">
+                        <span
+                          className="inline-block h-[8px] w-[10px] rounded-[2px]"
+                          style={{ backgroundColor: rgb }}
+                        />
+                        {label}
+                      </span>
+                    ))}
+                  </span>
+                </span>
               </div>
-              <div className="flex h-[30px] flex-1 items-end gap-[1px]">
+              <div className="flex h-[72px] flex-1 items-end gap-[1px]">
                 {chart.days.map((d) => {
                   const plan = dayTotals.plan[d] ?? 0;
                   const actual = dayTotals.actual[d] ?? 0;
-                  const short = actual < plan;
+                  // 그날이 모자란지 맞는지 넘쳤는지를 색으로 못 박는다.
+                  const tone = !plan && !actual ? null : actual < plan ? 'short' : actual > plan ? 'over' : 'ok';
                   return (
-                    <div key={d} className="relative flex-1" title={`${d} · 계획 ${plan} · 실행 ${actual}공수`}>
-                      <div className="flex h-[30px] items-end">
+                    <div
+                      key={d}
+                      className="relative flex-1"
+                      title={`${d} · 계획 ${formatNumber(plan)} · 실행 ${formatNumber(actual)}공수`}
+                    >
+                      {/* 숫자도 함께 적는다 — 막대 높이만으로는 3과 4를 가리기 어렵다. */}
+                      <div className="mb-0.5 h-[12px] text-center text-[9px] font-bold leading-none">
+                        {actual ? (
+                          <span style={{ color: tone ? DAY_TONE[tone] : undefined }}>{formatNumber(actual)}</span>
+                        ) : plan ? (
+                          <span className="text-text-faint">0</span>
+                        ) : null}
+                      </div>
+                      <div className="flex h-[58px] items-end">
                         <div
                           className="w-full rounded-t-[2px]"
                           style={{
                             height: `${(plan / dayMax) * 100}%`,
-                            backgroundColor: 'rgba(253, 186, 116, 0.18)',
-                            boxShadow: 'inset 0 0 0 1px rgba(253, 186, 116, 0.85)',
+                            backgroundColor: 'rgba(253, 186, 116, 0.15)',
+                            boxShadow: 'inset 0 0 0 1px rgba(253, 186, 116, 0.8)',
                           }}
                         />
                       </div>
-                      <div className="absolute inset-x-0 bottom-0 flex h-[30px] items-end">
+                      <div className="absolute inset-x-0 bottom-0 flex h-[58px] items-end">
                         <div
                           className="w-full rounded-t-[2px]"
                           style={{
                             height: `${(actual / dayMax) * 100}%`,
-                            backgroundColor: short ? 'rgb(248, 113, 113)' : 'rgb(253, 186, 116)',
+                            backgroundColor: tone ? DAY_TONE[tone] : undefined,
                           }}
                         />
                       </div>
@@ -403,8 +441,19 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
         />
       )}
 
-      {/* 잡아 둔 구간 목록 — 계획을 보고 지우는 자리다. */}
-      <div className={`${tableWrapCls} mt-4`}>
+      {/* 잡아 둔 구간 목록 — 계획을 보고 지우는 자리다.
+          평소에는 접어 둔다. 위 막대가 주인공이고 이 표는 손볼 때만 편다. */}
+      <button
+        type="button"
+        onClick={() => setListOpen((v) => !v)}
+        className="mt-4 flex items-center gap-1.5 text-[13px] font-semibold text-text-sub hover:text-text-strong"
+      >
+        {listOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+        계획 목록 {plans.length}건
+        <span className="text-[12px] font-normal text-text-faint">{listOpen ? '접기' : '펼치기'}</span>
+      </button>
+
+      <div className={`${tableWrapCls} mt-2 ${listOpen ? '' : 'hidden'}`}>
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-border">
