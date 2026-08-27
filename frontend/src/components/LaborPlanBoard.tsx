@@ -47,27 +47,33 @@ const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
 const weekdayOf = (date: string) => new Date(`${date}T00:00:00`).getDay();
 const dayNo = (date: string) => Number(date.slice(8, 10));
 
-// 막대 길이는 그 줄에서 가장 큰 값을 꽉 찬 것으로 본다 —
-// 프로젝트마다 인원 규모가 달라 절대 높이로는 견줄 수 없다.
-function Bar({ value, max, tone }: { value: number; max: number; tone: 'plan' | 'actual' }) {
-  if (!value) return <div className="h-[15px]" />;
-  const pct = Math.max(20, Math.round((value / (max || 1)) * 100));
+// 투입 공수는 크기다 — 같은 색을 옅게에서 짙게로 다섯 단계로 나눈다.
+// 색을 여러 가지로 쓰면 "주황이 초록보다 많은가"를 외워야 하지만, 농담은 보면 안다.
+// 계획은 윤곽만, 실행은 채워서 둘을 한눈에 가른다.
+const STEPS = [
+  { upto: 0.5, plan: 'bg-primary/10', actual: 'bg-primary/25' },
+  { upto: 1, plan: 'bg-primary/20', actual: 'bg-primary/45' },
+  { upto: 2, plan: 'bg-primary/30', actual: 'bg-primary/65' },
+  { upto: 3, plan: 'bg-primary/40', actual: 'bg-primary/80' },
+  { upto: Infinity, plan: 'bg-primary/50', actual: 'bg-primary' },
+];
+const stepOf = (v: number) => STEPS.find((s) => v <= s.upto) ?? STEPS[STEPS.length - 1];
+
+function Cell({ value, tone }: { value: number; tone: 'plan' | 'actual' }) {
+  if (!value) return <div className="h-[16px]" />;
+  const step = stepOf(value);
   return (
-    <div className="relative h-[15px] px-[3px]" title={`${tone === 'plan' ? '계획' : '실행'} ${formatNumber(value)}공수`}>
-      <div className="flex h-full items-end">
-        <div
-          className={`w-full rounded-[2px] ${tone === 'plan' ? 'bg-primary/30' : 'bg-primary'}`}
-          style={{ height: `${pct}%` }}
-        />
-      </div>
-      {/* 몇 공수인지 막대 위에 그대로 적는다 — 길이만으로는 2와 3을 가리기 어렵다. */}
-      <span
-        className={`absolute inset-0 flex items-center justify-center text-[9px] font-bold ${
-          tone === 'plan' ? 'text-text-sub' : 'text-white'
+    <div className="px-[2px] py-[1px]">
+      <div
+        title={`${tone === 'plan' ? '계획' : '실행'} ${formatNumber(value)}공수`}
+        className={`flex h-[16px] items-center justify-center rounded-[3px] text-[9.5px] font-bold ${
+          tone === 'plan'
+            ? `${step.plan} text-text-mid ring-1 ring-inset ring-primary/40`
+            : `${step.actual} text-white`
         }`}
       >
         {formatNumber(value)}
-      </span>
+      </div>
     </div>
   );
 }
@@ -143,6 +149,15 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
             <span className="ml-1 text-text-faint">(달성 {Math.round((totals.actual / totals.plan) * 100)}%)</span>
           )}
         </span>
+        <span className="ml-3 flex items-center gap-1 text-[11px] text-text-faint">
+          공수
+          {['0.5', '1', '2', '3', '4+'].map((label, i) => (
+            <span key={label} className="flex items-center gap-0.5">
+              <span className={`inline-block h-[10px] w-[14px] rounded-[2px] ${STEPS[i].actual}`} />
+              {label}
+            </span>
+          ))}
+        </span>
         <button type="button" onClick={() => setAdding(true)} className={`${primaryBtnCls} ml-auto`}>
           <Plus size={15} /> 구간 추가
         </button>
@@ -200,7 +215,6 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
           </thead>
           <tbody>
             {rows.map((r) => {
-              const max = Math.max(...chart.days.map((d) => Math.max(r.plan[d] ?? 0, r.actual[d] ?? 0)), 1);
               return (
                 <tr key={r.employmentType} className="border-b border-border">
                   <td
@@ -218,8 +232,8 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                         className={`p-0 align-bottom ${w === 0 || w === 6 ? 'bg-hover/40' : ''}`}
                         style={{ width: DAY_W, minWidth: DAY_W }}
                       >
-                        <Bar value={r.plan[d] ?? 0} max={max} tone="plan" />
-                        <Bar value={r.actual[d] ?? 0} max={max} tone="actual" />
+                        <Cell value={r.plan[d] ?? 0} tone="plan" />
+                        <Cell value={r.actual[d] ?? 0} tone="actual" />
                       </td>
                     );
                   })}
