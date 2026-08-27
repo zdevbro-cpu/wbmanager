@@ -27,7 +27,8 @@ const COOLDOWN_MS = 6000;
 
 export function AttendGatePage() {
   const { projects } = useProjects();
-  const [projectId, setProjectId] = useState('');
+  // 사무실 단말이므로 본사를 기본으로 둔다. 현장 단말로 쓸 때만 바꾼다.
+  const [projectId, setProjectId] = useState('HQ');
   const [kind, setKind] = useState<'in' | 'out'>('in');
   const [code, setCode] = useState('출근');
   const [voice, setVoice] = useState(true);
@@ -147,7 +148,12 @@ export function AttendGatePage() {
 
   // 스캐너는 키보드처럼 동작한다 — 입력칸이 늘 초점을 물고 있어야 그냥 쏘면 찍힌다.
   useEffect(() => {
-    const focus = () => inputRef.current?.focus();
+    const focus = () => {
+      const active = document.activeElement;
+      // 사람이 무언가 만지고 있으면 뺏지 않는다 — 현장 고르기가 닫혀 버린다.
+      if (active && active !== document.body && active !== inputRef.current) return;
+      inputRef.current?.focus();
+    };
     focus();
     const t = window.setInterval(focus, 1500);
     return () => window.clearInterval(t);
@@ -166,7 +172,7 @@ export function AttendGatePage() {
           className={`${inputCls} w-[240px]`}
           aria-label="현장"
         >
-          <option value="">현장을 고르세요</option>
+          <option value="HQ">본사</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.roundName}
