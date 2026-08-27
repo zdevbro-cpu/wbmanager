@@ -139,17 +139,26 @@ async function saveDay(req, month) {
     : (body.workerName ?? '').trim()
       ? await prisma.employee.findFirst({ where: { name: body.workerName.trim() } })
       : null;
+  // 정규직은 급여로 나가므로 프로젝트 인건비에 넣지 않는다. 공수는 그대로 센다 —
+  // 누가 며칠 나왔는지는 알아야 하기 때문이다. 식대·기타비용은 그날 실제로 든 돈이라 남긴다.
+  const regular = (data.workerType ?? person?.employmentType) === '정규직';
+  if (regular) {
+    data.unitCost = null;
+    data.laborCost = null;
+  }
+
   if (person) {
-    if (data.unitCost == null && person.unitCost != null) data.unitCost = person.unitCost;
+    if (!regular && data.unitCost == null && person.unitCost != null) data.unitCost = person.unitCost;
     if (data.mealCost == null && person.mealCost != null) data.mealCost = person.mealCost;
     if (data.suppliesCost == null && person.etcCost != null) data.suppliesCost = person.etcCost;
-    if (data.totalManDays != null && data.unitCost != null && body.laborCost == null) {
-      data.laborCost = Math.round(Number(data.totalManDays) * Number(data.unitCost));
-    }
-    if (body.totalAmount == null) {
-      data.totalAmount =
-        Number(data.laborCost ?? 0) + Number(data.mealCost ?? 0) + Number(data.suppliesCost ?? 0) || null;
-    }
+  }
+
+  if (!regular && data.totalManDays != null && data.unitCost != null && body.laborCost == null) {
+    data.laborCost = Math.round(Number(data.totalManDays) * Number(data.unitCost));
+  }
+  if (regular || (person && body.totalAmount == null)) {
+    data.totalAmount =
+      Number(data.laborCost ?? 0) + Number(data.mealCost ?? 0) + Number(data.suppliesCost ?? 0) || null;
   }
 
   const row = existing
