@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { CalendarRange, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
+import { FormModal } from './FormModal';
 import { SearchSelect } from './SearchSelect';
 import { NumberInput } from './ui/NumberInput';
 import { formatNumber } from '../lib/number';
@@ -78,6 +79,8 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
   const [plans, setPlans] = useState<Plan[]>([]);
   const [chart, setChart] = useState<{ days: string[]; rows: ChartRow[] }>({ days: [], rows: [] });
   const [adding, setAdding] = useState(false);
+  // 막대나 구분을 누르면 그 계획 한 건을 자세히 본다.
+  const [detail, setDetail] = useState<string | null>(null);
 
   const load = useCallback(() => {
     const q = projectId ? `?projectId=${projectId}` : '';
@@ -169,7 +172,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
 
   return (
     <div>
-      <div className={`${cardCls} mb-3 flex flex-wrap items-center gap-2 px-3 py-2`}>
+      <div className={`${cardCls} mb-3 flex items-center gap-2 px-3 py-2`}>
         <div
           tabIndex={0}
           onKeyDown={(e) => {
@@ -205,7 +208,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
             <ChevronRight size={15} />
           </button>
         </div>
-        <div style={{ width: 260 }}>
+        <div className="shrink-0" style={{ width: 240 }}>
           <SearchSelect
             ariaLabel="프로젝트"
             options={projects.map((p) => ({ value: p.id, label: p.roundName }))}
@@ -214,18 +217,18 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
             placeholder="전체 프로젝트"
           />
         </div>
-        <span className="ml-2 text-[13px] text-text-sub">
+        <span className="ml-2 shrink-0 whitespace-nowrap text-[13px] text-text-sub">
           계획 <b className="text-text-strong">{formatNumber(totals.plan)}</b>공수 · 실행{' '}
           <b className="text-text-strong">{formatNumber(totals.actual)}</b>공수
           {totals.plan > 0 && (
             <span className="ml-1 text-text-faint">(달성 {Math.round((totals.actual / totals.plan) * 100)}%)</span>
           )}
         </span>
-        <span className="ml-3 text-[11px] text-text-faint">
-          막대 길이는 기간, 채움은 달성률입니다 · 색은 고용 구분
+        <span className="ml-2 min-w-0 flex-1 truncate text-[11px] text-text-faint">
+          막대 길이는 기간, 채움은 달성률 · 막대를 누르면 상세
         </span>
-        <button type="button" onClick={() => setAdding(true)} className={`${primaryBtnCls} ml-auto`}>
-          <Plus size={15} /> 구간 추가
+        <button type="button" onClick={() => setAdding(true)} className={`${primaryBtnCls} shrink-0`}>
+          <Plus size={15} /> 공수 추가
         </button>
       </div>
 
@@ -247,7 +250,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
       <div className={`${cardCls} mb-4 p-3`}>
         {monthPlans.length === 0 ? (
           <p className="py-8 text-center text-[13px] text-text-faint">
-            이 달에 잡힌 계획이 없습니다. 오른쪽 위 구간 추가로 계획을 세웁니다.
+            이 달에 잡힌 계획이 없습니다. 오른쪽 위 공수 추가로 계획을 세웁니다.
           </p>
         ) : (
           <>
@@ -272,7 +275,12 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
 
             <div className="space-y-1">
               {monthPlans.map((p) => (
-                <div key={p.id} className="flex items-center gap-3">
+                <div
+                  key={p.id}
+                  onClick={() => setDetail(p.id)}
+                  className="flex cursor-pointer items-center gap-3 rounded-[6px] px-1 py-0.5 hover:bg-hover"
+                  title="눌러서 상세 보기"
+                >
                   <div className="shrink-0 truncate" style={{ width: LABEL_W }}>
                     <span className="flex items-center gap-1.5 text-[13px] font-semibold text-text-strong">
                       <span
@@ -378,6 +386,23 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
         )}
       </div>
 
+      {detail && (
+        <PlanDetail
+          plan={monthPlans.find((p) => p.id === detail)!}
+          projectLabel={projectName(monthPlans.find((p) => p.id === detail)!.projectId)}
+          days={chart.days}
+          actualOf={(d) =>
+            chart.rows.find((r) => r.employmentType === (monthPlans.find((p) => p.id === detail)!.employmentType ?? '미지정'))
+              ?.actual[d] ?? 0
+          }
+          onClose={() => setDetail(null)}
+          onDeleted={() => {
+            setDetail(null);
+            load();
+          }}
+        />
+      )}
+
       {/* 잡아 둔 구간 목록 — 계획을 보고 지우는 자리다. */}
       <div className={`${tableWrapCls} mt-4`}>
         <table className="w-full border-collapse">
@@ -401,7 +426,9 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                   {p.startDate.slice(0, 10)} ~ {p.endDate.slice(0, 10)}
                 </td>
                 <td className={tdNumCls}>{formatNumber(p.manDays)}</td>
-                <td className={tdNumCls}>{p.unitCost ? formatNumber(p.unitCost) : '-'}</td>
+                <td className={tdNumCls}>
+                  {p.employmentType === '정규직' ? '해당 없음' : p.unitCost ? formatNumber(p.unitCost) : '-'}
+                </td>
                 <td className={tdCls}>{p.memo ?? '-'}</td>
                 <td className={tdCls}>
                   <button
@@ -558,7 +585,7 @@ function PlanForm({
         items: EMPLOYMENT_TYPES.map((t) => ({
           employmentType: t,
           manDays: Number(lines[t].manDays || 0),
-          unitCost: lines[t].unitCost ? Number(lines[t].unitCost) : undefined,
+          unitCost: t !== '정규직' && lines[t].unitCost ? Number(lines[t].unitCost) : undefined,
         })),
       });
       onSaved();
@@ -608,11 +635,17 @@ function PlanForm({
                   decimals={2}
                   placeholder="0"
                 />
-                <NumberInput
-                  value={lines[t].unitCost}
-                  onChange={(v) => setLine(t, { unitCost: v })}
-                  placeholder={t === '정규직' ? '해당 없음' : '0'}
-                />
+                {t === '정규직' ? (
+                  <span className="flex h-[38px] items-center justify-end pr-3 text-[12.5px] text-text-faint">
+                    해당 없음
+                  </span>
+                ) : (
+                  <NumberInput
+                    value={lines[t].unitCost}
+                    onChange={(v) => setLine(t, { unitCost: v })}
+                    placeholder="0"
+                  />
+                )}
               </Fragment>
             ))}
           </div>
@@ -623,8 +656,8 @@ function PlanForm({
           </div>
 
           <p className="mt-2 text-[12px] text-text-faint">
-            1명이 하루 나오면 1공수입니다 — 정규직 2명이면 2, 반나절이 섞이면 2.5로 적습니다. 정규직은 인건비를
-            프로젝트 원가에 넣지 않으므로 단가를 비워 둡니다.
+            1명이 하루 나오면 1공수입니다 — 정규직 2명이면 2, 반나절이 섞이면 2.5로 적습니다. 정규직은 급여로
+            나가 프로젝트 원가에 넣지 않으므로 계획 단가를 받지 않습니다.
           </p>
 
           {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
@@ -640,5 +673,123 @@ function PlanForm({
         </div>
       </div>
     </div>
+  );
+}
+
+// 계획 한 건을 자세히 본다 — 며칠에 얼마를 잡았고 그 날 실제로 몇 공수가 들어왔는지.
+function PlanDetail({
+  plan,
+  projectLabel,
+  days,
+  actualOf,
+  onClose,
+  onDeleted,
+}: {
+  plan: {
+    id: string;
+    employmentType?: string | null;
+    startDate: string;
+    endDate: string;
+    manDays: string;
+    unitCost?: string | null;
+    memo?: string | null;
+    offset: number;
+    days: number;
+    planTotal: number;
+    actualTotal: number;
+    rate: number;
+  };
+  projectLabel: string;
+  days: string[];
+  actualOf: (date: string) => number;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const type = plan.employmentType ?? '미지정';
+  const span = days.slice(plan.offset, plan.offset + plan.days);
+  const perDay = Number(plan.manDays || 0);
+  const cost = plan.unitCost ? plan.planTotal * Number(plan.unitCost) : null;
+
+  const remove = async () => {
+    if (!window.confirm('이 계획 줄을 지울까요?')) return;
+    await api.del(`/api/labor-plans/${plan.id}`);
+    onDeleted();
+  };
+
+  return (
+    <FormModal title="계획 상세" icon={CalendarRange} onClose={onClose}>
+      <div className="rounded-[10px] border border-border bg-input p-4">
+        <p className="mb-3 flex items-center gap-2 text-[14px] font-bold text-text-strong">
+          <span
+            className="inline-block h-[10px] w-[10px] rounded-full"
+            style={{ backgroundColor: `rgb(${colorOf(type)})` }}
+          />
+          {type}
+          <span className="text-[12.5px] font-normal text-text-sub">{projectLabel}</span>
+        </p>
+
+        <dl className="grid grid-cols-2 gap-x-5 gap-y-2">
+          {[
+            ['기간', `${plan.startDate.slice(0, 10)} ~ ${plan.endDate.slice(0, 10)}`],
+            ['이 달 걸친 날', `${plan.days}일`],
+            ['하루 공수', `${formatNumber(perDay)}공수 (${formatNumber(perDay)}명)`],
+            ['계획 공수', `${formatNumber(plan.planTotal)}공수`],
+            ['실행 공수', `${formatNumber(plan.actualTotal)}공수`],
+            ['달성', plan.planTotal ? `${Math.round(plan.rate * 100)}%` : '-'],
+            ['계획 단가', plan.unitCost ? `${formatNumber(plan.unitCost)}원` : '-'],
+            ['계획 인건비', cost == null ? '-' : `${formatNumber(cost)}원`],
+            ['비고', plan.memo ?? '-'],
+          ].map(([label, value]) => (
+            <div key={label} className="flex justify-between gap-3 border-b border-border pb-1.5">
+              <dt className="text-[12.5px] text-text-sub">{label}</dt>
+              <dd className="text-[13px] font-semibold text-text-strong">{value}</dd>
+            </div>
+          ))}
+        </dl>
+
+        {/* 날짜별 — 잡아 둔 공수와 그 날 실제로 들어온 공수. */}
+        <div className="mt-4 max-h-[240px] overflow-y-auto rounded-[8px] border border-border">
+          <table className="w-full border-collapse">
+            <thead className="sticky top-0 bg-card">
+              <tr className="border-b border-border">
+                <th className={thCls}>날짜</th>
+                <th className={thNumCls}>계획</th>
+                <th className={thNumCls}>실행</th>
+                <th className={thNumCls}>차이</th>
+              </tr>
+            </thead>
+            <tbody>
+              {span.map((d) => {
+                const actual = actualOf(d);
+                const gap = actual - perDay;
+                return (
+                  <tr key={d} className="border-b border-border last:border-0">
+                    <td className={`${tdCls} tabular whitespace-nowrap`}>
+                      {d.slice(5)} ({WEEK[weekdayOf(d)]})
+                    </td>
+                    <td className={tdNumCls}>{formatNumber(perDay)}</td>
+                    <td className={tdNumCls}>{formatNumber(actual)}</td>
+                    <td
+                      className={`${tdNumCls} font-bold ${gap < 0 ? 'text-danger' : gap > 0 ? 'text-primary' : 'text-text-faint'}`}
+                    >
+                      {gap === 0 ? '·' : gap > 0 ? `+${formatNumber(gap)}` : formatNumber(gap)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-4 flex justify-between gap-2 border-t border-border pt-3">
+          <button type="button" onClick={remove} className={`${outlineBtnCls} text-danger`}>
+            <Trash2 size={14} /> 계획 삭제
+          </button>
+          <button type="button" onClick={onClose} className={outlineBtnCls}>
+            닫기
+          </button>
+        </div>
+      </div>
+    </FormModal>
   );
 }
