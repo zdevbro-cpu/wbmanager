@@ -71,9 +71,11 @@ const colorOf = (type: string) => TYPE_COLOR[type] ?? TYPE_COLOR.미지정;
 // 하루 실적을 계획과 견준 판정 — 막대 색이 곧 답이다.
 const DAY_TONE: Record<'short' | 'ok' | 'over', string> = {
   short: 'rgb(96, 165, 250)', // 미달 — 덜 썼다
-  ok: 'rgb(253, 186, 116)', // 적정
+  ok: 'rgb(250, 204, 21)', // 적정 — 계획 막대(주황)와 갈라 보이도록 노랑
   over: 'rgb(248, 113, 113)', // 초과 — 계획보다 더 들어가 원가를 민다
 };
+// 계획 막대 — 밝은 주황 한 가지. 윤곽선 없이 면으로만 둔다.
+const PLAN_FILL = 'rgba(251, 146, 60, 0.5)';
 
 
 
@@ -354,9 +356,10 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
               <div className="shrink-0 text-[12px] font-semibold text-text-mid" style={{ width: LABEL_W }}>
                 합계
                 <span className="block text-[11px] font-normal text-text-faint">
-                  계획 윤곽 · 실행 채움
+                  위 숫자 실행 · 아래 숫자 계획
                   <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     {[
+                      ['계획', PLAN_FILL],
                       ['미달', DAY_TONE.short],
                       ['적정', DAY_TONE.ok],
                       ['초과', DAY_TONE.over],
@@ -372,7 +375,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                   </span>
                 </span>
               </div>
-              <div className="flex h-[72px] flex-1 items-end gap-[1px]">
+              <div className="flex h-[132px] flex-1 items-end gap-[1px]">
                 {chart.days.map((d) => {
                   const plan = dayTotals.plan[d] ?? 0;
                   const actual = dayTotals.actual[d] ?? 0;
@@ -384,25 +387,21 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                       className="relative flex-1"
                       title={`${d} · 계획 ${formatNumber(plan)} · 실행 ${formatNumber(actual)}공수`}
                     >
-                      {/* 숫자도 함께 적는다 — 막대 높이만으로는 3과 4를 가리기 어렵다. */}
-                      <div className="mb-0.5 h-[12px] text-center text-[9px] font-bold leading-none">
+                      {/* 막대 높이만으로는 3과 4를 가리기 어렵다 — 위에 실행, 아래에 계획을 적는다. */}
+                      <div className="mb-0.5 h-[14px] text-center text-[10px] font-extrabold leading-none">
                         {actual ? (
                           <span style={{ color: tone ? DAY_TONE[tone] : undefined }}>{formatNumber(actual)}</span>
                         ) : plan ? (
                           <span className="text-text-faint">0</span>
                         ) : null}
                       </div>
-                      <div className="flex h-[58px] items-end">
+                      <div className="flex h-[100px] items-end">
                         <div
                           className="w-full rounded-t-[2px]"
-                          style={{
-                            height: `${(plan / dayMax) * 100}%`,
-                            backgroundColor: 'rgba(253, 186, 116, 0.15)',
-                            boxShadow: 'inset 0 0 0 1px rgba(253, 186, 116, 0.8)',
-                          }}
+                          style={{ height: `${(plan / dayMax) * 100}%`, backgroundColor: PLAN_FILL }}
                         />
                       </div>
-                      <div className="absolute inset-x-0 bottom-0 flex h-[58px] items-end">
+                      <div className="absolute inset-x-0 bottom-[18px] flex h-[100px] items-end">
                         <div
                           className="w-full rounded-t-[2px]"
                           style={{
@@ -410,6 +409,9 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                             backgroundColor: tone ? DAY_TONE[tone] : undefined,
                           }}
                         />
+                      </div>
+                      <div className="mt-0.5 h-[14px] text-center text-[10px] leading-none text-text-faint">
+                        {plan ? formatNumber(plan) : ''}
                       </div>
                     </div>
                   );
