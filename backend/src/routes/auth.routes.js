@@ -86,8 +86,15 @@ router.patch('/users/:id/status', requireAuth, requireAdmin, async (req, res) =>
   // 승인만 해서는 그 계정이 누구인지 알 수 없어, 현장에서 출퇴근을 찍으면
   // "관리자에게 연결을 요청하세요"만 뜬다. 승인과 동시에 사람을 잇는다.
   // 승인하는 사람이 고른 임직원·고용 구분을 그대로 쓴다.
-  const linked =
-    status === 'approved' && !user.employeeId ? await linkEmployee(user, { employeeId, employmentType, unitCost, mealCost, etcCost }) : null;
+  const opts = { employeeId, employmentType, unitCost, mealCost, etcCost };
+  const linked = status === 'approved' && !user.employeeId ? await linkEmployee(user, opts) : null;
+
+  // 이미 임직원이 이어져 있는 계정을 다시 승인한 경우 — 적어 보낸 구분·품값은 그 사람에게 반영한다.
+  // 그러지 않으면 승인 화면에서 적은 값이 아무 데도 남지 않는다.
+  if (!linked && status === 'approved' && user.employeeId) {
+    const patch = { ...(employmentType ? { employmentType } : {}), ...costPatch(opts) };
+    if (Object.keys(patch).length) await prisma.employee.update({ where: { id: user.employeeId }, data: patch });
+  }
   res.json(linked ?? user);
 });
 
