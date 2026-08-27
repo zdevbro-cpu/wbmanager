@@ -34,7 +34,7 @@ export function AttendGatePage() {
   const [voice, setVoice] = useState(true);
   const [last, setLast] = useState<Stamped | null>(null);
   const [error, setError] = useState('');
-  const [now, setNow] = useState(new Date());
+  const [afternoon, setAfternoon] = useState(new Date().getHours() >= OUT_FROM_HOUR);
   const [camera, setCamera] = useState<'idle' | 'on' | 'off'>('idle');
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -43,18 +43,17 @@ export function AttendGatePage() {
   const recent = useRef<Map<string, number>>(new Map());
   const busy = useRef(false);
 
-  // 시계 — 단말은 종일 켜 두므로 화면에 지금 시각이 보여야 한다.
-  useEffect(() => {
-    const t = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(t);
-  }, []);
-
   // 오후 4시가 지나면 퇴근으로 넘긴다. 손으로 바꾼 뒤에는 건드리지 않는다.
+  // 1분에 한 번만 본다 — 더 자주 다시 그리면 열려 있던 목록이 닫힌다.
   const touched = useRef(false);
   useEffect(() => {
+    const t = window.setInterval(() => setAfternoon(new Date().getHours() >= OUT_FROM_HOUR), 60000);
+    return () => window.clearInterval(t);
+  }, []);
+  useEffect(() => {
     if (touched.current) return;
-    setKind(now.getHours() >= OUT_FROM_HOUR ? 'out' : 'in');
-  }, [now]);
+    setKind(afternoon ? 'out' : 'in');
+  }, [afternoon]);
 
   const speak = useCallback(
     (text: string) => {
@@ -162,14 +161,14 @@ export function AttendGatePage() {
   const ready = Boolean(projectId);
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg p-6">
+    <div className="flex h-screen flex-col overflow-hidden bg-bg p-3">
       {/* 머리줄 — 어디서 무엇으로 찍는지가 늘 보여야 한다. */}
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <h1 className="text-[22px] font-extrabold text-text-strong">출퇴근 단말</h1>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <h1 className="text-[17px] font-extrabold text-text-strong">출퇴근 단말</h1>
         <select
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
-          className={`${inputCls} w-[240px]`}
+          className={`${inputCls} h-[34px] w-[170px] text-[13px]`}
           aria-label="현장"
         >
           <option value="HQ">본사</option>
@@ -194,11 +193,11 @@ export function AttendGatePage() {
                 touched.current = true;
                 setKind(k);
               }}
-              className={`flex items-center gap-1.5 px-5 py-2.5 text-[15px] font-bold ${
+              className={`flex items-center gap-1 px-3.5 py-1.5 text-[14px] font-bold ${
                 kind === k ? (k === 'in' ? 'bg-success text-white' : 'bg-primary text-white') : 'text-text-sub'
               }`}
             >
-              <Icon size={17} /> {label}
+              <Icon size={15} /> {label}
             </button>
           ))}
         </div>
@@ -210,7 +209,7 @@ export function AttendGatePage() {
                 key={c}
                 type="button"
                 onClick={() => setCode(c)}
-                className={`rounded-[9px] border px-3 py-2 text-[14px] font-bold ${
+                className={`rounded-[8px] border px-2.5 py-1.5 text-[13px] font-bold ${
                   code === c ? 'border-primary bg-primary/20 text-primary' : 'border-border text-text-sub'
                 }`}
               >
@@ -224,27 +223,25 @@ export function AttendGatePage() {
           type="button"
           onClick={() => setVoice((v) => !v)}
           title={voice ? '음성 안내 끄기' : '음성 안내 켜기'}
-          className="ml-auto rounded-[9px] border border-border px-3 py-2 text-text-sub hover:text-text-strong"
+          className="ml-auto rounded-[8px] border border-border px-2.5 py-1.5 text-text-sub hover:text-text-strong"
         >
-          {voice ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          {voice ? <Volume2 size={16} /> : <VolumeX size={16} />}
         </button>
-        <span className="tabular text-[20px] font-extrabold text-text-strong">
-          {now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-        </span>
+        <Clock />
       </div>
 
-      <div className="grid flex-1 gap-5 [grid-template-columns:minmax(0,420px)_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 gap-3 [grid-template-columns:minmax(0,300px)_minmax(0,1fr)]">
         {/* 카메라 — 사번 QR을 여기에 비춘다. */}
-        <div className="overflow-hidden rounded-[14px] border border-border bg-black">
+        <div className="min-h-0 overflow-hidden rounded-[12px] border border-border bg-black">
           {camera === 'on' ? (
             <video ref={videoRef} playsInline muted className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 p-6 text-center">
-              <p className="text-[14px] text-text-sub">카메라로 사번 QR을 읽습니다.</p>
+            <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
+              <p className="text-[13px] text-text-sub">카메라로 사번 QR을 읽습니다.</p>
               <button
                 type="button"
                 onClick={() => setCamera('on')}
-                className="rounded-[10px] bg-primary px-5 py-2.5 text-[15px] font-bold text-white"
+                className="rounded-[10px] bg-primary px-4 py-2 text-[14px] font-bold text-white"
               >
                 카메라 켜기
               </button>
@@ -254,31 +251,31 @@ export function AttendGatePage() {
         </div>
 
         {/* 결과 — 멀리서도 읽히도록 크게. */}
-        <div className="flex flex-col rounded-[14px] border border-border bg-card p-6">
+        <div className="flex min-h-0 flex-col rounded-[12px] border border-border bg-card p-4">
           {!ready ? (
-            <p className="m-auto text-[20px] font-bold text-warning">먼저 현장을 고르세요.</p>
+            <p className="m-auto text-[18px] font-bold text-warning">먼저 현장을 고르세요.</p>
           ) : error ? (
             <div className="m-auto text-center">
-              <p className="text-[42px] font-extrabold text-danger">확인되지 않음</p>
-              <p className="mt-2 text-[18px] text-text-sub">{error}</p>
+              <p className="text-[34px] font-extrabold text-danger">확인되지 않음</p>
+              <p className="mt-1.5 text-[15px] text-text-sub">{error}</p>
             </div>
           ) : last ? (
             <div className="m-auto text-center">
-              <p className="text-[20px] font-bold text-text-sub">
+              <p className="text-[17px] font-bold text-text-sub">
                 {last.kind === 'in' ? '안녕하세요' : '수고하셨습니다'}
               </p>
-              <p className="mt-1 text-[56px] font-extrabold leading-tight text-text-strong">{last.name}</p>
-              <p className={`mt-2 text-[28px] font-extrabold ${last.kind === 'in' ? 'text-success' : 'text-primary'}`}>
+              <p className="mt-0.5 text-[46px] font-extrabold leading-tight text-text-strong">{last.name}</p>
+              <p className={`mt-1 text-[23px] font-extrabold ${last.kind === 'in' ? 'text-success' : 'text-primary'}`}>
                 {last.kind === 'in' ? (last.attendCode ?? '출근') : '퇴근'} 처리되었습니다
               </p>
-              <p className="tabular mt-3 text-[18px] text-text-sub">{kstStamp(last.at)}</p>
-              <p className="mt-1 text-[14px] text-text-faint">
+              <p className="tabular mt-2 text-[16px] text-text-sub">{kstStamp(last.at)}</p>
+              <p className="mt-1 text-[13px] text-text-faint">
                 {last.checkInAt && `출근 ${kstStamp(last.checkInAt).slice(11)}`}
                 {last.checkOutAt && ` · 퇴근 ${kstStamp(last.checkOutAt).slice(11)}`}
               </p>
             </div>
           ) : (
-            <p className="m-auto text-[24px] font-bold text-text-faint">사번 QR을 대 주세요</p>
+            <p className="m-auto text-[22px] font-bold text-text-faint">사번 QR을 대 주세요</p>
           )}
 
           {/* 스캐너·손입력 — 늘 초점을 물고 있다. */}
@@ -289,17 +286,31 @@ export function AttendGatePage() {
               if (v) void stamp(v);
               if (inputRef.current) inputRef.current.value = '';
             }}
-            className="mt-4 border-t border-border pt-4"
+            className="mt-3 border-t border-border pt-3"
           >
             <input
               ref={inputRef}
               placeholder="스캐너로 읽거나 사번을 적고 Enter"
-              className={`${inputCls} h-[46px] text-center text-[16px]`}
+              className={`${inputCls} h-[40px] text-center text-[15px]`}
               autoComplete="off"
             />
           </form>
         </div>
       </div>
     </div>
+  );
+}
+
+// 시계만 따로 그린다 — 이 조각만 1초마다 바뀌면 나머지 화면은 건드리지 않는다.
+function Clock() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  return (
+    <span className="tabular text-[19px] font-extrabold text-text-strong">
+      {now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+    </span>
   );
 }
