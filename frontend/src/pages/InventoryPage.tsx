@@ -6,6 +6,7 @@ import { SearchSelect } from '../components/SearchSelect';
 import { useProjects, useItemMasters } from '../hooks/useMasters';
 import { NumberInput } from '../components/ui/NumberInput';
 import { formatNumber } from '../lib/number';
+import { kstToday } from '../lib/datetime';
 import { pageTitleCls, primaryBtnCls, inputCls, tableWrapCls, thCls,
   thNumCls,
   tdNumCls, tdCls, trCls } from '../components/ui/classes';
@@ -41,7 +42,18 @@ export function InventoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  const rows = (valuation?.rows ?? []).filter((r) => !itemCode || r.itemCode === itemCode);
+  // 같은 현장은 붙여 놓는다 — 현장이 흩어져 있으면 한 현장의 재고를 눈으로 모아야 한다.
+  const rows = (valuation?.rows ?? [])
+    .filter((r) => !itemCode || r.itemCode === itemCode)
+    .sort(
+      (a, b) =>
+        (a.projectName ?? '').localeCompare(b.projectName ?? '') ||
+        (a.itemName ?? '').localeCompare(b.itemName ?? ''),
+    );
+
+  // 현장이 바뀌는 첫 줄에만 이름을 적고, 그 현장이 몇 줄인지 세어 칸을 합친다.
+  const groupSize = new Map<string, number>();
+  for (const r of rows) groupSize.set(r.projectId, (groupSize.get(r.projectId) ?? 0) + 1);
 
   const totals = rows.reduce(
     (acc, r) => ({
@@ -158,9 +170,19 @@ export function InventoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
-                  <tr key={`${r.projectId}-${r.itemCode}`} onClick={() => openDrilldown(r)} className={`${trCls} cursor-pointer`}>
-                    <td className={tdCls}>{r.projectName}</td>
+                {rows.map((r, i) => {
+                  const first = i === 0 || rows[i - 1].projectId !== r.projectId;
+                  return (
+                  <tr
+                    key={`${r.projectId}-${r.itemCode}`}
+                    onClick={() => openDrilldown(r)}
+                    className={`${trCls} cursor-pointer ${first && i > 0 ? 'border-t-2 border-border' : ''}`}
+                  >
+                    {first && (
+                      <td className={`${tdCls} align-top font-semibold text-text-strong`} rowSpan={groupSize.get(r.projectId)}>
+                        {r.projectName}
+                      </td>
+                    )}
                     <td className={tdCls}>{r.itemName}</td>
                     <td className={tdNumCls}>{formatNumber(r.inWeight)}</td>
                     <td className={tdNumCls}>{formatNumber(r.outWeight)}</td>
@@ -169,7 +191,8 @@ export function InventoryPage() {
                     <td className={tdCls}>{SOURCE_LABEL[r.priceSource]}</td>
                     <td className={tdNumCls}>{formatNumber(r.valuationAmount)}</td>
                   </tr>
-                ))}
+                  );
+                })}
                 {rows.length === 0 && (
                   <tr>
                     <td colSpan={8} className="py-10 text-center text-[13px] text-text-faint">
@@ -280,26 +303,42 @@ function PriceRegisterForm({
   const [itemCode, setItemCode] = useState('');
   const [price, setPrice] = useState('');
   const [projectId, setProjectId] = useState('');
-  const [effectiveDate, setEffectiveDate] = useState('');
+  // 적용일은 오늘로 채워 둔다. 비어 있으면 등록이 조용히 막혀 아무 일도 없는 것처럼 보였다.
+  const [effectiveDate, setEffectiveDate] = useState(kstToday());
+  const [note, setNote] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!itemCode || !price || !effectiveDate) return;
-    await api.post('/api/inventory/prices', {
-      itemCode,
-      price: Number(price),
-      projectId: projectId || undefined,
-      effectiveDate,
-    });
-    setPrice('');
-    setEffectiveDate('');
-    onRegistered();
+    // 무엇이 모자란지 말해 준다. 말없이 끝내면 고장 난 것과 구별되지 않는다.
+    if (!itemCode) return setNote({ tone: 'bad', text: '품목을 고르세요.' });
+    if (!price) return setNote({ tone: 'bad', text: '단가를 적으세요.' });
+    if (!effectiveDate) return setNote({ tone: 'bad', text: '적용일을 고르세요.' });
+
+    setNote(null);
+    setBusy(true);
+    try {
+      await api.post('/api/inventory/prices', {
+        itemCode,
+        price: Number(price),
+        projectId: projectId || undefined,
+        effectiveDate,
+      });
+      const name = items.find((i) => i.itemCode === itemCode)?.itemName ?? itemCode;
+      setNote({ tone: 'ok', text: `${name} ${formatNumber(price)}원 · ${effectiveDate}부터 적용으로 등록했습니다.` });
+      setPrice('');
+      onRegistered();
+    } catch (err) {
+      setNote({ tone: 'bad', text: err instanceof Error ? err.message : '등록하지 못했습니다.' });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="mb-3 flex w-full items-center gap-2 rounded-[12px] border border-border bg-card px-4 py-2.5"
+      className="mb-3 flex w-full flex-wrap items-center gap-2 rounded-[12px] border border-border bg-card px-4 py-2.5"
     >
       <span className="mr-1 whitespace-nowrap text-[13px] font-extrabold text-text-strong">품목 추정단가 등록</span>
       <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} w-[160px] min-w-0`}>
@@ -329,9 +368,12 @@ function PriceRegisterForm({
         onChange={(e) => setEffectiveDate(e.target.value)}
         className={`${inputCls} w-[150px] min-w-0`}
       />
-      <button type="submit" className={`${primaryBtnCls} shrink-0 whitespace-nowrap`}>
-        등록
+      <button type="submit" disabled={busy} className={`${primaryBtnCls} shrink-0 whitespace-nowrap`}>
+        {busy ? '등록 중...' : '등록'}
       </button>
+      {note && (
+        <span className={`text-[12.5px] ${note.tone === 'ok' ? 'text-success' : 'text-danger'}`}>{note.text}</span>
+      )}
     </form>
   );
 }
