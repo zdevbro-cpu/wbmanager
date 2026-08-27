@@ -432,25 +432,26 @@ function RecentFeed() {
       <div className={tableWrapCls}>
         <table className="w-full border-collapse">
           <thead>
+            {/* 내용이 주인공이다. 나머지 칸은 글자가 들어갈 만큼만 준다. */}
             <tr className="border-y border-border">
-              <th className={thCls}>일시</th>
-              <th className={thCls}>구분</th>
-              <th className={thCls}>대상</th>
+              <th className={`${thCls} w-[124px]`}>일시</th>
+              <th className={`${thCls} w-[56px]`}>구분</th>
+              <th className={`${thCls} w-[84px]`}>대상</th>
               <th className={thCls}>내용</th>
-              <th className={thCls}>사용자</th>
+              <th className={`${thCls} w-[88px]`}>사용자</th>
             </tr>
           </thead>
           <tbody>
             {items.map((i) => (
               <tr key={i.id} className={trCls}>
-                <td className={`${tdCls} tabular whitespace-nowrap`}>{kstStamp(i.createdAt)}</td>
+                <td className={`${tdCls} tabular whitespace-nowrap`}>{kstStamp(i.createdAt).replace(/^\d{4}-/, '')}</td>
                 <td className={tdCls}>
                   <span className={`rounded-[5px] px-1.5 py-0.5 text-[11px] font-bold ${ACTION_TONE[i.action] ?? ''}`}>
                     {ACTION_LABEL[i.action] ?? i.action}
                   </span>
                 </td>
                 <td className={`${tdCls} whitespace-nowrap`}>{TARGET_LABEL[i.target] ?? i.target}</td>
-                <td className={tdCls}>{i.summary ?? '-'}</td>
+                <td className={`${tdCls} break-words text-text-strong`}>{i.summary ?? '-'}</td>
                 <td className={`${tdCls} whitespace-nowrap`}>{i.who}</td>
               </tr>
             ))}
