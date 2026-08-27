@@ -14,7 +14,7 @@ const STATUS_TONE: Record<string, BadgeTone> = { pending: 'amber', approved: 'gr
 export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
   const { resetPassword } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
-  const { employees } = useEmployees();
+  const { employees, reload: reloadEmployees } = useEmployees();
 
   const load = () => {
     api.get<AppUser[]>('/api/auth/users').then(setUsers);
@@ -26,6 +26,8 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
 
   const setStatus = async (id: string, status: string) => {
     await api.patch(`/api/auth/users/${id}/status`, { status });
+    // 승인은 임직원을 새로 만들 수 있다. 목록을 다시 읽어야 연결이 화면에 보인다.
+    reloadEmployees();
     load();
   };
 
@@ -53,6 +55,7 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
 고용 구분은 임직원 관리에서 확인해 주세요.`)) return;
     try {
       await api.post(`/api/auth/users/${u.id}/employee`);
+      reloadEmployees();
       load();
     } catch (e) {
       alert(e instanceof Error ? e.message : '연결하지 못했습니다.');
