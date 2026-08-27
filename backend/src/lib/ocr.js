@@ -5,7 +5,12 @@ import { VertexAI } from '@google-cloud/vertexai';
 
 // 모델은 공급사 사정으로 사라진다 — 2.5-flash는 신규 사용이 막혀 인식이 전부 실패했다.
 // 다음에 또 바뀌어도 배포 없이 넘어갈 수 있게 환경변수로 뺀다.
-const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+// 모델 이름은 공급사 사정으로 바뀌고, AI Studio와 Vertex의 이름이 다르기도 하다.
+// 지정한 것부터 차례로 시도하고, 없는 이름(404)이면 다음 후보로 넘어간다.
+const MODEL_CANDIDATES = process.env.GEMINI_MODEL
+  ? [process.env.GEMINI_MODEL]
+  : ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-001', 'gemini-1.5-flash-002'];
+const MODEL_NAME = MODEL_CANDIDATES[0];
 
 // 부르는 길이 둘이다.
 //  1) Vertex AI — 이 프로젝트 결제 계정으로 후불 과금된다. 키 파일이 필요 없고
@@ -17,9 +22,10 @@ const vertexProject = process.env.VERTEX_PROJECT_ID;
 const vertexLocation = process.env.VERTEX_LOCATION || 'us-central1';
 const apiKey = process.env.GEMINI_API_KEY;
 
-const vertexModel = vertexProject
-  ? new VertexAI({ project: vertexProject, location: vertexLocation }).getGenerativeModel({ model: MODEL_NAME })
-  : null;
+const vertex = vertexProject ? new VertexAI({ project: vertexProject, location: vertexLocation }) : null;
+const vertexModel = vertex ? vertex.getGenerativeModel({ model: MODEL_NAME }) : null;
+// 한 번 통한 이름을 기억해 다음 요청부터는 곧장 그 모델로 간다.
+let workingModel = null;
 const keyModel = apiKey ? new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: MODEL_NAME }) : null;
 const model = vertexModel ?? keyModel;
 
@@ -33,16 +39,30 @@ else console.warn('[ocr] VERTEX_PROJECT_ID·GEMINI_API_KEY 모두 미설정 — 
 async function askModel(prompt, buffer, mimeType) {
   const inlineData = { data: buffer.toString('base64'), mimeType };
 
-  if (vertexModel) {
-    try {
-      const res = await vertexModel.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }, { inlineData }] }],
-      });
-      return res.response?.candidates?.[0]?.content?.parts?.map((x) => x.text ?? '').join('') ?? '';
-    } catch (err) {
-      if (!keyModel) throw err;
-      console.warn('[ocr] Vertex 호출 실패 — API 키로 재시도:', String(err.message).split('\n')[0]);
+  if (vertex) {
+    for (const name of workingModel ? [workingModel] : MODEL_CANDIDATES) {
+      try {
+        const res = await vertex
+          .getGenerativeModel({ model: name })
+          .generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }, { inlineData }] }] });
+        if (workingModel !== name) {
+          workingModel = name;
+          console.log(`[ocr] Vertex 모델 ${name} 사용`);
+        }
+        return res.response?.candidates?.[0]?.content?.parts?.map((x) => x.text ?? '').join('') ?? '';
+      } catch (err) {
+        const msg = String(err.message).split('\n')[0];
+        // 없는 이름이면 다음 후보로 넘어간다. 그 밖의 오류는 후보를 더 뒤져도 결과가 같아 멈춘다.
+        if (/404|NOT_FOUND|was not found/.test(msg)) {
+          console.warn(`[ocr] Vertex 모델 ${name} 없음 — 다음 후보`);
+          continue;
+        }
+        if (!keyModel) throw err;
+        console.warn('[ocr] Vertex 호출 실패 — API 키로 재시도:', msg);
+        break;
+      }
     }
+    if (!keyModel) throw new Error('Vertex에서 쓸 수 있는 모델을 찾지 못했습니다.');
   }
 
   const res = await keyModel.generateContent([prompt, { inlineData }]);
@@ -54,6 +74,12 @@ async function askModel(prompt, buffer, mimeType) {
 const PROMPT = `이 이미지는 한국의 계량증명서(계근표)입니다. 아래 필드를 JSON으로만 추출하세요.
 값이 없으면 빈 문자열("")로. 중량과 숫자는 단위/콤마를 빼고 숫자만.
 중량 단위가 톤(t)이면 kg으로 환산해서 넣으세요.
+
+읽는 방법:
+- 한 장에 같은 내용이 좌우(보관용1·보관용2) 두 부로 인쇄되는 양식입니다. 둘은 같은 내용이니 한쪽만 읽으세요.
+- 중량이 "1차 중량"·"2차 중량"으로 적힌 양식이면 큰 값이 총중량(만차), 작은 값이 공차중량입니다.
+- "실중량" 칸에 출고/입고 같은 구분이 함께 적혀 있으면 숫자만 실중량으로 넣으세요.
+- 차량번호 칸에 번호와 이름이 함께 있으면(예: "84나4888 김현수") 번호는 vehicleNo, 이름은 driverName입니다.
 {
   "weighDate": "계량일(YYYY-MM-DD)",
   "vehicleNo": "차량번호",
