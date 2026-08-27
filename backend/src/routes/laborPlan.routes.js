@@ -45,31 +45,34 @@ router.get('/chart', async (req, res) => {
     }),
     prisma.labor.findMany({
       where: { settleMonth: month, ...(projectId ? { projectId } : {}) },
-      select: { workDate: true, workerType: true, totalManDays: true },
+      select: { projectId: true, workDate: true, workerType: true, totalManDays: true },
     }),
   ]);
 
-  // 고용구분별로 계획·실행을 같은 날짜축에 담는다.
+  // 프로젝트 × 고용구분으로 담는다. 고용구분만으로 묶으면 전체 보기에서
+  // 다른 현장 실적이 남의 막대에 얹힌다 — 한 현장의 달성률을 믿을 수 없게 된다.
   const groups = new Map();
-  const take = (type) => {
-    if (!groups.has(type)) {
-      groups.set(type, {
+  const take = (pid, type) => {
+    const k = `${pid}|${type}`;
+    if (!groups.has(k)) {
+      groups.set(k, {
+        projectId: pid,
         employmentType: type,
         plan: Object.fromEntries(days.map((d) => [d, 0])),
         actual: Object.fromEntries(days.map((d) => [d, 0])),
       });
     }
-    return groups.get(type);
+    return groups.get(k);
   };
 
   for (const p of plans) {
-    const g = take(p.employmentType ?? '미지정');
+    const g = take(p.projectId, p.employmentType ?? '미지정');
     const from = key(p.startDate);
     const to = key(p.endDate);
     for (const d of days) if (d >= from && d <= to) g.plan[d] += num(p.manDays);
   }
   for (const l of labors) {
-    const g = take(l.workerType ?? '미지정');
+    const g = take(l.projectId, l.workerType ?? '미지정');
     const d = key(l.workDate);
     if (g.actual[d] != null) g.actual[d] += num(l.totalManDays);
   }
