@@ -399,6 +399,10 @@ export interface Employee {
   hireDate?: string | null;
   certifications?: EmployeeCertification[];
   trainings?: EmployeeTraining[];
+  /** 출퇴근 셀카를 견줄 기준 사진 */
+  photoDriveId?: string | null;
+  photoLink?: string | null;
+  faceConsentAt?: string | null;
 }
 
 export interface VehicleMaintenance {

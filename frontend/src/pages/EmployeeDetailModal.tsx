@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Users, Plus, Trash2, ChevronDown, Pencil } from 'lucide-react';
-import { api } from '../api/client';
+import { api, API_BASE_URL } from '../api/client';
+import { auth } from '../lib/firebase';
 import { formatPhone } from '../lib/phone';
 import { useCommonCodes } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
@@ -300,6 +301,66 @@ function BasicInfoForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // 출퇴근 셀카를 견줄 기준 사진. 한 사람에 한 장이고, 새로 올리면 앞의 것은 치운다.
+  const [photoAt, setPhotoAt] = useState(Date.now());
+  const [hasPhoto, setHasPhoto] = useState(Boolean(emp.photoDriveId));
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const photoRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!hasPhoto) {
+      setPhotoUrl('');
+      return;
+    }
+    let made = '';
+    let dropped = false;
+    (async () => {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch(`${API_BASE_URL}/api/employees/${emp.id}/photo`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok || dropped) return;
+      made = URL.createObjectURL(await res.blob());
+      setPhotoUrl(made);
+    })();
+    return () => {
+      dropped = true;
+      if (made) URL.revokeObjectURL(made);
+    };
+  }, [emp.id, hasPhoto, photoAt]);
+
+  const uploadPhoto = async (file: File | null) => {
+    if (!file) return;
+    setError('');
+    setPhotoBusy(true);
+    try {
+      const form = new FormData();
+      form.append('photo', file);
+      await api.post(`/api/employees/${emp.id}/photo`, form);
+      setHasPhoto(true);
+      setPhotoAt(Date.now());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '사진을 올리지 못했습니다.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const removePhoto = async () => {
+    if (!window.confirm('기준 사진을 지울까요?')) return;
+    setPhotoBusy(true);
+    try {
+      await api.del(`/api/employees/${emp.id}/photo`);
+      setHasPhoto(false);
+      setPhotoAt(Date.now());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '사진을 지우지 못했습니다.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -365,6 +426,48 @@ function BasicInfoForm({
               <option key={o} value={o} />
             ))}
           </datalist>
+        </div>
+      </div>
+
+      {/* 기준 사진 — 현장에서 찍은 셀카와 견주는 데 쓴다. */}
+      <div className="mt-3 flex items-center gap-3 border-t border-border pt-3">
+        <div className="h-[64px] w-[64px] shrink-0 overflow-hidden rounded-[10px] border border-border bg-input">
+          {hasPhoto ? (
+            <img src={photoUrl} alt="기준 사진" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[11px] text-text-faint">없음</div>
+          )}
+        </div>
+        <div className="min-w-0">
+          <p className="text-[12px] font-semibold text-text-sub">기준 사진</p>
+          <p className="mb-1.5 text-[11.5px] text-text-faint">출퇴근 셀카를 견주는 데 씁니다.</p>
+          <div className="flex gap-2">
+            <input
+              ref={photoRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => uploadPhoto(e.target.files?.[0] ?? null)}
+              className="hidden"
+            />
+            <button
+              type="button"
+              disabled={photoBusy}
+              onClick={() => photoRef.current?.click()}
+              className={`${outlineBtnCls} h-8 px-2.5 text-[12px]`}
+            >
+              {photoBusy ? '올리는 중...' : hasPhoto ? '바꾸기' : '사진 올리기'}
+            </button>
+            {hasPhoto && (
+              <button
+                type="button"
+                disabled={photoBusy}
+                onClick={removePhoto}
+                className={`${outlineBtnCls} h-8 px-2.5 text-[12px] text-danger`}
+              >
+                지우기
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

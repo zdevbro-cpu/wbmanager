@@ -26,6 +26,9 @@ model AppUser {
   lastLoginAt DateTime? @map("last_login_at") // 마지막 접속 시각
   lastLoginIp String?   @map("last_login_ip") // 마지막 접속 IP
   loginCount  Int       @default(0) @map("login_count")
+  // 출퇴근을 찍을 때 "나"가 누구인지. 비어 있으면 화면에서 직접 고른다.
+  employeeId  String?   @map("employee_id")
+  employee    Employee? @relation(fields: [employeeId], references: [id])
 
   auditLogs AuditLog[]
 
@@ -152,6 +155,21 @@ model ExternalDriver {
 
 // 프로젝트(차수) — 원본 프로젝트명은 `발주처_시공사_현장`을 이어 붙인 형태였다(예: 포스코_KM_안산).
 // 발주처별·현장별 집계가 가능하도록 요소를 분리해 두고, 원본 문자열은 roundName에 그대로 보존한다.
+// 월 마감 — 마감한 달은 잠기고, 다시 여는 것은 관리자만 한다.
+model LaborSettlement {
+  id            String    @id @default(uuid())
+  month         String    @unique @map("month") // 'YYYY-MM'
+  status        String    @default("open") @map("status") // open / closed
+  closedById    String?   @map("closed_by_id")
+  closedAt      DateTime? @map("closed_at")
+  // 마감 뒤 셀카를 지운 시각. 얼굴 사진은 마감이 끝나면 남길 이유가 없다.
+  photoPurgedAt DateTime? @map("photo_purged_at")
+  memo          String?   @map("memo")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@map("labor_settlement")
+}
+
 model Project {
   id              String    @id @default(uuid())
   projectCode     String?   @unique @map("project_code") // 자동 채번 P-2026-001
@@ -178,6 +196,11 @@ model Project {
   startDate       DateTime? @map("start_date") // 계약 시작일
   endDate         DateTime? @map("end_date") // 계약 종료일
   status          String    @default("진행") @map("status") // 진행/완료/보류
+  // 출퇴근 위치를 견줄 현장 기준점. 입력칸은 없다 —
+  // 그 현장에서 처음 찍힌 출근 위치를 기준으로 삼고, 그 뒤로는 반경 안인지만 본다.
+  siteLat         Float?    @map("site_lat")
+  siteLng         Float?    @map("site_lng")
+  geoRadius       Int       @default(100) @map("geo_radius") // m
   createdAt       DateTime  @default(now()) @map("created_at")
 
   inbounds          Inbound[]
@@ -430,6 +453,10 @@ model Transport {
   vehicleType     String?  @map("vehicle_type")
   origin          String?  @map("origin")
   destination     String?  @map("destination")
+  // 무엇을 얼마에 날랐는지 — 운반비가 어떻게 나온 값인지 남긴다.
+  itemCode        String?  @map("item_code")
+  itemName        String?  @map("item_name")
+  unitPrice       Decimal? @map("unit_price") @db.Decimal(14, 2) // 원/kg
   supplyAmount    Decimal? @map("supply_amount") @db.Decimal(14, 2)
   taxAmount       Decimal? @map("tax_amount") @db.Decimal(14, 2)
   createdAt       DateTime @default(now()) @map("created_at")
@@ -458,6 +485,32 @@ model Labor {
   totalAmount  Decimal? @map("total_amount") @db.Decimal(14, 2)
   createdAt    DateTime @default(now()) @map("created_at")
 
+  // 임직원 연결 — 이름 문자열만으로는 월 집계를 묶을 수 없다.
+  employeeId String?   @map("employee_id")
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+  // 출근 / 반차 / 특근 / 연차 / 병가 / 결근 / 휴무
+  attendCode String?   @map("attend_code")
+
+  checkInAt       DateTime? @map("check_in_at")
+  checkOutAt      DateTime? @map("check_out_at")
+  checkInLat      Float?    @map("check_in_lat")
+  checkInLng      Float?    @map("check_in_lng")
+  checkOutLat     Float?    @map("check_out_lat")
+  checkOutLng     Float?    @map("check_out_lng")
+  // 현장 기준점에서 떨어진 거리(m)
+  checkInDistance Int?      @map("check_in_distance")
+  // 본인 확인 — match 일치 / unsure 확인필요 / mismatch 불일치
+  faceVerdict     String?   @map("face_verdict")
+  faceNote        String?   @map("face_note")
+
+  settleMonth String?  @map("settle_month") // 'YYYY-MM'
+  isDraft     Boolean  @default(false) @map("is_draft") // 현장에서 올라와 사무실 확인을 기다리는 건
+  createdById String?  @map("created_by_id")
+
+  attachments Attachment[]
+
+  @@index([settleMonth])
+  @@index([employeeId, workDate])
   @@map("labor")
 }
 
@@ -530,10 +583,18 @@ model Employee {
   hireDate       DateTime? @map("hire_date")
   createdAt      DateTime  @default(now()) @map("created_at")
 
+  // 출퇴근 셀카를 견줄 기준 사진
+  photoDriveId  String?   @map("photo_drive_id")
+  photoLink     String?   @map("photo_link")
+  // 얼굴 대조 동의 — 처음 한 번만 받고 그 시각을 남긴다.
+  faceConsentAt DateTime? @map("face_consent_at")
+
   certifications  EmployeeCertification[]
   trainings       EmployeeTraining[]
   managedAssets   Asset[]
   managedProjects Project[]
+  labors          Labor[]
+  appUsers        AppUser[]
 
   @@map("employee")
 }
@@ -779,6 +840,9 @@ model Attachment {
   asset                Asset?              @relation(fields: [assetId], references: [id])
   assetMaintenanceId   String?             @map("asset_maintenance_id")
   assetMaintenance     AssetMaintenance?   @relation(fields: [assetMaintenanceId], references: [id])
+  // 출퇴근 셀카가 매달리는 자리
+  laborId              String?             @map("labor_id")
+  labor                Labor?              @relation(fields: [laborId], references: [id])
 
   @@map("attachment")
 }

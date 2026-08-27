@@ -12,3 +12,14 @@ export function toISO(dateInput) {
   const parsed = new Date(dateInput);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
+
+// 한국 기준의 'YYYY-MM-DD'. 현장에서 밤 늦게 찍어도 그날로 남아야 한다.
+// 서버는 UTC로 도니 시각을 그대로 자르면 하루가 밀린다.
+export function kstDayString(input) {
+  const s = String(input ?? '');
+  // 'YYYY-MM-DD'로 온 값은 이미 그날을 가리킨다. 시각이 붙어 있으면 시차를 따져야 한다.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = input ? new Date(input) : new Date();
+  const base = Number.isNaN(d.getTime()) ? new Date() : d;
+  return new Date(base.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+}
