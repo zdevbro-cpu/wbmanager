@@ -32,6 +32,7 @@ interface Plan {
 }
 
 interface ChartRow {
+  projectId: string;
   employmentType: string;
   plan: Record<string, number>;
   actual: Record<string, number>;
@@ -40,7 +41,7 @@ interface ChartRow {
 }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
-const LABEL_W = 150;
+const LABEL_W = 176; // 전체 보기에서는 현장 이름까지 들어간다
 const SUM_W = 72;
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
 
@@ -126,7 +127,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
     if (!chart.days.length) return [];
     const first = chart.days[0];
     const last = chart.days[chart.days.length - 1];
-    const byType = new Map(chart.rows.map((r) => [r.employmentType, r]));
+    const byKey = new Map(chart.rows.map((r) => [`${r.projectId}|${r.employmentType}`, r]));
 
     return plans
       .filter((p) => p.startDate.slice(0, 10) <= last && p.endDate.slice(0, 10) >= first)
@@ -134,7 +135,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
         const from = p.startDate.slice(0, 10) < first ? first : p.startDate.slice(0, 10);
         const to = p.endDate.slice(0, 10) > last ? last : p.endDate.slice(0, 10);
         const span = chart.days.filter((d) => d >= from && d <= to);
-        const row = byType.get(p.employmentType ?? '미지정');
+        const row = byKey.get(`${p.projectId}|${p.employmentType ?? '미지정'}`);
         const actualTotal = span.reduce((sum, d) => sum + (row?.actual[d] ?? 0), 0);
         const planTotal = span.length * Number(p.manDays || 0);
         return {
@@ -265,8 +266,8 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                       />
                       {p.employmentType ?? '미지정'}
                     </span>
-                    <span className="block text-[11px] text-text-faint">
-                      하루 {formatNumber(p.manDays)}공수 · {p.days}일
+                    <span className="block truncate text-[11px] text-text-faint">
+                      {!projectId && `${projectName(p.projectId)} · `}하루 {formatNumber(p.manDays)}공수 · {p.days}일
                     </span>
                   </div>
 
@@ -402,10 +403,14 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
           plan={monthPlans.find((p) => p.id === detail)!}
           projectLabel={projectName(monthPlans.find((p) => p.id === detail)!.projectId)}
           days={chart.days}
-          actualOf={(d) =>
-            chart.rows.find((r) => r.employmentType === (monthPlans.find((p) => p.id === detail)!.employmentType ?? '미지정'))
-              ?.actual[d] ?? 0
-          }
+          actualOf={(d) => {
+            const p = monthPlans.find((x) => x.id === detail)!;
+            return (
+              chart.rows.find(
+                (r) => r.projectId === p.projectId && r.employmentType === (p.employmentType ?? '미지정'),
+              )?.actual[d] ?? 0
+            );
+          }}
           onClose={() => setDetail(null)}
           onDeleted={() => {
             setDetail(null);
