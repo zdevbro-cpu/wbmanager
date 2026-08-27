@@ -69,7 +69,7 @@ router.post('/', async (req, res) => {
 
   const inbound = await prisma.$transaction(async (tx) => {
     const created = await tx.inbound.create({
-      data: { ...req.body, netWeight, stockWeight: stock, inboundDate: toISO(inboundDate) },
+      data: { ...req.body, createdById: req.appUser?.id ?? null, netWeight, stockWeight: stock, inboundDate: toISO(inboundDate) },
     });
     // 재고 = 입고 - 출고 (갑지 기준). 품목 미선택 건은 미분류 품목으로 계상해 누락을 막는다.
     await postInboundLedger(

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Lock, LogOut, ArrowRight, Camera } from 'lucide-react';
+import { Lock, LogOut, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AREAS, type Area } from '../lib/areas';
 
@@ -97,14 +97,6 @@ export function EntryPage() {
             })}
           </div>
 
-          {/* 현장에서 휴대폰으로 들어오는 입구. 계량증명서를 찍어 그 자리에서 등록한다. */}
-          <button
-            type="button"
-            onClick={() => navigate('/mobile')}
-            className="mt-8 inline-flex items-center gap-2 rounded-[10px] border border-border px-4 py-2.5 text-[13px] font-bold text-text-sub hover:bg-hover hover:text-text-strong"
-          >
-            <Camera size={15} /> 모바일 계근 등록 — 계량증명서 촬영
-          </button>
         </div>
       </main>
     </div>

@@ -1,12 +1,12 @@
-import { useRef, useState } from 'react';
-import { Camera, Loader2, Check, ChevronLeft, ScanLine } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Camera, Loader2, Check, ScanLine, ListChecks } from 'lucide-react';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { useProjects, useItemMasters, useEmployees, useExternalDrivers } from '../hooks/useMasters';
 import { useCertificateOcr, OCR_LABEL, type OcrFields } from '../hooks/useCertificateOcr';
 import { uploadStagedFiles, type ParentType } from '../lib/uploadStaged';
 import { formatPhone } from '../lib/phone';
-import { kstToday } from '../lib/datetime';
+import { kstToday, kstStamp } from '../lib/datetime';
 
 // 현장에서 휴대폰으로 계량증명서를 찍어 그 자리에서 등록한다.
 // 사무실 화면을 휴대폰에 욱여넣지 않고, 한 줄에 한 칸씩 큼직하게 둔 별도 화면으로 만든다.
@@ -44,7 +44,7 @@ const field = 'w-full rounded-[10px] border border-border bg-input px-3 py-3 tex
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
 
 export function MobileWeighPage() {
-  const navigate = useNavigate();
+  const { appUser, logout } = useAuth();
   const { projects } = useProjects();
   const { items } = useItemMasters();
   const { employees } = useEmployees();
@@ -68,11 +68,38 @@ export function MobileWeighPage() {
   const [lossWeight, setLossWeight] = useState('');
   const [memo, setMemo] = useState('');
 
+  const [today, setToday] = useState<TodayRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
 
   const spec = KINDS.find((k) => k.key === kind)!;
+
+  // 오늘 내가 올린 건만 모은다. 네 곳에 나뉘어 있어 한꺼번에 읽어 시각순으로 세운다.
+  const loadToday = useCallback(async () => {
+    if (!appUser?.id) return;
+    const day = kstToday();
+    const lists = await Promise.all(
+      KINDS.map(async (k) => {
+        const rows = await api.get<Record<string, unknown>[]>(`${k.path}?from=${day}&to=${day}`);
+        return rows
+          .filter((r) => r.createdById === appUser.id)
+          .map((r) => ({
+            id: String(r.id),
+            kind: k.label,
+            vehicleNo: (r.vehicleNo as string) ?? '',
+            weight: Number(r.netWeight ?? r.settledWeight ?? r.weight ?? 0),
+            isDraft: r.isDraft === true,
+            createdAt: String(r.createdAt ?? ''),
+          }));
+      }),
+    );
+    setToday(lists.flat().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)));
+  }, [appUser?.id]);
+
+  useEffect(() => {
+    loadToday();
+  }, [loadToday]);
   const net = Number(grossWeight || 0) - Number(tareWeight || 0) - Number(lossWeight || 0);
 
   // 사진에서 읽은 값으로 빈 칸만 채운다. 손으로 고친 값은 건드리지 않는다.
@@ -136,6 +163,7 @@ export function MobileWeighPage() {
         await uploadStagedFiles([{ fileType: '계량증명서', files: [photo] }], PARENT_TYPE[kind], created.id);
       }
       setSaved(true);
+      loadToday();
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장에 실패했습니다.');
     } finally {
@@ -172,9 +200,9 @@ export function MobileWeighPage() {
         <button type="button" onClick={reset} className="w-full rounded-[12px] bg-primary py-4 text-[16px] font-bold text-white">
           다음 건 등록
         </button>
-        <button type="button" onClick={() => navigate('/')} className="text-[13px] text-text-sub underline">
-          시작 화면으로
-        </button>
+        <div className="w-full text-left">
+          <TodayList rows={today} />
+        </div>
       </div>
     );
   }
@@ -182,10 +210,11 @@ export function MobileWeighPage() {
   return (
     <div className="mx-auto min-h-screen max-w-[520px] bg-bg px-4 pb-10 pt-4">
       <div className="mb-4 flex items-center gap-2">
-        <button type="button" onClick={() => navigate('/')} className="rounded-[8px] p-1 text-text-sub">
-          <ChevronLeft size={20} />
+        <img src="/원방로고.png" alt="원방" className="h-8 w-8 shrink-0 rounded-[9px] bg-white object-contain p-0.5" />
+        <h1 className="text-[17px] font-extrabold text-text-strong">계근 등록</h1>
+        <button type="button" onClick={logout} className="ml-auto text-[12.5px] text-text-sub underline">
+          로그아웃
         </button>
-        <h1 className="text-[17px] font-extrabold text-text-strong">계근 등록 (모바일)</h1>
       </div>
 
       {/* 무엇을 계근한 것인지 먼저 고른다. 나머지 칸 구성은 같다. */}
@@ -365,6 +394,56 @@ export function MobileWeighPage() {
           {saving ? '저장 중…' : `${spec.label} 등록`}
         </button>
       </form>
+
+      <TodayList rows={today} />
+    </div>
+  );
+}
+
+interface TodayRow {
+  id: string;
+  kind: string;
+  vehicleNo: string;
+  weight: number;
+  isDraft: boolean;
+  createdAt: string;
+}
+
+// 오늘 올린 건 — 값이 맞는지 그 자리에서 훑어보는 용도다. 고치는 것은 사무실에서 한다.
+function TodayList({ rows }: { rows: TodayRow[] }) {
+  return (
+    <div className="mt-8">
+      <div className="mb-2 flex items-center gap-2">
+        <ListChecks size={16} className="text-primary" />
+        <h2 className="text-[14px] font-extrabold text-text-strong">오늘 내가 올린 건</h2>
+        <span className="text-[12.5px] text-text-sub">{rows.length}건</span>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="rounded-[10px] border border-border px-3 py-4 text-center text-[12.5px] text-text-faint">
+          아직 없습니다.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((r) => (
+            <li key={r.id} className="rounded-[10px] border border-border px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-bold text-text-strong">{r.kind}</span>
+                {r.isDraft ? (
+                  <span className="rounded-[5px] bg-warning/15 px-1.5 py-0.5 text-[11px] font-bold text-warning">임시저장</span>
+                ) : (
+                  <span className="rounded-[5px] bg-success/15 px-1.5 py-0.5 text-[11px] font-bold text-success">정상등록</span>
+                )}
+                <span className="ml-auto text-[12px] text-text-faint">{kstStamp(r.createdAt).slice(11, 16)}</span>
+              </div>
+              <div className="mt-1 flex items-center gap-3 text-[12.5px] text-text-sub">
+                <span>{r.vehicleNo || '차량번호 없음'}</span>
+                <span className="tabular">{r.weight ? `${r.weight.toLocaleString()} kg` : '-'}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
