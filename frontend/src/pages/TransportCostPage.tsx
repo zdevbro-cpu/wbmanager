@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Truck, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
-import { useProjects, useVehicles, useCommonCodes } from '../hooks/useMasters';
+import { useProjects, useVehicles, useCommonCodes, useItemMasters } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FilterField } from '../components/FilterField';
 import { SearchSelect } from '../components/SearchSelect';
@@ -33,6 +33,9 @@ interface Transport {
   origin?: string | null;
   destination?: string | null;
   weight?: string | null;
+  itemCode?: string | null;
+  itemName?: string | null;
+  unitPrice?: string | null;
   supplyAmount?: string | null;
   taxAmount?: string | null;
 }
@@ -108,7 +111,9 @@ export function TransportCostPage() {
               <th className={thCls}>차종</th>
               <th className={thCls}>상차지</th>
               <th className={thCls}>하차지</th>
+              <th className={thCls}>제품</th>
               <th className={thNumCls}>중량(kg)</th>
+              <th className={thNumCls}>단가</th>
               <th className={thNumCls}>공급가액</th>
               <th className={thNumCls}>세액</th>
               <th className={thNumCls}>합계</th>
@@ -124,7 +129,9 @@ export function TransportCostPage() {
                 <td className={tdCls}>{show(r.vehicleType)}</td>
                 <td className={tdCls}>{show(r.origin)}</td>
                 <td className={tdCls}>{show(r.destination)}</td>
+                <td className={tdCls}>{show(r.itemName)}</td>
                 <td className={tdNumCls}>{formatNumber(r.weight)}</td>
+                <td className={tdNumCls}>{formatNumber(r.unitPrice)}</td>
                 <td className={tdNumCls}>{formatNumber(r.supplyAmount)}</td>
                 <td className={tdNumCls}>{formatNumber(r.taxAmount)}</td>
                 <td className={`${tdNumCls} font-bold text-text-strong`}>
@@ -144,7 +151,7 @@ export function TransportCostPage() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={11} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={13} className="py-10 text-center text-[13px] text-text-faint">
                   등록된 운반비가 없습니다.
                 </td>
               </tr>
@@ -188,6 +195,9 @@ function TransportForm({
     vehicleType: '',
     origin: '',
     destination: '',
+    itemCode: '',
+    itemName: '',
+    unitPrice: '',
     weight: '',
     supplyAmount: '',
     taxAmount: '',
@@ -200,6 +210,7 @@ function TransportForm({
   // 차량번호는 차량등록관리에서, 차종·상차지·하차지는 공통코드에서 가져온다.
   // 목록에 없으면 그대로 적어 넣을 수 있고, 저장하면 다음부터 목록에 나온다.
   const { vehicles } = useVehicles();
+  const { items } = useItemMasters();
   const { labels: vehicleTypes } = useCommonCodes('차종');
   const { labels: origins } = useCommonCodes('상차지');
   const { labels: destinations } = useCommonCodes('하차지');
@@ -208,8 +219,11 @@ function TransportForm({
     const vehicle = vehicles.find((v) => v.vehicleNo === no);
     set({ vehicleNo: no, ...(vehicle?.vehicleType ? { vehicleType: vehicle.vehicleType } : {}) });
   };
+  // 중량과 단가가 있으면 공급가액을 대신 낸다. 직접 적으면 적은 값이 이긴다.
+  const byRate = f.weight && f.unitPrice ? Math.round(Number(f.weight) * Number(f.unitPrice)) : 0;
+  const supply = f.supplyAmount !== '' ? Number(f.supplyAmount) : byRate;
   // 세액을 비워 두면 공급가액의 10%로 채운다 — 세금계산서와 맞추기 위해서다.
-  const tax = f.taxAmount !== '' ? Number(f.taxAmount) : f.supplyAmount ? Math.round(Number(f.supplyAmount) * 0.1) : 0;
+  const tax = f.taxAmount !== '' ? Number(f.taxAmount) : supply ? Math.round(supply * 0.1) : 0;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,8 +241,11 @@ function TransportForm({
         vehicleType: f.vehicleType || undefined,
         origin: f.origin || undefined,
         destination: f.destination || undefined,
+        itemCode: f.itemCode || undefined,
+        itemName: f.itemName || undefined,
+        unitPrice: f.unitPrice ? Number(f.unitPrice) : undefined,
         weight: f.weight ? Number(f.weight) : undefined,
-        supplyAmount: f.supplyAmount ? Number(f.supplyAmount) : undefined,
+        supplyAmount: supply || undefined,
         taxAmount: tax,
       });
       onDone();
@@ -309,14 +326,38 @@ function TransportForm({
           />
         </div>
 
+        <div className="col-span-2">
+          <label className={labelCls}>제품</label>
+          <SearchSelect
+            ariaLabel="제품"
+            options={items.map((i) => ({ value: i.itemName, label: i.itemName }))}
+            value={f.itemName}
+            onChange={(v) =>
+              set({ itemName: v, itemCode: items.find((i) => i.itemName === v)?.itemCode ?? '' })
+            }
+            placeholder="검색 또는 직접 입력"
+            allowFree
+          />
+        </div>
+
         <div>
           <label className={labelCls}>중량(kg)</label>
           <NumberInput value={f.weight} onChange={(v) => set({ weight: v })} decimals={3} />
         </div>
 
         <div>
+          <label className={labelCls}>단가(원/kg)</label>
+          <NumberInput value={f.unitPrice} onChange={(v) => set({ unitPrice: v })} decimals={2} />
+        </div>
+
+        <div>
           <label className={labelCls}>공급가액(원)</label>
-          <NumberInput value={f.supplyAmount} onChange={(v) => set({ supplyAmount: v })} />
+          <NumberInput
+            value={f.supplyAmount}
+            onChange={(v) => set({ supplyAmount: v })}
+            placeholder={byRate ? String(byRate) : ''}
+          />
+          <p className="mt-1 text-[12px] text-text-faint">비우면 중량 × 단가</p>
         </div>
 
         <div>
@@ -325,8 +366,8 @@ function TransportForm({
           <p className="mt-1 text-[12px] text-text-faint">비우면 공급가액의 10%</p>
         </div>
 
-        <p className="col-span-2 self-end pb-2 text-[13px] text-text-sub">
-          합계: <span className="tabular font-bold text-text-strong">{formatNumber(Number(f.supplyAmount || 0) + tax)}</span> 원
+        <p className="col-span-3 self-end pb-2 text-[13px] text-text-sub">
+          합계: <span className="tabular font-bold text-text-strong">{formatNumber(supply + tax)}</span> 원
         </p>
       </div>
 

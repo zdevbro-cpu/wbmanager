@@ -1,8 +1,12 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { prisma } from '../lib/prisma.js';
 import { toISO } from '../lib/date.js';
+import { uploadToDrive, downloadFromDrive, trashInDrive } from '../lib/drive.js';
 
 const router = Router();
+// 기준 사진 한 장. 폰으로 찍어 올려도 담기게 넉넉히 둔다.
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024 } });
 
 // 사번 자동 채번 — EMP-{연도}-{3자리 일련번호}. 근태 QR이 이 값을 담는다.
 async function nextEmpCode(tx, hireDate) {
@@ -231,6 +235,67 @@ router.get('/:id/trainings', async (req, res) => {
     orderBy: { trainingDate: 'desc' },
   });
   res.json(trainings);
+});
+
+// 출퇴근 셀카를 견줄 기준 사진을 올린다. 한 사람에 한 장이고, 새로 올리면 앞의 것은 치운다.
+router.post('/:id/photo', upload.single('photo'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: '사진을 고르세요.' });
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
+  if (!employee) return res.status(404).json({ error: '임직원을 찾을 수 없습니다.' });
+
+  const uploaded = await uploadToDrive({
+    buffer: req.file.buffer,
+    fileName: `기준사진_${employee.name}.jpg`,
+    mimeType: req.file.mimetype || 'image/jpeg',
+  });
+
+  if (employee.photoDriveId) {
+    try {
+      await trashInDrive(employee.photoDriveId);
+    } catch (e) {
+      console.error('[employee] 옛 기준사진 정리 실패:', e.message);
+    }
+  }
+
+  const row = await prisma.employee.update({
+    where: { id: employee.id },
+    data: { photoDriveId: uploaded.driveFileId, photoLink: uploaded.webViewLink },
+  });
+  res.status(201).json({ id: row.id, photoDriveId: row.photoDriveId });
+});
+
+// 사진은 드라이브에 있고, 화면에는 이 서버를 거쳐 보여 준다.
+// 드라이브 링크를 그대로 쓰면 로그인하지 않은 사람에게도 열리기 때문이다.
+router.get('/:id/photo', async (req, res) => {
+  const employee = await prisma.employee.findUnique({
+    where: { id: req.params.id },
+    select: { photoDriveId: true },
+  });
+  if (!employee?.photoDriveId) return res.status(404).json({ error: '등록된 사진이 없습니다.' });
+
+  try {
+    const { stream, mimeType } = await downloadFromDrive(employee.photoDriveId);
+    res.setHeader('Content-Type', mimeType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    stream.pipe(res);
+  } catch (err) {
+    console.error('[employee] 사진 내려받기 실패:', err.message);
+    res.status(502).json({ error: '사진을 가져오지 못했습니다.' });
+  }
+});
+
+router.delete('/:id/photo', async (req, res) => {
+  const employee = await prisma.employee.findUnique({ where: { id: req.params.id } });
+  if (!employee) return res.status(404).json({ error: '임직원을 찾을 수 없습니다.' });
+  if (employee.photoDriveId) {
+    try {
+      await trashInDrive(employee.photoDriveId);
+    } catch (e) {
+      console.error('[employee] 기준사진 삭제 실패:', e.message);
+    }
+  }
+  await prisma.employee.update({ where: { id: employee.id }, data: { photoDriveId: null, photoLink: null } });
+  res.status(204).end();
 });
 
 export default router;

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Camera, Loader2, Check, ScanLine, ListChecks } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -255,7 +256,10 @@ export function MobileWeighPage() {
       <div className="mb-4 flex items-center gap-2">
         <img src="/원방로고.png" alt="원방" className="h-8 w-8 shrink-0 rounded-[9px] bg-white object-contain p-0.5" />
         <h1 className="text-[17px] font-extrabold text-text-strong">계근 등록</h1>
-        <button type="button" onClick={logout} className="ml-auto text-[12.5px] text-text-sub underline">
+        <Link to="/mobile/attend" className="ml-auto text-[12.5px] text-text-sub underline">
+          출퇴근
+        </Link>
+        <button type="button" onClick={logout} className="text-[12.5px] text-text-sub underline">
           로그아웃
         </button>
       </div>

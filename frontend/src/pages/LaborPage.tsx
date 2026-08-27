@@ -25,6 +25,7 @@ import {
   trCls,
 } from '../components/ui/classes';
 import type { Project } from '../types';
+import { LaborMonthGrid } from '../components/LaborMonthGrid';
 
 export const WORKER_TYPES = ['정규직', '프리랜서', '현장직', '타사직원'];
 
@@ -55,6 +56,8 @@ export function LaborPage() {
   const [rows, setRows] = useState<Labor[]>([]);
   const [projectId, setProjectId] = useState('');
   const [open, setOpen] = useState(false);
+  // 월 근태·공수가 기본 화면이다. 지금까지 쓰던 날짜별 목록은 탭으로 그대로 남긴다.
+  const [tab, setTab] = useState<'month' | 'list'>('month');
 
   const load = useCallback(() => {
     const params = new URLSearchParams();
@@ -103,102 +106,126 @@ export function LaborPage() {
         <span className="ml-1 text-[13px] text-text-sub">
           {rows.length}건 · {formatNumber(totals.manDays)}공수 · {formatNumber(totals.amount)}원
         </span>
-        <button type="button" onClick={() => setOpen(true)} className={`${primaryBtnCls} ml-auto`}>
-          <Plus size={15} /> 공수 등록
-        </button>
-      </div>
-
-      <div className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:minmax(0,320px)_minmax(0,1fr)]`}>
-        <FilterField label="프로젝트">
-          <SearchSelect
-            ariaLabel="프로젝트"
-            options={projects.map((p) => ({ value: p.id, label: p.roundName }))}
-            value={projectId}
-            onChange={setProjectId}
-          />
-        </FilterField>
-        <p className="pb-2 text-[12.5px] text-text-faint">
-          한 줄이 한 사람의 하루입니다. 여기 합계가 손익보고서의 인건비로 잡힙니다.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-[minmax(0,1fr)_320px] gap-4">
-        <div className={`${tableWrapCls} overflow-x-auto`}>
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-y border-border">
-                <th className={thCls}>작업일</th>
-                <th className={thCls}>프로젝트</th>
-                <th className={thCls}>작업자</th>
-                <th className={thCls}>구분</th>
-                <th className={thNumCls}>공수</th>
-                <th className={thNumCls}>단가</th>
-                <th className={thNumCls}>인건비</th>
-                <th className={thNumCls}>식대</th>
-                <th className={thNumCls}>기타</th>
-                <th className={thNumCls}>합계</th>
-                <th className={thCls}>관리</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className={trCls}>
-                  <td className={`${tdCls} tabular whitespace-nowrap`}>{day(r.workDate)}</td>
-                  <td className={tdCls}>{projectName(r.projectId)}</td>
-                  <td className={`${tdCls} font-semibold text-text-strong`}>{show(r.workerName)}</td>
-                  <td className={tdCls}>{r.workerType ? <Badge tone="blue">{r.workerType}</Badge> : '-'}</td>
-                  <td className={tdNumCls}>{formatNumber(r.totalManDays)}</td>
-                  <td className={tdNumCls}>{formatNumber(r.unitCost)}</td>
-                  <td className={tdNumCls}>{formatNumber(r.laborCost)}</td>
-                  <td className={tdNumCls}>{formatNumber(r.mealCost)}</td>
-                  <td className={tdNumCls}>
-                    {formatNumber(num(r.toolCost) + num(r.fuelCost) + num(r.suppliesCost))}
-                  </td>
-                  <td className={`${tdNumCls} font-bold text-text-strong`}>{formatNumber(r.totalAmount)}</td>
-                  <td className={tdCls}>
-                    <button
-                      type="button"
-                      title="삭제"
-                      onClick={() => remove(r)}
-                      className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-danger"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={11} className="py-10 text-center text-[13px] text-text-faint">
-                    등록된 공수가 없습니다.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className={cardPadCls}>
-          <h2 className="mb-2 text-[15px] font-extrabold text-text-strong">인원별 소계</h2>
-          {byWorker.length === 0 ? (
-            <p className="text-[13px] text-text-faint">집계할 공수가 없습니다.</p>
-          ) : (
-            <div className="space-y-1.5">
-              {byWorker.map((w) => (
-                <div key={w.name} className="flex items-center justify-between gap-2 border-b border-border pb-1.5">
-                  <span className="min-w-0 truncate text-[13px] text-text">
-                    {w.name} <span className="text-[12px] text-text-faint">{w.type}</span>
-                  </span>
-                  <span className="tabular shrink-0 text-[13px] font-semibold text-text-strong">
-                    {formatNumber(w.manDays)}공수
-                    <span className="ml-2 font-normal text-text-sub">{formatNumber(w.amount)}원</span>
-                  </span>
-                </div>
-              ))}
-            </div>
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex rounded-[9px] border border-border p-0.5">
+            {([['month', '월 근태·공수'], ['list', '날짜별 목록']] as const).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setTab(k)}
+                className={`rounded-[7px] px-3 py-1.5 text-[13px] font-semibold ${
+                  tab === k ? 'bg-primary text-white' : 'text-text-sub hover:bg-hover'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {tab === 'list' && (
+            <button type="button" onClick={() => setOpen(true)} className={primaryBtnCls}>
+              <Plus size={15} /> 공수 등록
+            </button>
           )}
         </div>
       </div>
+
+      {tab === 'month' && <LaborMonthGrid projects={projects} defaultProjectId={projectId} />}
+
+      {tab === 'list' && (
+        <>
+        <div className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:minmax(0,320px)_minmax(0,1fr)]`}>
+          <FilterField label="프로젝트">
+            <SearchSelect
+              ariaLabel="프로젝트"
+              options={projects.map((p) => ({ value: p.id, label: p.roundName }))}
+              value={projectId}
+              onChange={setProjectId}
+            />
+          </FilterField>
+          <p className="pb-2 text-[12.5px] text-text-faint">
+            한 줄이 한 사람의 하루입니다. 여기 합계가 손익보고서의 인건비로 잡힙니다.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-[minmax(0,1fr)_320px] gap-4">
+          <div className={`${tableWrapCls} overflow-x-auto`}>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-y border-border">
+                  <th className={thCls}>작업일</th>
+                  <th className={thCls}>프로젝트</th>
+                  <th className={thCls}>작업자</th>
+                  <th className={thCls}>구분</th>
+                  <th className={thNumCls}>공수</th>
+                  <th className={thNumCls}>단가</th>
+                  <th className={thNumCls}>인건비</th>
+                  <th className={thNumCls}>식대</th>
+                  <th className={thNumCls}>기타</th>
+                  <th className={thNumCls}>합계</th>
+                  <th className={thCls}>관리</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className={trCls}>
+                    <td className={`${tdCls} tabular whitespace-nowrap`}>{day(r.workDate)}</td>
+                    <td className={tdCls}>{projectName(r.projectId)}</td>
+                    <td className={`${tdCls} font-semibold text-text-strong`}>{show(r.workerName)}</td>
+                    <td className={tdCls}>{r.workerType ? <Badge tone="blue">{r.workerType}</Badge> : '-'}</td>
+                    <td className={tdNumCls}>{formatNumber(r.totalManDays)}</td>
+                    <td className={tdNumCls}>{formatNumber(r.unitCost)}</td>
+                    <td className={tdNumCls}>{formatNumber(r.laborCost)}</td>
+                    <td className={tdNumCls}>{formatNumber(r.mealCost)}</td>
+                    <td className={tdNumCls}>
+                      {formatNumber(num(r.toolCost) + num(r.fuelCost) + num(r.suppliesCost))}
+                    </td>
+                    <td className={`${tdNumCls} font-bold text-text-strong`}>{formatNumber(r.totalAmount)}</td>
+                    <td className={tdCls}>
+                      <button
+                        type="button"
+                        title="삭제"
+                        onClick={() => remove(r)}
+                        className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-danger"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={11} className="py-10 text-center text-[13px] text-text-faint">
+                      등록된 공수가 없습니다.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className={cardPadCls}>
+            <h2 className="mb-2 text-[15px] font-extrabold text-text-strong">인원별 소계</h2>
+            {byWorker.length === 0 ? (
+              <p className="text-[13px] text-text-faint">집계할 공수가 없습니다.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {byWorker.map((w) => (
+                  <div key={w.name} className="flex items-center justify-between gap-2 border-b border-border pb-1.5">
+                    <span className="min-w-0 truncate text-[13px] text-text">
+                      {w.name} <span className="text-[12px] text-text-faint">{w.type}</span>
+                    </span>
+                    <span className="tabular shrink-0 text-[13px] font-semibold text-text-strong">
+                      {formatNumber(w.manDays)}공수
+                      <span className="ml-2 font-normal text-text-sub">{formatNumber(w.amount)}원</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        </>
+      )}
 
       {open && (
         <FormModal title="공수 등록" icon={Users} wide onClose={() => setOpen(false)}>
