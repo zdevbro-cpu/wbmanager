@@ -91,7 +91,7 @@ interface Props<T> {
   filterKeys?: FilterKey[];
   /** 검색 후보 보강 — 마스터에 없는 실제 입력값(배출자·운반자·처리자·수기 차량번호 등)을 화면이 넘긴다. */
   suggestions?: Partial<Record<FilterKey, string[]>>;
-  /** 상세에서 수정 폼을 띄운다. 저장이 끝나면 done()을 불러 상세로 돌아온다. */
+  /** 상세에서 수정 폼을 띄운다. 저장이 끝나면 done()을 불러 창을 닫고 목록으로 돌아간다. */
   editForm?: (row: T, done: () => void) => ReactNode;
   /** 첨부를 지운 뒤 목록을 다시 읽는다. */
   reload?: () => void;
@@ -466,7 +466,12 @@ export function TransactionListLayout<T>({
             </div>
 
             {detailEdit && editForm ? (
-              editForm(detail, () => setDetailEdit(false))
+              // 저장하면 상세로 되돌리지 않고 창을 닫는다. 같은 화면이 다시 떠 있으면
+              // 저장이 됐는지 알기 어렵고, 바뀐 값은 목록에서 바로 보인다.
+              editForm(detail, () => {
+                setDetailEdit(false);
+                setDetail(null);
+              })
             ) : (
               <>
             <dl className="grid grid-cols-2 gap-x-5 gap-y-2">
