@@ -254,9 +254,52 @@ async function nextDocNo(typeCode) {
   return `${prefix}${String(seq).padStart(4, '0')}`;
 }
 
-// 목록 — 분류·프로젝트·검색어로 좁힌다. 프로젝트는 연결(document_link)로 건다.
+// 파일 종류 — 확장자와 mime 양쪽으로 본다. 드라이브가 mime을 비워 보내는 경우가 있다.
+const FILE_KINDS = {
+  pdf: { ext: ['.pdf'], mime: ['application/pdf'] },
+  image: { ext: ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'], mime: ['image/'] },
+  sheet: { ext: ['.xlsx', '.xls', '.csv'], mime: ['spreadsheet', 'excel', 'text/csv'] },
+  doc: { ext: ['.docx', '.doc', '.hwp', '.hwpx'], mime: ['word', 'hwp'] },
+};
+
+function fileKindFilter(kind) {
+  const spec = FILE_KINDS[kind];
+  if (!spec) return {};
+  return {
+    versions: {
+      some: {
+        OR: [
+          ...spec.ext.map((e) => ({ fileName: { endsWith: e, mode: 'insensitive' } })),
+          ...spec.mime.map((m) => ({ mimeType: { contains: m, mode: 'insensitive' } })),
+        ],
+      },
+    },
+  };
+}
+
+// 목록 — 분류·프로젝트·검색어에 더해 등록일·실물 상태·파일 종류·첨부 유무로도 좁힌다.
+// 문서를 찾는 길이 하나뿐이면 결국 트리를 처음부터 훑게 된다.
 router.get('/documents', async (req, res) => {
   const { typeId, projectId, q, includeSubtree, includeReports } = req.query;
+  const { from, to, physical, fileKind, hasAttachment, retention } = req.query;
+
+  // 등록일은 한국 날짜로 받아 그날 0시부터 자정까지로 본다.
+  const createdRange = {};
+  if (from) createdRange.gte = new Date(`${from}T00:00:00+09:00`);
+  if (to) createdRange.lte = new Date(`${to}T23:59:59.999+09:00`);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const retentionFilter =
+    retention === 'expired'
+      ? { retentionUntil: { lt: new Date(`${today}T00:00:00+09:00`) } }
+      : retention === 'soon'
+        ? {
+            retentionUntil: {
+              gte: new Date(`${today}T00:00:00+09:00`),
+              lte: new Date(new Date(`${today}T00:00:00+09:00`).getTime() + 90 * 86400000),
+            },
+          }
+        : {};
 
   let typeIds;
   if (typeId) {
@@ -276,7 +319,23 @@ router.get('/documents', async (req, res) => {
       deletedAt: null,
       ...(typeIds ? { typeId: { in: typeIds } } : {}),
       ...(projectId ? { links: { some: { entityType: 'project', entityId: projectId } } } : {}),
-      ...(q ? { OR: [{ title: { contains: q, mode: 'insensitive' } }, { docNo: { contains: q, mode: 'insensitive' } }] } : {}),
+      // 검색어는 제목·문서번호에 더해 비고와 파일명까지 훑는다. 파일명만 기억나는 경우가 흔하다.
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: 'insensitive' } },
+              { docNo: { contains: q, mode: 'insensitive' } },
+              { description: { contains: q, mode: 'insensitive' } },
+              { versions: { some: { fileName: { contains: q, mode: 'insensitive' } } } },
+            ],
+          }
+        : {}),
+      ...(Object.keys(createdRange).length ? { createdAt: createdRange } : {}),
+      ...(physical ? { meta: { path: ['physicalStatus'], equals: physical } } : {}),
+      ...fileKindFilter(fileKind),
+      ...(hasAttachment === 'true' ? { attachments: { some: {} } } : {}),
+      ...(hasAttachment === 'false' ? { attachments: { none: {} } } : {}),
+      ...retentionFilter,
       // 계근표는 건당 수천 장이라 문서 목록에 올리지 않는다. 해당 거래의 첨부로만 본다(설계 3.5).
       // 분류를 콕 집어 고른 경우에만 보여 준다.
       ...(typeId ? {} : { type: { name: { not: { contains: '계근표' } } } }),
