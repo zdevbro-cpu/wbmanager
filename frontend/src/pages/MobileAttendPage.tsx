@@ -202,7 +202,7 @@ export function MobileAttendPage() {
 
       {/* 누구인지는 로그인한 계정으로 정해진다. 남의 이름으로 찍을 수 없다. */}
       <div className="mb-3">
-        <span className={labelCls}>누구</span>
+        <span className={labelCls}>사용자</span>
         {me?.employee ? (
           <div className={`${field} font-bold`}>
             {me.employee.name}
