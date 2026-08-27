@@ -89,7 +89,10 @@ const PROMPT = `이 이미지는 한국의 계량증명서(계근표)입니다. 
   "tareWeight": "공차중량(kg, 숫자만)",
   "netWeight": "실중량/감량후중량(kg, 숫자만)",
   "companyName": "거래처/업체명",
-  "siteName": "현장명/하차지"
+  "siteName": "현장명/하차지",
+  "dischargerName": "배출자(폐기물 계근표에만 있음)",
+  "transporterName": "운반자(폐기물 계근표에만 있음)",
+  "processorName": "처리자/처리업체(폐기물 계근표에만 있음)"
 }`;
 
 const NUMERIC_FIELDS = ['grossWeight', 'tareWeight', 'netWeight'];
