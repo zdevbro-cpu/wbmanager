@@ -69,6 +69,7 @@ export function MobileWeighPage() {
   const [memo, setMemo] = useState('');
 
   const [today, setToday] = useState<TodayRow[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -86,11 +87,13 @@ export function MobileWeighPage() {
           .filter((r) => r.createdById === appUser.id)
           .map((r) => ({
             id: String(r.id),
+            key: k.key,
             kind: k.label,
             vehicleNo: (r.vehicleNo as string) ?? '',
             weight: Number(r.netWeight ?? r.settledWeight ?? r.weight ?? 0),
             isDraft: r.isDraft === true,
             createdAt: String(r.createdAt ?? ''),
+            raw: r,
           }));
       }),
     );
@@ -133,6 +136,29 @@ export function MobileWeighPage() {
     if (known?.phone) setDriverPhone(formatPhone(known.phone));
   };
 
+  // 목록에서 고르면 그 건의 값으로 폼을 채운다. 같은 칸에서 고치고 저장한다.
+  const openRow = (row: TodayRow) => {
+    const r = row.raw;
+    const k = KINDS.find((x) => x.key === row.key)!;
+    setKind(row.key);
+    setEditingId(row.id);
+    setPhoto(null);
+    setPreview('');
+    setProjectId(String(r.projectId ?? ''));
+    setDate(String(r[k.dateField] ?? '').slice(0, 10));
+    setPlace(String(r[k.placeField] ?? ''));
+    setItemCode(String(r.itemCode ?? ''));
+    setVehicleNo(String(r.vehicleNo ?? ''));
+    setDriverName(String(r.driverName ?? ''));
+    setDriverPhone(String(r.driverPhone ?? ''));
+    setGrossWeight(r.grossWeight == null ? '' : String(r.grossWeight));
+    setTareWeight(r.tareWeight == null ? '' : String(r.tareWeight));
+    setLossWeight(r.lossWeight == null ? '' : String(r.lossWeight));
+    setMemo(String(r.memo ?? ''));
+    setError('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const takePhoto = (picked: File[]) => {
     const file = picked[0];
     if (!file) return;
@@ -167,13 +193,16 @@ export function MobileWeighPage() {
         lossWeight: lossWeight ? Number(lossWeight) : undefined,
         memo: memo || undefined,
         // 사진에서 읽은 값이 섞여 있다. 사무실에서 확인하기 전까지 임시저장으로 둔다.
-        isDraft: true,
+        ...(editingId ? {} : { isDraft: true }),
       };
-      const created = await api.post<{ id: string }>(spec.path, payload);
+      // 고치는 중이면 그 건을 수정한다. 임시저장 여부는 사무실이 정하므로 건드리지 않는다.
+      const target = editingId
+        ? await api.patch<{ id: string }>(`${spec.path}/${editingId}`, payload)
+        : await api.post<{ id: string }>(spec.path, payload);
 
       // 찍은 사진을 계량증명서로 붙인다. 문서로도 자동 편입된다.
       if (photo) {
-        await uploadStagedFiles([{ fileType: '계량증명서', files: [photo] }], PARENT_TYPE[kind], created.id);
+        await uploadStagedFiles([{ fileType: '계량증명서', files: [photo] }], PARENT_TYPE[kind], target.id ?? editingId!);
       }
       setSaved(true);
       loadToday();
@@ -199,6 +228,7 @@ export function MobileWeighPage() {
     setLossWeight('');
     setMemo('');
     setSaved(false);
+    setEditingId(null);
     setError('');
   };
 
@@ -214,7 +244,7 @@ export function MobileWeighPage() {
           다음 건 등록
         </button>
         <div className="w-full text-left">
-          <TodayList rows={today} />
+          <TodayList rows={today} onOpen={(row) => { setSaved(false); openRow(row); }} />
         </div>
       </div>
     );
@@ -230,12 +260,19 @@ export function MobileWeighPage() {
         </button>
       </div>
 
+      {editingId && (
+        <div className="mb-3 rounded-[10px] border border-primary/40 bg-primary/10 px-3 py-2.5 text-[12.5px] text-text-strong">
+          오늘 올린 건을 고치는 중입니다. 유형은 바꿀 수 없습니다.
+        </div>
+      )}
+
       {/* 무엇을 계근한 것인지 먼저 고른다. 나머지 칸 구성은 같다. */}
       <div className="mb-4 grid grid-cols-2 gap-2">
         {KINDS.map((k) => (
           <button
             key={k.key}
             type="button"
+            disabled={!!editingId}
             onClick={() => setKind(k.key)}
             className={[
               'rounded-[10px] border py-3 text-[14px] font-bold',
@@ -412,31 +449,45 @@ export function MobileWeighPage() {
 
         {error && <p className="text-[13px] text-danger">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full rounded-[12px] bg-primary py-4 text-[16px] font-bold text-white disabled:opacity-70"
-        >
-          {saving ? '저장 중…' : `${spec.label} 등록`}
-        </button>
+        <div className="flex gap-2">
+          {editingId && (
+            <button
+              type="button"
+              onClick={reset}
+              className="w-1/3 rounded-[12px] border border-border py-4 text-[15px] font-bold text-text-sub"
+            >
+              취소
+            </button>
+          )}
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex-1 rounded-[12px] bg-primary py-4 text-[16px] font-bold text-white disabled:opacity-70"
+          >
+            {saving ? '저장 중…' : editingId ? '수정 저장' : `${spec.label} 등록`}
+          </button>
+        </div>
       </form>
 
-      <TodayList rows={today} />
+      <TodayList rows={today} onOpen={openRow} />
     </div>
   );
 }
 
 interface TodayRow {
   id: string;
+  key: Kind;
   kind: string;
   vehicleNo: string;
   weight: number;
   isDraft: boolean;
   createdAt: string;
+  /** 눌렀을 때 폼을 채우는 데 쓰는 원본 */
+  raw: Record<string, unknown>;
 }
 
 // 오늘 올린 건 — 값이 맞는지 그 자리에서 훑어보는 용도다. 고치는 것은 사무실에서 한다.
-function TodayList({ rows }: { rows: TodayRow[] }) {
+function TodayList({ rows, onOpen }: { rows: TodayRow[]; onOpen: (row: TodayRow) => void }) {
   return (
     <div className="mt-8">
       <div className="mb-2 flex items-center gap-2">
@@ -452,7 +503,12 @@ function TodayList({ rows }: { rows: TodayRow[] }) {
       ) : (
         <ul className="space-y-2">
           {rows.map((r) => (
-            <li key={r.id} className="rounded-[10px] border border-border px-3 py-2.5">
+            <li key={r.id}>
+              <button
+                type="button"
+                onClick={() => onOpen(r)}
+                className="w-full rounded-[10px] border border-border px-3 py-2.5 text-left active:bg-hover"
+              >
               <div className="flex items-center gap-2">
                 <span className="text-[13px] font-bold text-text-strong">{r.kind}</span>
                 {r.isDraft ? (
@@ -465,7 +521,9 @@ function TodayList({ rows }: { rows: TodayRow[] }) {
               <div className="mt-1 flex items-center gap-3 text-[12.5px] text-text-sub">
                 <span>{r.vehicleNo || '차량번호 없음'}</span>
                 <span className="tabular">{r.weight ? `${r.weight.toLocaleString()} kg` : '-'}</span>
+                <span className="ml-auto text-[12px] text-text-faint">눌러서 보기·수정</span>
               </div>
+              </button>
             </li>
           ))}
         </ul>
