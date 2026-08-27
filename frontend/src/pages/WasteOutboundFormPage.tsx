@@ -3,7 +3,7 @@ import { Trash2, CheckCircle2, Plus } from 'lucide-react';
 import { api } from '../api/client';
 import { registerVehicleAfterSave } from '../lib/vehicleRegister';
 import { formatPhone } from '../lib/phone';
-import { useProjects, useVendors, useItemMasters, useCommonCodes, useEmployees } from '../hooks/useMasters';
+import { useProjects, useVendors, useItemMasters, useCommonCodes, useEmployees, useExternalDrivers } from '../hooks/useMasters';
 import { MasterSelect } from '../components/MasterSelect';
 import { SearchSelect } from '../components/SearchSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
@@ -33,6 +33,7 @@ const initNum = (v?: string | number | null) => (v == null ? '' : String(Number(
 export function WasteOutboundFormPage({ embedded = false, onCreated, record = null, onSaved }: Props = {}) {
   const { projects } = useProjects();
   const { employees } = useEmployees();
+  const { drivers } = useExternalDrivers();
   const { vendors, quickCreate: quickCreateVendor } = useVendors();
   const { items, quickCreate: quickCreateItem } = useItemMasters();
   // 반복 입력값은 공통코드 관리에서 유지한다.
@@ -77,8 +78,10 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
       if (f.vehicleNo && !vehicleNo) setVehicleNo(f.vehicleNo);
       if (f.driverName && !driverName) {
         setDriverName(f.driverName);
-        // 계근표에는 연락처가 찍히지 않는다. 이름이 임직원 마스터에 있으면 거기서 가져와 채운다.
-        const matchedDriver = employees.find((e) => e.name === f.driverName);
+        // 계근표에는 연락처가 찍히지 않는다. 등록된 운전자면 연락처를 가져와 채운다.
+        // 운전자는 임직원과 외부 운전자 두 곳에 있으므로 둘 다 본다.
+        const matchedDriver =
+          employees.find((e) => e.name === f.driverName) ?? drivers.find((d) => d.name === f.driverName);
         if (matchedDriver?.phone && !driverPhone) setDriverPhone(formatPhone(matchedDriver.phone));
       }
       if (f.siteName && !loadingPoint) setLoadingPoint(f.siteName);
