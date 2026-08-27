@@ -9,6 +9,7 @@ import { NumberInput } from '../components/ui/NumberInput';
 import { DateField } from '../components/ui/DateField';
 import { Badge } from '../components/ui/Badge';
 import { formatNumber } from '../lib/number';
+import { employmentRank } from './EmployeeManagementPage';
 import { kstToday } from '../lib/datetime';
 import {
   pageTitleCls,
@@ -93,8 +94,23 @@ export function LaborPage() {
       e.manDays += num(r.totalManDays);
       e.amount += num(r.totalAmount);
     }
-    return [...map.values()].sort((a, b) => b.manDays - a.manDays);
+    // 정규직 → 계약직 → 일용직 → 아르바이트 차례로 세우고, 같은 구분 안에서는 이름순이다.
+    return [...map.values()].sort(
+      (a, b) => employmentRank(a.type) - employmentRank(b.type) || a.name.localeCompare(b.name),
+    );
   }, [rows]);
+
+  // 목록도 같은 차례다 — 고용 구분, 이름, 그다음 작업일 최신순.
+  const sortedRows = useMemo(
+    () =>
+      [...rows].sort(
+        (a, b) =>
+          employmentRank(a.workerType) - employmentRank(b.workerType) ||
+          (a.workerName ?? '').localeCompare(b.workerName ?? '') ||
+          (b.workDate ?? '').localeCompare(a.workDate ?? ''),
+      ),
+    [rows],
+  );
 
   const projectName = (id: string) => projects.find((p) => p.id === id)?.roundName ?? '-';
 
@@ -166,7 +182,7 @@ export function LaborPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
+                {sortedRows.map((r) => (
                   <tr key={r.id} className={trCls}>
                     <td className={`${tdCls} tabular whitespace-nowrap`}>{day(r.workDate)}</td>
                     <td className={tdCls}>{projectName(r.projectId)}</td>
