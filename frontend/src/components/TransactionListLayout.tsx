@@ -128,6 +128,8 @@ export function TransactionListLayout<T>({
   const [detailEdit, setDetailEdit] = useState(false);
   // 계량증명서를 보려고 상세까지 들어가지 않게, 목록에서 바로 연다.
   const [previewFiles, setPreviewFiles] = useState<PreviewDoc[] | null>(null);
+  // 지운 첨부는 창을 닫지 않고 목록에서만 빼 준다. 수정 중에 창이 닫히면 입력하던 값이 사라진다.
+  const [removedFiles, setRemovedFiles] = useState<string[]>([]);
 
   // 수정 후 목록이 새로 오면 열려 있는 상세도 새 값으로 갈아 끼운다.
   // 이걸 하지 않으면 저장은 됐는데 상세에는 옛 값이 남아 반영이 안 된 것처럼 보인다.
@@ -179,15 +181,18 @@ export function TransactionListLayout<T>({
   // 잘못 붙인 증빙을 지운다. 파일은 드라이브 휴지통으로 가므로 되살릴 수 있다.
   const removeAttachment = async (a: Attachment) => {
     if (!window.confirm(`'${a.fileName ?? '파일'}'을(를) 첨부에서 지울까요?
-다시 올리려면 수정에서 새로 붙이면 됩니다.`)) return;
+파일은 드라이브 휴지통으로 갑니다.`)) return;
     try {
       await api.del(`/api/attachments/${a.id}`);
-      setDetail(null);
+      setRemovedFiles((prev) => [...prev, a.id]);
       reload?.();
     } catch (err) {
       window.alert(err instanceof Error ? err.message : '첨부를 지우지 못했습니다.');
     }
   };
+
+  // 지운 것을 뺀 현재 첨부
+  const liveFiles = (row: T) => attachments(row).filter((a) => !removedFiles.includes(a.id));
 
   const confirmDelete = (row: T) => {
     if (window.confirm('이 건을 삭제하시겠습니까? 재고 반영분도 함께 취소됩니다.')) onDelete(row);
@@ -379,6 +384,7 @@ export function TransactionListLayout<T>({
                       title="상세"
                       onClick={() => {
                         setDetailEdit(false);
+                        setRemovedFiles([]);
                         setDetail(row);
                       }}
                       className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-text-strong"
@@ -468,10 +474,41 @@ export function TransactionListLayout<T>({
             {detailEdit && editForm ? (
               // 저장하면 상세로 되돌리지 않고 창을 닫는다. 같은 화면이 다시 떠 있으면
               // 저장이 됐는지 알기 어렵고, 바뀐 값은 목록에서 바로 보인다.
-              editForm(detail, () => {
-                setDetailEdit(false);
-                setDetail(null);
-              })
+              <>
+                {/* 파일을 갈아 끼우려면 지금 붙어 있는 것이 무엇인지 보여야 한다. */}
+                {liveFiles(detail).length > 0 && (
+                  <div className="mb-4 rounded-[10px] border border-border p-3">
+                    <h3 className="mb-2 text-[13px] font-semibold text-text-mid">현재 첨부</h3>
+                    <ul className="space-y-1">
+                      {liveFiles(detail).map((a) => (
+                        <li key={a.id} className="flex items-center gap-2 text-[13px]">
+                          <Paperclip size={12} className="shrink-0 text-text-faint" />
+                          <span className="shrink-0 text-text-sub">{a.fileType ?? '문서'}</span>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewFiles(filesOf(detail))}
+                            className="truncate text-left text-primary hover:underline"
+                          >
+                            {a.fileName ?? '파일'}
+                          </button>
+                          <button
+                            type="button"
+                            title="첨부에서 지우기"
+                            onClick={() => removeAttachment(a)}
+                            className="ml-auto shrink-0 rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-danger"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {editForm(detail, () => {
+                  setDetailEdit(false);
+                  setDetail(null);
+                })}
+              </>
             ) : (
               <>
             <dl className="grid grid-cols-2 gap-x-5 gap-y-2">
@@ -485,11 +522,11 @@ export function TransactionListLayout<T>({
 
             <div className="mt-5">
               <h3 className="mb-2 text-[13px] font-semibold text-text-mid">첨부 서류</h3>
-              {attachments(detail).length === 0 ? (
+              {liveFiles(detail).length === 0 ? (
                 <p className="text-[13px] text-text-faint">첨부된 서류가 없습니다.</p>
               ) : (
                 <ul className="space-y-1">
-                  {attachments(detail).map((a) => (
+                  {liveFiles(detail).map((a) => (
                     <li key={a.id} className="flex items-center gap-2 text-[13px]">
                       <Paperclip size={12} className="text-text-faint" />
                       <span className="shrink-0 text-text-sub">{a.fileType ?? '문서'}</span>
@@ -500,14 +537,6 @@ export function TransactionListLayout<T>({
                         className="truncate text-left text-primary hover:underline"
                       >
                         {a.fileName ?? '파일'}
-                      </button>
-                      <button
-                        type="button"
-                        title="첨부에서 지우기"
-                        onClick={() => removeAttachment(a)}
-                        className="ml-auto shrink-0 rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-danger"
-                      >
-                        <Trash2 size={13} />
                       </button>
                     </li>
                   ))}
