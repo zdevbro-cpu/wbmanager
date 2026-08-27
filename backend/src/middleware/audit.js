@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { decodeUploadName } from '../lib/fileName.js';
 
 // Cloud Run은 프록시 뒤에 있어 실제 접속 IP가 X-Forwarded-For 첫 항목에 담긴다.
 export function clientIp(req) {
@@ -147,6 +148,9 @@ function summarize(req) {
   if (typeof b !== 'object' || Array.isArray(b)) return null;
 
   const parts = [];
+  // 파일을 올린 요청은 본문에 이름이 없다. 올라간 파일 이름을 앞에 적는다.
+  const uploaded = req.file ?? (Array.isArray(req.files) ? req.files[0] : null);
+  if (uploaded?.originalname) parts.push(`파일 ${decodeUploadName(uploaded.originalname)}`);
   for (const [key, label] of Object.entries(FIELD_LABEL)) {
     if (!(key in b)) continue;
     const shown = showValue(key, b[key]);

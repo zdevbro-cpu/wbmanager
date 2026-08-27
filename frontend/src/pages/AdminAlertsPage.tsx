@@ -312,6 +312,11 @@ const TARGET_LABEL: Record<string, string> = {
   labors: '공수표',
   'external-drivers': '운전자',
   'asset-maintenances': '정비',
+  ocr: '계량증명서 판독',
+  'app-users': '사용자',
+  'external-vehicles': '계근차량',
+  'document-types': '문서분류',
+  'audit-logs': '변경로그',
 };
 
 function RecentFeed() {
