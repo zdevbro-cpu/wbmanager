@@ -281,6 +281,9 @@ function fileKindFilter(kind) {
 // 문서를 찾는 길이 하나뿐이면 결국 트리를 처음부터 훑게 된다.
 router.get('/documents', async (req, res) => {
   const { typeId, projectId, q, includeSubtree, includeReports } = req.query;
+  // 계근표가 쌓이면 전체를 한 번에 내려줄 수 없다. 화면이 필요한 만큼만 끊어 간다.
+  const limit = Math.min(Number(req.query.limit) || 200, 500);
+  const offset = Number(req.query.offset) || 0;
   const { from, to, physical, fileKind, hasAttachment, retention } = req.query;
 
   // 등록일은 한국 날짜로 받아 그날 0시부터 자정까지로 본다.
@@ -336,13 +339,13 @@ router.get('/documents', async (req, res) => {
       ...(hasAttachment === 'true' ? { attachments: { some: {} } } : {}),
       ...(hasAttachment === 'false' ? { attachments: { none: {} } } : {}),
       ...retentionFilter,
-      // 계근표는 건당 수천 장이라 문서 목록에 올리지 않는다. 해당 거래의 첨부로만 본다(설계 3.5).
-      // 분류를 콕 집어 고른 경우에만 보여 준다.
-      ...(typeId ? {} : { type: { name: { not: { contains: '계근표' } } } }),
+      // 계근표는 세무 증빙이자 감사 자료다. 건수가 많다는 이유로 목록에서 빼 두었더니
+      // 정작 가장 자주 찾는 문서를 문서 화면에서 볼 수 없었다. 다시 넣고, 대신 아래에서 나눠 읽는다.
     },
     include: { type: true, versions: { orderBy: { versionNo: 'desc' } }, links: true, attachments: true },
     orderBy: { createdAt: 'desc' },
-    take: 300,
+    skip: offset,
+    take: limit,
   });
 
   // 프로젝트명은 화면에서 바로 쓰이므로 함께 채워 준다.
