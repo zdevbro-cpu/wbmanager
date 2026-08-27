@@ -40,8 +40,14 @@ function Gate() {
       {/* 시작 화면은 사이드바 없이 카드만 띄운다. */}
       <Route path="/" element={<EntryPage />} />
       {/* 현장에서 휴대폰으로 쓰는 화면 — 사이드바 없이 한 화면만 쓴다. */}
-      <Route path="/mobile" element={<MobileWeighPage />} />
-      <Route path="/mobile/attend" element={<MobileAttendPage />} />
+      {/* 현장에서 여는 첫 화면은 출퇴근이다. 계근 등록은 관리자만 들어간다. */}
+      <Route path="/mobile" element={<MobileAttendPage />} />
+      <Route
+        path="/mobile/weigh"
+        element={appUser.role === 'admin' ? <MobileWeighPage /> : <Navigate to="/mobile" replace />}
+      />
+      {/* 예전 주소로 저장해 둔 바로가기를 위해 남긴다. */}
+      <Route path="/mobile/attend" element={<Navigate to="/mobile" replace />} />
       <Route element={<Layout />}>
         <Route path="/inbound" element={<InboundListPage />} />
         <Route path="/outbound" element={<OutboundListPage />} />
