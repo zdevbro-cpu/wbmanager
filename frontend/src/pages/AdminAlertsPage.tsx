@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BellRing, Truck, Award, GraduationCap, Boxes, AlertTriangle, Clock, CalendarClock, ArrowUpRight } from 'lucide-react';
+import { BellRing, Truck, Award, GraduationCap, Boxes, AlertTriangle, Clock, CalendarClock, ArrowUpRight, History } from 'lucide-react';
 import { api } from '../api/client';
+import { kstStamp } from '../lib/datetime';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import {
   pageTitleCls,
+  sectionTitleCls,
   cardCls,
   cardPadCls,
   outlineBtnCls,
@@ -180,6 +182,8 @@ export function AdminAlertsPage() {
         </table>
       </div>
 
+      <RecentFeed />
+
       <p className="mt-4 text-[12.5px] text-text-faint">
         차량검사·보험·리스 등 자산 일정은{' '}
         <Link to="/assets" className="font-semibold text-primary hover:underline">
@@ -261,6 +265,110 @@ function SummaryCard({
         </div>
         <div className="tabular text-[20px] font-extrabold text-text-strong">{value}</div>
         <div className="truncate text-[12px] text-text-faint">{hint}</div>
+      </div>
+    </div>
+  );
+}
+
+// 최근 변경 피드 — 어제 누가 무엇을 등록·수정했는지.
+// 관리자 이력 화면에 들어가야만 알 수 있던 것을 같이 일하는 사람 모두가 보게 한다.
+interface FeedItem {
+  id: string;
+  action: 'create' | 'update' | 'delete';
+  target: string;
+  summary: string | null;
+  who: string;
+  createdAt: string;
+}
+
+const ACTION_LABEL: Record<string, string> = { create: '등록', update: '수정', delete: '삭제' };
+const ACTION_TONE: Record<string, string> = {
+  create: 'bg-success/15 text-success',
+  update: 'bg-primary/15 text-primary',
+  delete: 'bg-danger/15 text-danger',
+};
+
+// 경로 조각을 사람이 쓰는 말로 바꾼다. 모르는 것은 그대로 둔다.
+const TARGET_LABEL: Record<string, string> = {
+  inbounds: '입고',
+  'waste-inbounds': '폐기물 수집·운반',
+  outbounds: '출고',
+  'waste-outbounds': '폐기물 반출',
+  projects: '프로젝트',
+  assets: '자산',
+  employees: '임직원',
+  vendors: '거래처',
+  'item-masters': '품목',
+  'common-codes': '공통코드',
+  attachments: '첨부',
+  dms: '문서',
+  reports: '보고서',
+  transports: '운반비',
+  labors: '공수표',
+  'external-drivers': '운전자',
+  'asset-maintenances': '정비',
+};
+
+function RecentFeed() {
+  const [items, setItems] = useState<FeedItem[]>([]);
+  const [days, setDays] = useState(2);
+
+  useEffect(() => {
+    api.get<FeedItem[]>(`/api/audit-logs/recent?days=${days}`).then(setItems);
+  }, [days]);
+
+  return (
+    <div className="mt-6">
+      <div className="mb-2 flex items-center gap-2">
+        <History size={16} className="text-primary" />
+        <h2 className={`${sectionTitleCls} text-[15px]`}>최근 변경</h2>
+        <span className="text-[13px] text-text-sub">{items.length}건</span>
+        <select
+          value={days}
+          onChange={(e) => setDays(Number(e.target.value))}
+          className="ml-auto rounded-[8px] border border-border bg-input px-2 py-1 text-[12.5px] text-input-text"
+        >
+          <option value={1}>오늘</option>
+          <option value={2}>어제부터</option>
+          <option value={7}>최근 7일</option>
+          <option value={30}>최근 30일</option>
+        </select>
+      </div>
+
+      <div className={tableWrapCls}>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-y border-border">
+              <th className={thCls}>일시</th>
+              <th className={thCls}>구분</th>
+              <th className={thCls}>대상</th>
+              <th className={thCls}>내용</th>
+              <th className={thCls}>사용자</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((i) => (
+              <tr key={i.id} className={trCls}>
+                <td className={`${tdCls} tabular whitespace-nowrap`}>{kstStamp(i.createdAt)}</td>
+                <td className={tdCls}>
+                  <span className={`rounded-[5px] px-1.5 py-0.5 text-[11px] font-bold ${ACTION_TONE[i.action] ?? ''}`}>
+                    {ACTION_LABEL[i.action] ?? i.action}
+                  </span>
+                </td>
+                <td className={`${tdCls} whitespace-nowrap`}>{TARGET_LABEL[i.target] ?? i.target}</td>
+                <td className={tdCls}>{i.summary ?? '-'}</td>
+                <td className={`${tdCls} whitespace-nowrap`}>{i.who}</td>
+              </tr>
+            ))}
+            {items.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-10 text-center text-[13px] text-text-faint">
+                  이 기간에 등록·수정된 건이 없습니다.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

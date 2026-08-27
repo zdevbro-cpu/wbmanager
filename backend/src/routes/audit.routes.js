@@ -36,6 +36,45 @@ router.get('/', requireAdmin, async (req, res) => {
   res.json(logs);
 });
 
+// 최근 변경 피드 — 로그인한 사람이면 누구나 본다.
+// "어제 누가 무엇을 등록·수정했는지"는 관리자만 알 일이 아니라 같이 일하는 사람이 알아야 하는 일이다.
+// 감사 화면과 달리 접속 IP·실패한 시도·로그인 기록은 내보내지 않는다.
+router.get('/recent', async (req, res) => {
+  const days = Math.min(Number(req.query.days) || 7, 30);
+  const since = new Date(Date.now() - days * 86400000);
+
+  const logs = await prisma.auditLog.findMany({
+    where: {
+      createdAt: { gte: since },
+      action: { in: ['create', 'update', 'delete'] },
+      // 성공한 변경만 보여 준다. 실패한 시도는 감사 영역이다.
+      statusCode: { gte: 200, lt: 300 },
+    },
+    select: {
+      id: true,
+      action: true,
+      path: true,
+      summary: true,
+      createdAt: true,
+      appUser: { select: { name: true, email: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 200,
+  });
+
+  res.json(
+    logs.map((l) => ({
+      id: l.id,
+      action: l.action,
+      // 경로에서 무엇을 다뤘는지만 남긴다(예: /api/inbounds/123 → inbounds).
+      target: (l.path ?? '').replace(/^\/api\//, '').split(/[/?]/)[0] || '',
+      summary: l.summary,
+      who: l.appUser?.name ?? l.appUser?.email ?? '알 수 없음',
+      createdAt: l.createdAt,
+    })),
+  );
+});
+
 // 접속 IP 요약 — 사무실·집 외 접속을 한눈에 본다.
 router.get('/ip-summary', requireAdmin, async (req, res) => {
   const days = Number(req.query.days ?? 30);
