@@ -189,6 +189,14 @@ async function stamp(req, res, kind) {
   }
 }
 
+// 본사 — 사무실 출퇴근이 붙을 자리. 이름으로 찾고 없으면 만든다.
+async function ensureHqProject() {
+  const found = await prisma.project.findFirst({ where: { roundName: '본사' } });
+  if (found) return found.id;
+  const created = await prisma.project.create({ data: { roundName: '본사', status: '진행' } });
+  return created.id;
+}
+
 // 사무실 출퇴근 단말 — 태블릿 카메라나 USB 스캐너로 사번 QR을 읽어 그 자리에서 찍는다.
 // 셀카·위치를 묻지 않는다. 단말이 사무실에 붙박이라 어디서 찍었는지가 이미 정해져 있고,
 // 눈앞에서 사람이 찍는 것을 보기 때문이다. 대신 어느 단말에서 왔는지는 계정으로 남는다.
@@ -198,6 +206,9 @@ router.post('/gate', async (req, res) => {
     const { projectId, kind, attendCode } = req.body;
     if (!empCode) return res.status(400).json({ error: '사번을 읽지 못했습니다.' });
     if (!projectId) return res.status(400).json({ error: '현장을 고르세요.' });
+
+    // 사무실 출퇴근은 현장이 아니라 본사에 붙는다. 프로젝트가 없으면 그때 하나 만든다.
+    const siteId = projectId === 'HQ' ? await ensureHqProject() : projectId;
 
     const employee = await prisma.employee.findUnique({ where: { empCode } });
     if (!employee) return res.status(404).json({ error: `등록되지 않은 사번입니다 (${empCode})` });
@@ -217,7 +228,7 @@ router.post('/gate', async (req, res) => {
 
     const base = {
       employeeId: employee.id,
-      projectId,
+      projectId: siteId,
       workDate: day,
       settleMonth: month,
       workerName: employee.name,
