@@ -434,6 +434,8 @@ export function DmsPage() {
         <span className="ml-1 text-[13px] text-text-sub">
           분류 {countAll(tree)}개 · 문서 {docs.length}건
         </span>
+        {/* 검색 줄에 두면 조건 칸을 잡아먹어 제목 옆에 붙인다. */}
+        <span className="text-[12px] text-text-faint">계근표 제외 · 보고서는 보관함에서</span>
         <button
           type="button"
           onClick={() => {
@@ -449,14 +451,12 @@ export function DmsPage() {
         </button>
       </div>
 
-      {/* 현장 동선 — 프로젝트를 먼저 고르고, 그 아래 분류로 좁힌다. 한 줄에 세워 화면을 덜 먹게 한다. */}
-      <div className={`${cardCls} mb-4 flex items-center gap-2 overflow-x-auto px-4 py-2.5`}>
-        <span className="shrink-0 text-[13px] font-extrabold text-text-strong">검색</span>
-        <select
-          value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
-          className={`${inputCls} w-[200px] shrink-0`}
-        >
+      {/* 검색 조건 — 가로로 늘여 스크롤하게 두지 않는다. 폭에 맞춰 칸이 줄고, 모자라면 다음 줄로 넘어간다. */}
+      <div
+        className={`${cardCls} mb-4 grid items-center gap-2 px-4 py-2.5`}
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
+      >
+        <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-full min-w-0`}>
           <option value="">전체 프로젝트</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
@@ -469,7 +469,7 @@ export function DmsPage() {
         <select
           value={selected?.id ?? ''}
           onChange={(e) => setSelected(flatTypes.find((t) => t.node.id === e.target.value)?.node ?? null)}
-          className={`${inputCls} w-[240px] shrink-0`}
+          className={`${inputCls} w-full min-w-0`}
         >
           <option value="">전체 분류</option>
           {flatTypes.map(({ node, label }) => (
@@ -482,22 +482,19 @@ export function DmsPage() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="문서명 · 문서번호 · 파일명 · 비고"
-          className={`${inputCls} w-[220px] shrink-0`}
+          placeholder="문서명 · 번호 · 파일명"
+          className={`${inputCls} w-full min-w-0`}
         />
 
-        <span className="shrink-0 text-[12px] text-text-faint">계근표 제외 · 보고서는 보관함에서</span>
-      </div>
+        {/* 등록일 구간은 한 칸으로 묶는다. 두 칸으로 벌리면 다른 조건이 밀려난다. */}
+        <div className="flex min-w-0 items-center gap-1">
+          <DateField value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} w-full min-w-0 px-2`} />
+          <span className="shrink-0 text-text-faint">~</span>
+          <DateField value={to} onChange={(e) => setTo(e.target.value)} className={`${inputCls} w-full min-w-0 px-2`} />
+        </div>
 
-      {/* 둘째 줄 — 이름이 기억나지 않을 때 쓰는 길들. 언제 넣었는지, 원본은 어디 있는지, 어떤 파일인지로 좁힌다. */}
-      <div className={`${cardCls} mb-4 flex items-center gap-2 overflow-x-auto px-4 py-2.5`}>
-        <span className="shrink-0 text-[12px] font-bold text-text-sub">등록일</span>
-        <DateField value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} w-[130px] shrink-0`} />
-        <span className="shrink-0 text-text-faint">~</span>
-        <DateField value={to} onChange={(e) => setTo(e.target.value)} className={`${inputCls} w-[130px] shrink-0`} />
-
-        <select value={physical} onChange={(e) => setPhysical(e.target.value)} className={`${inputCls} w-[150px] shrink-0`}>
-          <option value="">실물 문서 전체</option>
+        <select value={physical} onChange={(e) => setPhysical(e.target.value)} className={`${inputCls} w-full min-w-0`}>
+          <option value="">실물 전체</option>
           {PHYSICAL_STATUS.map((v) => (
             <option key={v} value={v}>
               {v}
@@ -505,8 +502,8 @@ export function DmsPage() {
           ))}
         </select>
 
-        <select value={fileKind} onChange={(e) => setFileKind(e.target.value)} className={`${inputCls} w-[140px] shrink-0`}>
-          <option value="">파일 종류 전체</option>
+        <select value={fileKind} onChange={(e) => setFileKind(e.target.value)} className={`${inputCls} w-full min-w-0`}>
+          <option value="">파일 전체</option>
           <option value="pdf">PDF</option>
           <option value="image">이미지</option>
           <option value="sheet">엑셀 · CSV</option>
@@ -516,39 +513,36 @@ export function DmsPage() {
         <select
           value={hasAttachment}
           onChange={(e) => setHasAttachment(e.target.value)}
-          className={`${inputCls} w-[130px] shrink-0`}
+          className={`${inputCls} w-full min-w-0`}
         >
           <option value="">첨부 전체</option>
           <option value="true">첨부 있음</option>
           <option value="false">첨부 없음</option>
         </select>
 
-        <select value={retention} onChange={(e) => setRetention(e.target.value)} className={`${inputCls} w-[150px] shrink-0`}>
-          <option value="">보존 기한 전체</option>
+        <select value={retention} onChange={(e) => setRetention(e.target.value)} className={`${inputCls} w-full min-w-0`}>
+          <option value="">보존 전체</option>
           <option value="soon">90일 내 만료</option>
           <option value="expired">만료 지남</option>
         </select>
 
-        {(projectId || selected || q || from || to || physical || fileKind || hasAttachment || retention) && (
-          <button
-            type="button"
-            onClick={() => {
-              setProjectId('');
-              setSelected(null);
-              setQ('');
-              setFrom('');
-              setTo('');
-              setPhysical('');
-              setFileKind('');
-              setHasAttachment('');
-              setRetention('');
-            }}
-            className={`${outlineBtnCls} h-[38px] shrink-0 whitespace-nowrap px-3`}
-          >
-            <RotateCcw size={15} /> 초기화
-          </button>
-        )}
-        <span className="ml-auto shrink-0 text-[12px] text-text-faint">{docs.length}건</span>
+        <button
+          type="button"
+          onClick={() => {
+            setProjectId('');
+            setSelected(null);
+            setQ('');
+            setFrom('');
+            setTo('');
+            setPhysical('');
+            setFileKind('');
+            setHasAttachment('');
+            setRetention('');
+          }}
+          className={`${outlineBtnCls} h-[38px] w-full min-w-0 justify-center whitespace-nowrap px-2`}
+        >
+          <RotateCcw size={15} /> 초기화
+        </button>
       </div>
 
       {error && <p className="mb-3 text-[13px] text-danger">{error}</p>}
