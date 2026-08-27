@@ -5,7 +5,7 @@ import { api, API_BASE_URL } from '../api/client';
 import { auth } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useProjects, useEmployees } from '../hooks/useMasters';
-import { kstToday } from '../lib/datetime';
+import { kstToday, kstStamp } from '../lib/datetime';
 
 // 현장에서 휴대폰으로 출퇴근을 찍는다.
 // 셀카 한 장과 그 자리의 위치를 함께 보내고, 사무실이 확인하기 전까지는 임시저장이다.
@@ -33,7 +33,8 @@ interface MeResponse {
   today: TodayRow | null;
 }
 
-const hhmm = (v?: string | null) => (v ? v.slice(11, 16) : null);
+// 서버는 UTC로 남긴다. 화면에는 한국 시각으로 보여 준다.
+const hhmm = (v?: string | null) => (v ? kstStamp(v).slice(11, 16) : null);
 
 export function MobileAttendPage() {
   const { appUser, logout } = useAuth();

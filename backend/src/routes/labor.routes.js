@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { toISO } from '../lib/date.js';
 import { rememberCodes } from '../lib/rememberCodes.js';
 import { requireAdmin } from '../middleware/auth.js';
-import { purgeMonthSelfies } from '../lib/attendance.js';
+import { purgeMonthSelfies, purgeLaborSelfies } from '../lib/attendance.js';
 
 const router = Router();
 
@@ -196,6 +196,8 @@ router.delete('/:id', async (req, res) => {
     const existing = await prisma.labor.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: 'not found' });
     await assertOpen(existing.settleMonth);
+    // 사진을 먼저 치운다. 줄이 사라지면 사진을 찾아갈 길이 없어진다.
+    await purgeLaborSelfies(existing.id);
     await prisma.labor.delete({ where: { id: req.params.id } });
     res.status(204).end();
   } catch (e) {

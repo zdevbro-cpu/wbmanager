@@ -92,6 +92,11 @@ router.patch('/:id', async (req, res) => {
       ...set('managerEmpId', b.managerEmpId || null),
       ...set('dischargerName', b.dischargerName || null),
       ...set('memo', b.memo || null),
+      // 출퇴근 기준점 — 화면에 입력칸은 없지만, 첫 출근이 엉뚱한 곳에서 찍혔을 때
+      // 비워서 다시 잡을 수 있어야 한다.
+      ...set('siteLat', b.siteLat === null || b.siteLat === '' ? null : num(b.siteLat)),
+      ...set('siteLng', b.siteLng === null || b.siteLng === '' ? null : num(b.siteLng)),
+      ...set('geoRadius', num(b.geoRadius) ?? 100),
       ...set('startDate', toISO(b.startDate)),
       ...set('endDate', toISO(b.endDate)),
       ...set('status', b.status),

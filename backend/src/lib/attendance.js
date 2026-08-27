@@ -7,8 +7,18 @@ import { trashInDrive } from './drive.js';
 // 집계에 쓰는 숫자(공수·근태·시각·거리)는 그대로 남고 사진만 사라진다.
 // 드라이브에서 지우지 못해도 우리 쪽 연결은 끊는다 — 사진에 닿을 길을 남기지 않는다.
 export async function purgeMonthSelfies(month) {
+  return purgeSelfies({ labor: { settleMonth: month } });
+}
+
+// 하루 기록을 지울 때 그 날의 셀카도 함께 지운다.
+// 기록이 사라졌는데 사진만 드라이브에 남아 있으면 지운 것이 아니다.
+export async function purgeLaborSelfies(laborId) {
+  return purgeSelfies({ laborId });
+}
+
+async function purgeSelfies(where) {
   const photos = await prisma.attachment.findMany({
-    where: { labor: { settleMonth: month } },
+    where,
     select: { id: true, driveFileId: true },
   });
   if (!photos.length) return 0;
