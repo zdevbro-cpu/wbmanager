@@ -37,8 +37,10 @@ function Gate() {
 
   return (
     <Routes>
-      {/* 시작 화면은 사이드바 없이 카드만 띄운다. */}
-      <Route path="/" element={<EntryPage />} />
+      {/* 시작 화면은 사이드바 없이 카드만 띄운다.
+          손가락으로 쓰는 작은 화면에서는 업무 영역이 아니라 출퇴근으로 보낸다 —
+          현장에서 로그인해 처음 하는 일은 출퇴근을 찍는 것이다. */}
+      <Route path="/" element={onPhone() ? <Navigate to="/mobile" replace /> : <EntryPage />} />
       {/* 현장에서 휴대폰으로 쓰는 화면 — 사이드바 없이 한 화면만 쓴다. */}
       {/* 현장에서 여는 첫 화면은 출퇴근이다. 계근 등록은 관리자만 들어간다. */}
       <Route path="/mobile" element={<MobileAttendPage />} />
@@ -78,6 +80,9 @@ function Gate() {
     </Routes>
   );
 }
+
+const onPhone = () =>
+  typeof window !== 'undefined' && window.matchMedia('(max-width: 820px) and (pointer: coarse)').matches;
 
 function App() {
   return (
