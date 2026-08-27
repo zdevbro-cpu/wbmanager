@@ -127,7 +127,7 @@ export async function buildPnlXlsx(payload) {
   const ws = wb.addWorksheet('손익 보고');
   setWidths(ws, [30, 18, 18, 16, 14]);
 
-  addTitle(ws, `${p.roundName}${p.roundNo ? ` ${p.roundNo}` : ''} 손익 현황 보고`, 5);
+  addTitle(ws, `${p.roundName} 손익 현황 보고`, 5);
   addMeta(ws, `보고일: ${p.reportDate}   |   작성: 크로스특수   |   기준: 반입·반출·인건비·운송 등록 데이터`, 5);
 
   addSection(ws, '1. 핵심 결론 (요약)', 5);

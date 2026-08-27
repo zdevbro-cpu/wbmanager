@@ -63,7 +63,6 @@ export interface Project {
   id: string;
   projectCode?: string | null;
   roundName: string;
-  roundNo?: string | null;
   ordererId?: string | null;
   orderer?: Vendor;
   contractorId?: string | null;
@@ -574,7 +573,6 @@ export interface PnlSalesItem {
 export interface ProjectPnl {
   projectId: string;
   roundName: string;
-  roundNo?: string | null;
   contractWeight?: number | null;
   purchaseCost: number;
   salesRevenue: number;

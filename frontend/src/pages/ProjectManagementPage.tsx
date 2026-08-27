@@ -34,7 +34,7 @@ const money = (v?: string | null) => formatNumber(v);
 const show = (v?: string | null) => (v == null || v === '' ? '-' : v);
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
 
-// 프로젝트(차수) 관리 — 목록에서 계약 현황을 보고, 등록·수정은 모달에서 처리한다.
+// 프로젝트 관리 — 목록에서 계약 현황을 보고, 등록·수정은 모달에서 처리한다.
 // 거래·재고·손익이 모두 이 프로젝트를 참조하므로 삭제는 두지 않고 상태로 종료한다.
 export function ProjectManagementPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -83,7 +83,6 @@ export function ProjectManagementPage() {
         const hay = [
           p.projectCode,
           p.roundName,
-          p.roundNo,
           p.siteName,
           p.region,
           p.orderer?.name,
@@ -202,7 +201,7 @@ export function ProjectManagementPage() {
       </div>
 
       <p className="mt-4 text-[12.5px] text-text-faint">
-        입출고·재고·손익 집계가 모두 이 프로젝트를 참조합니다. 종료된 차수는 삭제하지 말고 상태를 완료로 바꿔 주세요.
+        입출고·재고·손익 집계가 모두 이 프로젝트를 참조합니다. 종료된 프로젝트는 삭제하지 말고 상태를 완료로 바꿔 주세요.
       </p>
 
       {detail && (
@@ -230,7 +229,7 @@ export function ProjectManagementPage() {
                 onEdit={() => setDetailEdit(true)}
                 onStatusChange={(next) => changeDetailStatus(detail, next)}
               />
-              {/* 계약서·정산서 등 이 차수에 딸린 문서를 같은 화면에서 다룬다. */}
+              {/* 계약서·정산서 등 이 프로젝트에 딸린 문서를 같은 화면에서 다룬다. */}
               <div className="mt-5 border-t border-border pt-4">
                 <EntityDocuments entityType="project" entityId={detail.id} />
               </div>
@@ -396,11 +395,11 @@ function ProjectForm({
     </>
   );
 
-  // 계약서를 프로젝트 문서로 붙인다. 분류는 「현장 관리 > 프로젝트(차수) > 매입계약서」로 정해져 있어 묻지 않는다.
-  // 파일이 없으면 아무 일도 하지 않는다 — 계약서가 아직 없는 채로 차수를 여는 경우가 있다.
+  // 계약서를 프로젝트 문서로 붙인다. 분류는 「현장 관리 > 프로젝트 > 매입계약서」로 정해져 있어 묻지 않는다.
+  // 파일이 없으면 아무 일도 하지 않는다 — 계약서가 아직 없는 채로 프로젝트를 여는 경우가 있다.
   const saveContract = async (projectId: string) => {
     if (!contractFile) return;
-    const typeId = await findDocTypeId(['현장 관리', '프로젝트(차수)', '매입계약서']);
+    const typeId = await findDocTypeId(['현장 관리', '프로젝트', '매입계약서']);
     if (!typeId) {
       setError('프로젝트는 등록됐지만 문서 분류를 찾지 못해 계약서를 붙이지 못했습니다. 상세에서 다시 올려 주세요.');
       return;
@@ -663,7 +662,7 @@ function ProjectFilterBar({
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="코드 / 사업명 / 차수 / 현장 / 거래처"
+          placeholder="코드 / 사업명 / 현장 / 거래처"
           className={inputCls}
         />
       </FilterField>

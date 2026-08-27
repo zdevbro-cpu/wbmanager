@@ -74,7 +74,6 @@ export async function getProjectPnl(projectId) {
   return {
     projectId,
     roundName: project.roundName,
-    roundNo: project.roundNo ?? null,
     contractWeight: project.contractWeight ? Number(project.contractWeight) : null,
     purchaseCost,
     salesRevenue,

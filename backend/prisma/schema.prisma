@@ -156,7 +156,6 @@ model Project {
   id              String    @id @default(uuid())
   projectCode     String?   @unique @map("project_code") // 자동 채번 P-2026-001
   roundName       String    @map("round_name") // 프로젝트(사업)명 — 원본 표기 그대로
-  roundNo         String?   @map("round_no") // 차수: 26-1차
   ordererId       String?   @map("orderer_id") // 발주처(원청)
   orderer         Vendor?   @relation("ProjectOrderer", fields: [ordererId], references: [id])
   contractorId    String?   @map("contractor_id") // 시공사·계약상대

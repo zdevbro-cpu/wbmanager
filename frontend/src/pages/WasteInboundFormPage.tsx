@@ -174,7 +174,7 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
         {/* 3열 그리드 — 모달 폭은 그대로 두고 한 행에 세 항목씩 배치한다. */}
         <div className="grid grid-cols-4 gap-x-3 gap-y-3.5">
           <div>
-            <label className={labelCls}>프로젝트(차수)</label>
+            <label className={labelCls}>프로젝트</label>
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)} required className={inputCls}>
               <option value="">선택</option>
               {projects.map((p) => (
