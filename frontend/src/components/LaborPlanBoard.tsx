@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarRange, ChevronDown, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { CalendarRange, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { FormModal } from './FormModal';
 import { SearchSelect } from './SearchSelect';
@@ -75,7 +75,7 @@ const DAY_TONE: Record<'short' | 'ok' | 'over', string> = {
   over: 'rgb(248, 113, 113)', // 초과 — 계획보다 더 들어가 원가를 민다
 };
 // 계획 막대 — 밝은 주황 한 가지. 윤곽선 없이 면으로만 둔다.
-const PLAN_FILL = 'rgba(251, 146, 60, 0.5)';
+const PLAN_FILL = 'rgb(255, 138, 0)';
 
 
 
@@ -183,41 +183,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
   return (
     <div>
       <div className={`${cardCls} mb-3 flex items-center gap-2 px-3 py-2`}>
-        <div
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowLeft') {
-              e.preventDefault();
-              setMonth(shiftMonth(month, -1));
-            }
-            if (e.key === 'ArrowRight') {
-              e.preventDefault();
-              setMonth(shiftMonth(month, 1));
-            }
-          }}
-          title="화살표 단추나 키보드 ← → 로 달을 옮깁니다"
-          className="flex h-[38px] w-[168px] shrink-0 items-center justify-between gap-0.5 rounded-[8px] border border-border bg-input px-1 outline-none focus:border-primary"
-        >
-          <button
-            type="button"
-            onClick={() => setMonth(shiftMonth(month, -1))}
-            aria-label="이전 달"
-            className="rounded-[6px] px-1.5 py-1 text-text-sub hover:bg-hover hover:text-text-strong"
-          >
-            <ChevronLeft size={15} />
-          </button>
-          <span className="tabular text-[13px] font-bold text-text-strong">
-            {month.slice(0, 4)}년 {month.slice(5, 7)}월
-          </span>
-          <button
-            type="button"
-            onClick={() => setMonth(shiftMonth(month, 1))}
-            aria-label="다음 달"
-            className="rounded-[6px] px-1.5 py-1 text-text-sub hover:bg-hover hover:text-text-strong"
-          >
-            <ChevronRight size={15} />
-          </button>
-        </div>
+        <MonthPicker month={month} onChange={setMonth} />
         <div className="min-w-[150px] max-w-[240px] flex-1">
           <SearchSelect
             ariaLabel="프로젝트"
@@ -305,7 +271,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                   </div>
 
                   {/* 막대 — 길이가 기간, 채움이 달성률이다. */}
-                  <div className="relative h-[11px] flex-1 rounded-[3px] bg-hover/50">
+                  <div className="relative h-[11px] flex-1 rounded-[3px] bg-white/[0.06]">
                     {/* 주말 자리를 옅게 깔아 주 단위가 보이게 한다. */}
                     {chart.days.map((d, i) =>
                       weekdayOf(d) === 0 || weekdayOf(d) === 6 ? (
@@ -321,15 +287,16 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                       style={{
                         left: `${(p.offset / dayCount) * 100}%`,
                         width: `${(p.days / dayCount) * 100}%`,
-                        backgroundColor: `rgba(${colorOf(p.employmentType ?? '미지정')}, 0.22)`,
-                        boxShadow: `inset 0 0 0 1px rgba(${colorOf(p.employmentType ?? '미지정')}, 0.55)`,
+                        backgroundColor: `rgba(${colorOf(p.employmentType ?? '미지정')}, 0.16)`,
+                        boxShadow: `inset 0 0 0 1px rgba(${colorOf(p.employmentType ?? '미지정')}, 1), 0 0 7px rgba(${colorOf(p.employmentType ?? '미지정')}, 0.5)`,
                       }}
                     >
                       <div
                         className="absolute top-0 bottom-0 left-0"
                         style={{
                           width: `${Math.min(100, p.rate * 100)}%`,
-                          backgroundColor: `rgba(${colorOf(p.employmentType ?? '미지정')}, 0.85)`,
+                          backgroundColor: `rgb(${colorOf(p.employmentType ?? '미지정')})`,
+                          boxShadow: `0 0 8px rgba(${colorOf(p.employmentType ?? '미지정')}, 0.6)`,
                         }}
                       />
                       <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold leading-none text-white drop-shadow">
@@ -398,7 +365,11 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                       <div className="flex h-[100px] items-end">
                         <div
                           className="w-full rounded-t-[2px]"
-                          style={{ height: `${(plan / dayMax) * 100}%`, backgroundColor: PLAN_FILL }}
+                          style={{
+                            height: `${(plan / dayMax) * 100}%`,
+                            backgroundColor: PLAN_FILL,
+                            boxShadow: '0 0 6px rgba(255, 138, 0, 0.55)',
+                          }}
                         />
                       </div>
                       <div className="absolute inset-x-0 bottom-[18px] flex h-[100px] items-end">
@@ -842,5 +813,113 @@ function PlanDetail({
         </div>
       </div>
     </FormModal>
+  );
+}
+
+// 기준월 — 누르면 연·월을 고르고, 키보드로도 옮긴다.
+// 좌우는 달, 위아래는 해다. 손이 어디 있든 한 손으로 옮길 수 있어야 한다.
+function MonthPicker({ month, onChange }: { month: string; onChange: (m: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const year = Number(month.slice(0, 4));
+  const mm = Number(month.slice(5, 7));
+
+  const set = (y: number, m: number) => onChange(`${y}-${String(m).padStart(2, '0')}`);
+
+  return (
+    <div className="relative shrink-0">
+      <div
+        tabIndex={0}
+        onKeyDown={(e) => {
+          const step: Record<string, [number, number]> = {
+            ArrowLeft: [0, -1],
+            ArrowRight: [0, 1],
+            ArrowUp: [1, 0],
+            ArrowDown: [-1, 0],
+          };
+          const s = step[e.key];
+          if (!s) return;
+          e.preventDefault();
+          if (s[1]) onChange(shiftMonth(month, s[1]));
+          else set(year + s[0], mm);
+        }}
+        title="← → 달 이동 · ↑ ↓ 해 이동 · 눌러서 골라 넣기"
+        className="flex h-[38px] w-[176px] items-center justify-between gap-0.5 rounded-[8px] border border-border bg-input px-1 outline-none focus:border-primary"
+      >
+        <button
+          type="button"
+          onClick={() => onChange(shiftMonth(month, -1))}
+          aria-label="이전 달"
+          className="rounded-[6px] px-1 py-1 text-text-sub hover:bg-hover hover:text-text-strong"
+        >
+          <ChevronLeft size={15} />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="tabular flex items-center gap-1 rounded-[6px] px-1 text-[13px] font-bold text-text-strong hover:bg-hover"
+        >
+          {year}년 {String(mm).padStart(2, '0')}월
+          <span className="flex flex-col leading-[6px] text-text-faint">
+            <ChevronUp size={11} />
+            <ChevronDown size={11} />
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onChange(shiftMonth(month, 1))}
+          aria-label="다음 달"
+          className="rounded-[6px] px-1 py-1 text-text-sub hover:bg-hover hover:text-text-strong"
+        >
+          <ChevronRight size={15} />
+        </button>
+      </div>
+
+      {open && (
+        <>
+          {/* 바깥을 누르면 닫힌다. */}
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute top-[42px] left-0 z-40 w-[236px] rounded-[10px] border border-border bg-card p-2 shadow-[0_8px_24px_rgba(0,0,0,0.45)]">
+            <div className="mb-2 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => set(year - 1, mm)}
+                aria-label="이전 해"
+                className="rounded-[6px] px-2 py-1 text-text-sub hover:bg-hover hover:text-text-strong"
+              >
+                <ChevronLeft size={15} />
+              </button>
+              <span className="tabular text-[14px] font-extrabold text-text-strong">{year}년</span>
+              <button
+                type="button"
+                onClick={() => set(year + 1, mm)}
+                aria-label="다음 해"
+                className="rounded-[6px] px-2 py-1 text-text-sub hover:bg-hover hover:text-text-strong"
+              >
+                <ChevronRight size={15} />
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-1">
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => {
+                    set(year, m);
+                    setOpen(false);
+                  }}
+                  className={`rounded-[7px] py-1.5 text-[12.5px] font-semibold ${
+                    m === mm ? 'bg-primary text-white' : 'text-text-sub hover:bg-hover hover:text-text-strong'
+                  }`}
+                >
+                  {m}월
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
