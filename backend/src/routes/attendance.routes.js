@@ -31,7 +31,7 @@ function fail(res, e) {
 router.get('/me', async (req, res) => {
   try {
     const date = kstDayString(req.query.date);
-    const employeeId = req.query.employeeId ?? (await linkedEmployeeId(req));
+    const employeeId = await resolveEmployeeId(req);
 
     const employee = employeeId
       ? await prisma.employee.findUnique({
@@ -58,11 +58,23 @@ router.get('/me', async (req, res) => {
   }
 });
 
-// 이 계정에 연결된 임직원. 연결이 없으면 화면에서 직접 고른다.
-async function linkedEmployeeId(req) {
+// 찍는 사람은 로그인한 계정에서 정한다 — 현장에서 남의 이름으로 찍는 일이 없어야 한다.
+// 계정에 연결이 없으면 같은 이름의 임직원을 한 번 찾아 연결해 두고, 그 뒤로는 그대로 쓴다.
+async function resolveEmployeeId(req) {
   if (!req.appUser?.id) return null;
-  const user = await prisma.appUser.findUnique({ where: { id: req.appUser.id }, select: { employeeId: true } });
-  return user?.employeeId ?? null;
+  const user = await prisma.appUser.findUnique({
+    where: { id: req.appUser.id },
+    select: { employeeId: true, name: true, email: true },
+  });
+  if (user?.employeeId) return user.employeeId;
+
+  const name = (user?.name ?? '').trim();
+  if (!name) return null;
+  const found = await prisma.employee.findFirst({ where: { name } });
+  if (!found) return null;
+
+  await prisma.appUser.update({ where: { id: req.appUser.id }, data: { employeeId: found.id } });
+  return found.id;
 }
 
 // 출근·퇴근 — 셀카와 위치를 함께 받는다.
@@ -72,8 +84,12 @@ router.post('/out', upload.single('photo'), (req, res) => stamp(req, res, 'out')
 
 async function stamp(req, res, kind) {
   try {
-    const { employeeId, projectId } = req.body;
-    if (!employeeId) return res.status(400).json({ error: '누가 찍는지 고르세요.' });
+    const { projectId } = req.body;
+    // 본문에 담긴 이름은 믿지 않는다. 누구인지는 계정에서 정한다.
+    const employeeId = await resolveEmployeeId(req);
+    if (!employeeId) {
+      return res.status(400).json({ error: '계정에 임직원 정보가 연결되어 있지 않습니다. 관리자에게 연결을 요청하세요.' });
+    }
     if (!projectId) return res.status(400).json({ error: '현장을 고르세요.' });
     if (!req.file) return res.status(400).json({ error: '사진을 찍어야 등록됩니다.' });
 

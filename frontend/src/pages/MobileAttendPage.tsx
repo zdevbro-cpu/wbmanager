@@ -4,7 +4,7 @@ import { Camera, Loader2, Check, LogIn, LogOut, MapPin, ShieldCheck } from 'luci
 import { api, API_BASE_URL } from '../api/client';
 import { auth } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
-import { useProjects, useEmployees } from '../hooks/useMasters';
+import { useProjects } from '../hooks/useMasters';
 import { kstToday, kstStamp } from '../lib/datetime';
 
 // 현장에서 휴대폰으로 출퇴근을 찍는다.
@@ -13,7 +13,8 @@ import { kstToday, kstStamp } from '../lib/datetime';
 
 const field = 'w-full rounded-[10px] border border-border bg-input px-3 py-3 text-[16px] text-input-text';
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
-const REMEMBER_KEY = 'wb.attend.employeeId';
+// 한 번 고른 현장은 그대로 둔다. 매일 같은 현장으로 나가는 사람이 대부분이다.
+const REMEMBER_PROJECT = 'wb.attend.projectId';
 
 interface TodayRow {
   id: string;
@@ -38,10 +39,9 @@ const hhmm = (v?: string | null) => (v ? kstStamp(v).slice(11, 16) : null);
 
 export function MobileAttendPage() {
   const { appUser, logout } = useAuth();
+  const isAdmin = appUser?.role === 'admin';
   const { projects } = useProjects();
-  const { employees } = useEmployees();
 
-  const [employeeId, setEmployeeId] = useState('');
   const [projectId, setProjectId] = useState('');
   const [me, setMe] = useState<MeResponse | null>(null);
   const [agreed, setAgreed] = useState(false);
@@ -57,29 +57,27 @@ export function MobileAttendPage() {
   const [error, setError] = useState('');
   const [done, setDone] = useState('');
 
-  // 이 기기에서 마지막에 고른 사람을 기억한다. 매일 같은 사람이 같은 폰으로 찍는다.
+  // 마지막에 고른 현장을 그대로 다시 띄운다.
   useEffect(() => {
-    const kept = localStorage.getItem(REMEMBER_KEY);
-    if (kept) setEmployeeId(kept);
+    const kept = localStorage.getItem(REMEMBER_PROJECT);
+    if (kept) setProjectId(kept);
   }, []);
 
   const loadMe = useCallback(() => {
-    const q = employeeId ? `?employeeId=${employeeId}` : '';
-    api.get<MeResponse>(`/api/attendance/me${q}`).then((r) => {
+    api.get<MeResponse>('/api/attendance/me').then((r) => {
       setMe(r);
-      if (!employeeId && r.employee?.id) setEmployeeId(r.employee.id);
-      if (r.today?.projectId && !projectId) setProjectId(r.today.projectId);
+      // 오늘 이미 찍은 현장이 있으면 그것을 따른다.
+      if (r.today?.projectId) setProjectId((prev) => prev || r.today!.projectId!);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employeeId]);
+  }, []);
 
   useEffect(() => {
     loadMe();
   }, [loadMe]);
 
   useEffect(() => {
-    if (employeeId) localStorage.setItem(REMEMBER_KEY, employeeId);
-  }, [employeeId]);
+    if (projectId) localStorage.setItem(REMEMBER_PROJECT, projectId);
+  }, [projectId]);
 
   // 위치는 화면에 숫자로 보여 주지 않는다. 잡혔는지만 알려 준다.
   const locate = useCallback(() => {
@@ -110,8 +108,8 @@ export function MobileAttendPage() {
   };
 
   const send = async () => {
-    if (!employeeId) {
-      setError('누가 찍는지 고르세요.');
+    if (!me?.employee) {
+      setError('계정에 임직원 정보가 연결되어 있지 않습니다. 관리자에게 연결을 요청하세요.');
       return;
     }
     if (!projectId) {
@@ -132,7 +130,6 @@ export function MobileAttendPage() {
     try {
       const form = new FormData();
       form.append('photo', photo);
-      form.append('employeeId', employeeId);
       form.append('projectId', projectId);
       form.append('date', kstToday());
       form.append('consent', String(agreed || me?.consented === true));
@@ -177,10 +174,12 @@ export function MobileAttendPage() {
       <div className="mb-4 flex items-center gap-2">
         <img src="/원방로고.png" alt="원방" className="h-8 w-8 shrink-0 rounded-[9px] bg-white object-contain p-0.5" />
         <h1 className="text-[17px] font-extrabold text-text-strong">출퇴근</h1>
-        <Link to="/mobile" className="ml-auto text-[12.5px] text-text-sub underline">
-          계근 등록
-        </Link>
-        <button type="button" onClick={logout} className="text-[12.5px] text-text-sub underline">
+        {isAdmin && (
+          <Link to="/mobile/weigh" className="ml-auto text-[12.5px] text-text-sub underline">
+            계근 등록
+          </Link>
+        )}
+        <button type="button" onClick={logout} className={`${isAdmin ? '' : 'ml-auto '}text-[12.5px] text-text-sub underline`}>
           로그아웃
         </button>
       </div>
@@ -201,17 +200,19 @@ export function MobileAttendPage() {
         )}
       </div>
 
+      {/* 누구인지는 로그인한 계정으로 정해진다. 남의 이름으로 찍을 수 없다. */}
       <div className="mb-3">
-        <label className={labelCls}>누구</label>
-        <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className={field}>
-          <option value="">고르세요</option>
-          {employees.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name}
-              {e.department ? ` (${e.department})` : ''}
-            </option>
-          ))}
-        </select>
+        <span className={labelCls}>누구</span>
+        {me?.employee ? (
+          <div className={`${field} font-bold`}>
+            {me.employee.name}
+            <span className="ml-2 text-[13px] font-normal text-text-sub">{me.employee.employmentType ?? ''}</span>
+          </div>
+        ) : (
+          <div className="rounded-[10px] border border-danger/40 bg-danger/10 px-3 py-3 text-[13px] text-danger">
+            이 계정에 임직원 정보가 연결되어 있지 않습니다. 관리자에게 연결을 요청하세요.
+          </div>
+        )}
       </div>
 
       <div className="mb-3">

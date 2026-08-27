@@ -3,6 +3,7 @@ import { ShieldCheck, KeyRound } from 'lucide-react';
 import { api } from '../api/client';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { useAuth } from '../context/AuthContext';
+import { useEmployees } from '../hooks/useMasters';
 import { pageTitleCls, tableWrapCls, thCls, tdCls, trCls, outlineBtnCls } from '../components/ui/classes';
 import { kstStamp } from '../lib/datetime';
 import type { AppUser } from '../context/AuthContext';
@@ -13,6 +14,7 @@ const STATUS_TONE: Record<string, BadgeTone> = { pending: 'amber', approved: 'gr
 export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
   const { resetPassword } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
+  const { employees } = useEmployees();
 
   const load = () => {
     api.get<AppUser[]>('/api/auth/users').then(setUsers);
@@ -39,6 +41,12 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
     }
   };
 
+  // 모바일 출퇴근은 이 연결을 보고 "누가 찍었는지"를 정한다. 연결이 없으면 찍을 수 없다.
+  const setEmployee = async (id: string, employeeId: string) => {
+    await api.patch(`/api/auth/users/${id}/employee`, { employeeId: employeeId || null });
+    load();
+  };
+
   const setRole = async (id: string, role: string) => {
     await api.patch(`/api/auth/users/${id}/role`, { role });
     load();
@@ -60,6 +68,7 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
               <th className={thCls}>이름</th>
               <th className={thCls}>연락처</th>
               <th className={thCls}>이메일</th>
+              <th className={thCls}>임직원 연결</th>
               <th className={thCls}>역할</th>
               <th className={thCls}>상태</th>
               <th className={thCls}>최종 접속</th>
@@ -73,6 +82,22 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
                 <td className={tdCls}>{u.name ?? '-'}</td>
                 <td className={`${tdCls} tabular whitespace-nowrap`}>{u.phone ?? '-'}</td>
                 <td className={tdCls}>{u.email}</td>
+                <td className={tdCls}>
+                  <select
+                    value={u.employeeId ?? ''}
+                    onChange={(e) => setEmployee(u.id, e.target.value)}
+                    title="모바일 출퇴근에서 이 계정이 누구로 찍히는지"
+                    className="rounded-[6px] border border-border bg-input px-2 py-1 text-[12.5px] text-input-text"
+                  >
+                    <option value="">연결 없음</option>
+                    {employees.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.name}
+                        {e.department ? ` (${e.department})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </td>
                 <td className={tdCls}>
                   <select
                     value={u.role}
@@ -116,7 +141,7 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={9} className="py-10 text-center text-[13px] text-text-faint">
                   가입 신청자가 없습니다.
                 </td>
               </tr>

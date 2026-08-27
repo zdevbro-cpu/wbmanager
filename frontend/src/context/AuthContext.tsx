@@ -21,6 +21,8 @@ export interface AppUser {
   lastLoginAt?: string | null;
   lastLoginIp?: string | null;
   loginCount?: number;
+  /** 모바일 출퇴근에서 이 계정이 누구로 찍히는지 */
+  employeeId?: string | null;
 }
 
 interface AuthContextValue {

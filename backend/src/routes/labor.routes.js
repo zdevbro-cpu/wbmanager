@@ -191,7 +191,32 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+// 이름만 적혀 있던 지난 자료를 임직원에 붙인다. 붙고 나면 달력에서 고칠 수 있다.
+// 관리자만 한다 — 누구의 공수인지 바꾸는 일이기 때문이다.
+router.put('/link', requireAdmin, async (req, res) => {
+  try {
+    const { workerName, employeeId, month } = req.body ?? {};
+    if (!workerName || !employeeId) return res.status(400).json({ error: 'workerName, employeeId는 필수입니다.' });
+
+    const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+    if (!employee) return res.status(404).json({ error: '임직원을 찾을 수 없습니다.' });
+
+    const { count } = await prisma.labor.updateMany({
+      where: {
+        workerName,
+        employeeId: null,
+        ...(month && MONTH.test(month) ? { settleMonth: month } : {}),
+      },
+      data: { employeeId, workerName: employee.name, workerType: employee.employmentType ?? undefined },
+    });
+    res.json({ count });
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
+// 지우는 것은 관리자만 한다. 지운 공수는 되돌릴 수 없고 셀카도 함께 사라진다.
+router.delete('/:id', requireAdmin, async (req, res) => {
   try {
     const existing = await prisma.labor.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: 'not found' });

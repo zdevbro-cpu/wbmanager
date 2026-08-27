@@ -100,6 +100,9 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
   const [rows, setRows] = useState<LaborRow[]>([]);
   const [closed, setClosed] = useState(false);
   const [editing, setEditing] = useState<{ employeeId: string; name: string; type: string; date: string } | null>(null);
+  // 이름만 남은 줄을 임직원에 붙이는 중
+  const [linking, setLinking] = useState<{ name: string; days: number } | null>(null);
+  const [linkTo, setLinkTo] = useState('');
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -263,7 +266,22 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
               <tr key={p.key} className="border-b border-border">
                 <td className="sticky left-0 z-10 whitespace-nowrap bg-card px-3 py-1.5 text-[13px] font-semibold text-text-strong">
                   {p.name}
-                  {!p.employeeId && <span className="ml-1 text-[11px] font-normal text-text-faint">미연결</span>}
+                  {!p.employeeId &&
+                    (isAdmin ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLinkTo('');
+                          setLinking({ name: p.name, days: p.presentDays + p.manDays });
+                        }}
+                        className="ml-1 text-[11px] font-bold text-warning underline"
+                        title="임직원에 연결하면 달력에서 고칠 수 있습니다"
+                      >
+                        미연결
+                      </button>
+                    ) : (
+                      <span className="ml-1 text-[11px] font-normal text-text-faint">미연결</span>
+                    ))}
                   {p.draft > 0 && <span className="ml-1 text-[11px] font-bold text-warning">임시 {p.draft}</span>}
                 </td>
                 <td className="whitespace-nowrap px-3 py-1.5 text-[12.5px] text-text-sub">{p.type}</td>
@@ -331,6 +349,53 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
         {people.some((p) => !p.employeeId) &&
           ' 임직원에 연결되지 않은 지난 자료는 이름만으로 아래에 두었고, 합계에는 들어갑니다(칸은 고칠 수 없습니다).'}
       </p>
+
+      {linking && (
+        <FormModal title={`「${linking.name}」 임직원에 연결`} icon={CalendarDays} onClose={() => setLinking(null)}>
+          <div className={cardPadCls}>
+            <p className="mb-3 text-[13px] leading-relaxed text-text-sub">
+              이름만 적혀 있는 지난 공수를 임직원에 붙입니다. 붙이면 달력에서 고칠 수 있고, 그 사람의 월 합계로 들어갑니다.
+              <b className="text-text-strong"> 이 달({month})의 「{linking.name}」 줄만</b> 바뀝니다.
+            </p>
+            <label className={labelCls}>어느 임직원인가요</label>
+            <SearchSelect
+              ariaLabel="임직원"
+              options={employees.map((e) => ({ value: e.id, label: `${e.name}${e.department ? ` (${e.department})` : ''}` }))}
+              value={linkTo}
+              onChange={setLinkTo}
+            />
+            <div className="mt-4 flex justify-end gap-2 border-t border-border pt-3">
+              <button type="button" onClick={() => setLinking(null)} className={outlineBtnCls}>
+                취소
+              </button>
+              <button
+                type="button"
+                disabled={!linkTo || busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    const r = await api.put<{ count: number }>('/api/labors/link', {
+                      workerName: linking.name,
+                      employeeId: linkTo,
+                      month,
+                    });
+                    alert(`${r.count}건을 연결했습니다.`);
+                    setLinking(null);
+                    load();
+                  } catch (e) {
+                    alert(e instanceof Error ? e.message : '연결하지 못했습니다.');
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+                className={primaryBtnCls}
+              >
+                연결
+              </button>
+            </div>
+          </div>
+        </FormModal>
+      )}
 
       {editing && (
         <DayEditor

@@ -65,7 +65,10 @@ router.get('/me', async (req, res) => {
 
 // 관리자: 전체 사용자 목록 (대기중 포함)
 router.get('/users', requireAuth, requireAdmin, async (req, res) => {
-  const users = await prisma.appUser.findMany({ orderBy: { createdAt: 'desc' } });
+  const users = await prisma.appUser.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: { employee: { select: { id: true, name: true } } },
+  });
   res.json(users);
 });
 
@@ -83,6 +86,20 @@ router.patch('/users/:id/status', requireAuth, requireAdmin, async (req, res) =>
 });
 
 // 관리자: 역할 변경
+// 계정이 누구인지 — 모바일 출퇴근은 이 연결을 보고 찍는 사람을 정한다.
+router.patch('/users/:id/employee', requireAuth, requireAdmin, async (req, res) => {
+  const { employeeId } = req.body;
+  if (employeeId) {
+    const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+    if (!employee) return res.status(404).json({ error: '임직원을 찾을 수 없습니다.' });
+  }
+  const user = await prisma.appUser.update({
+    where: { id: req.params.id },
+    data: { employeeId: employeeId || null },
+  });
+  res.json(user);
+});
+
 router.patch('/users/:id/role', requireAuth, requireAdmin, async (req, res) => {
   const { role } = req.body;
   if (!['admin', 'worker'].includes(role)) {
