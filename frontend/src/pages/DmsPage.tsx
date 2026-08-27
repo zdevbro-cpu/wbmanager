@@ -211,6 +211,7 @@ export function DmsPage() {
   const [versionFor, setVersionFor] = useState<Doc | null>(null);
   const [detailFor, setDetailFor] = useState<Doc | null>(null);
   const [previewFor, setPreviewFor] = useState<PreviewDoc | null>(null);
+  const [more, setMore] = useState(false);
   // 문서를 찾는 길을 여러 갈래로 둔다 — 등록 시기, 실물 보관 상태, 파일 종류, 첨부 유무, 보존 기한.
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -228,8 +229,12 @@ export function DmsPage() {
     });
   }, []);
 
-  const loadDocs = useCallback(() => {
+  // 계근표가 쌓이면 전부 한 번에 볼 수 없다. 한 묶음씩 읽고 필요하면 더 읽는다.
+  const PAGE = 200;
+  const loadDocs = useCallback((offset = 0) => {
     const params = new URLSearchParams();
+    params.set('limit', String(PAGE));
+    if (offset) params.set('offset', String(offset));
     if (selected) params.set('typeId', selected.id);
     if (projectId) params.set('projectId', projectId);
     if (q) params.set('q', q);
@@ -239,7 +244,10 @@ export function DmsPage() {
     if (fileKind) params.set('fileKind', fileKind);
     if (hasAttachment) params.set('hasAttachment', hasAttachment);
     if (retention) params.set('retention', retention);
-    api.get<Doc[]>(`/api/dms/documents?${params.toString()}`).then(setDocs);
+    api.get<Doc[]>(`/api/dms/documents?${params.toString()}`).then((rows) => {
+      setDocs((prev) => (offset ? [...prev, ...rows] : rows));
+      setMore(rows.length === PAGE);
+    });
   }, [selected, projectId, q, from, to, physical, fileKind, hasAttachment, retention]);
 
   useEffect(() => {
@@ -737,6 +745,15 @@ export function DmsPage() {
                   ))}
                 </tbody>
               </table>
+
+              {/* 계근표까지 목록에 들어오면서 건수가 많아졌다. 한 묶음씩 이어 읽는다. */}
+              {more && (
+                <div className="border-t border-border p-3 text-center">
+                  <button type="button" onClick={() => loadDocs(docs.length)} className={outlineBtnCls}>
+                    더 보기 (지금까지 {docs.length}건)
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

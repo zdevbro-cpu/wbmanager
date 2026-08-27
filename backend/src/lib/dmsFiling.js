@@ -33,11 +33,29 @@ const FILING_RULES = [
 // 업무 종류별로 어느 표에서 프로젝트를 찾는지. 문서를 그 프로젝트에 매달아
 // 프로젝트 상세의 문서함에서도 보이게 한다.
 const PROJECT_SOURCE = {
-  inbound: (tx, id) => tx.inbound.findUnique({ where: { id }, select: { projectId: true } }),
-  outbound_sale: (tx, id) => tx.outboundSale.findUnique({ where: { id }, select: { projectId: true } }),
-  waste_inbound: (tx, id) => tx.wasteInbound.findUnique({ where: { id }, select: { projectId: true } }),
-  waste_outbound: (tx, id) => tx.wasteOutbound.findUnique({ where: { id }, select: { projectId: true } }),
+  inbound: (db, id) =>
+    db.inbound.findUnique({
+      where: { id },
+      select: { projectId: true, inboundDate: true, vehicleNo: true, item: { select: { itemName: true } } },
+    }),
+  outbound_sale: (db, id) =>
+    db.outboundSale.findUnique({
+      where: { id },
+      select: { projectId: true, outboundDate: true, vehicleNo: true, item: { select: { itemName: true } } },
+    }),
+  waste_inbound: (db, id) =>
+    db.wasteInbound.findUnique({
+      where: { id },
+      select: { projectId: true, receiveDate: true, vehicleNo: true, item: { select: { itemName: true } } },
+    }),
+  waste_outbound: (db, id) =>
+    db.wasteOutbound.findUnique({
+      where: { id },
+      select: { projectId: true, outboundDate: true, vehicleNo: true, item: { select: { itemName: true } } },
+    }),
 };
+
+const day = (v) => (v ? new Date(v).toISOString().slice(0, 10) : null);
 
 function ruleFor(parentType, fileType) {
   return (
@@ -77,20 +95,31 @@ export async function fileAttachmentAsDocument({ attachment, parentType, parentI
       : null;
 
     let projectId = null;
+    let source = null;
     const finder = PROJECT_SOURCE[parentType];
     if (finder && parentId) {
-      const row = await finder(prisma, parentId);
-      projectId = row?.projectId ?? null;
+      source = await finder(prisma, parentId);
+      projectId = source?.projectId ?? null;
     }
+
+    // 파일명만으로는 감사 때 찾을 수 없다. 무엇을 계근한 서류인지 제목에 남긴다.
+    // 예: 계근표(입고) 2026-08-24 220호4205 고철
+    const docDate = day(source?.inboundDate ?? source?.outboundDate ?? source?.receiveDate);
+    const title =
+      source && docDate
+        ? [type.name, docDate, source.vehicleNo, source.item?.itemName].filter(Boolean).join(' ')
+        : (attachment.fileName ?? attachment.fileType ?? '증빙');
 
     return await prisma.$transaction(async (tx) => {
       const doc = await tx.document.create({
         data: {
           docNo: await nextDocNo(tx, type.code),
           typeId: type.id,
-          title: attachment.fileName ?? attachment.fileType ?? '증빙',
-          description: `${parentType} 등록에서 자동 편입`,
+          title,
+          description: attachment.fileName ?? null,
           ownerId: appUserId ?? null,
+          // 문서일자는 계근한 날이다. 등록한 날이 아니라 그날로 찾게 된다.
+          meta: docDate ? { docDate } : undefined,
           retentionUntil,
         },
       });
