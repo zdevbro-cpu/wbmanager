@@ -36,7 +36,7 @@ jobs:
           # OCR을 Vertex AI로 부른다 — 이 프로젝트 결제 계정에 후불로 달린다.
           # 값이 있으면 Vertex, 없으면 위 API 키로 되돌아간다.
           VERTEX_PROJECT_ID: "crosswb-a7083"
-          VERTEX_LOCATION: "global"
+          VERTEX_LOCATION: "us-central1"
           EOF
 
       - name: Install dependencies

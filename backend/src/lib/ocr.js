@@ -12,7 +12,9 @@ const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 //     Cloud Run 서비스 계정 권한으로 부른다. 운영에서 쓸 길이다.
 //  2) AI Studio 키 — 선결제 크레딧이 떨어지면 멈춘다. Vertex를 켜기 전까지의 대비책.
 const vertexProject = process.env.VERTEX_PROJECT_ID;
-const vertexLocation = process.env.VERTEX_LOCATION || 'global';
+// 위치는 호스트 이름에 그대로 들어간다(us-central1-aiplatform.googleapis.com).
+// 'global'을 넣으면 없는 주소를 불러 HTML 오류 페이지가 돌아온다.
+const vertexLocation = process.env.VERTEX_LOCATION || 'us-central1';
 const apiKey = process.env.GEMINI_API_KEY;
 
 const vertexModel = vertexProject
