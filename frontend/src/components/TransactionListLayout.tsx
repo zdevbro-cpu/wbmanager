@@ -3,6 +3,7 @@ import { Plus, Paperclip, Eye, Trash2, X, RotateCcw, Download, type LucideIcon }
 import { useProjects, useItemMasters, useVehicles, useEmployees } from '../hooks/useMasters';
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import { downloadFile } from '../lib/download';
+import { api } from '../api/client';
 import { SearchSelect, type SearchOption } from './SearchSelect';
 import { DocumentPreview, type PreviewDoc } from './DocumentPreview';
 import { API_BASE_URL } from '../api/client';
@@ -92,6 +93,8 @@ interface Props<T> {
   suggestions?: Partial<Record<FilterKey, string[]>>;
   /** 상세에서 수정 폼을 띄운다. 저장이 끝나면 done()을 불러 상세로 돌아온다. */
   editForm?: (row: T, done: () => void) => ReactNode;
+  /** 첨부를 지운 뒤 목록을 다시 읽는다. */
+  reload?: () => void;
   emptyText: string;
 }
 
@@ -114,6 +117,7 @@ export function TransactionListLayout<T>({
   filterKeys = DEFAULT_FILTER_KEYS,
   suggestions,
   editForm,
+  reload,
   emptyText,
 }: Props<T>) {
   const { projects } = useProjects();
@@ -170,6 +174,19 @@ export function TransactionListLayout<T>({
     downloadFile(`/api/list-exports/${exportType}?${params.toString()}`, `${exportName ?? exportType}.xlsx`).catch(
       (err: unknown) => window.alert(err instanceof Error ? err.message : '엑셀 내려받기에 실패했습니다.'),
     );
+  };
+
+  // 잘못 붙인 증빙을 지운다. 파일은 드라이브 휴지통으로 가므로 되살릴 수 있다.
+  const removeAttachment = async (a: Attachment) => {
+    if (!window.confirm(`'${a.fileName ?? '파일'}'을(를) 첨부에서 지울까요?
+다시 올리려면 수정에서 새로 붙이면 됩니다.`)) return;
+    try {
+      await api.del(`/api/attachments/${a.id}`);
+      setDetail(null);
+      reload?.();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : '첨부를 지우지 못했습니다.');
+    }
   };
 
   const confirmDelete = (row: T) => {
@@ -470,14 +487,23 @@ export function TransactionListLayout<T>({
                   {attachments(detail).map((a) => (
                     <li key={a.id} className="flex items-center gap-2 text-[13px]">
                       <Paperclip size={12} className="text-text-faint" />
-                      <span className="text-text-sub">{a.fileType ?? '문서'}</span>
-                      {a.webViewLink ? (
-                        <a href={a.webViewLink} target="_blank" rel="noreferrer" className="text-primary hover:underline">
-                          {a.fileName ?? '파일'}
-                        </a>
-                      ) : (
-                        <span className="text-text">{a.fileName ?? '파일'}</span>
-                      )}
+                      <span className="shrink-0 text-text-sub">{a.fileType ?? '문서'}</span>
+                      {/* 드라이브 링크 대신 앱이 중계하는 미리보기로 연다 — 드라이브 권한이 없어도 보인다. */}
+                      <button
+                        type="button"
+                        onClick={() => setPreviewFiles(filesOf(detail))}
+                        className="truncate text-left text-primary hover:underline"
+                      >
+                        {a.fileName ?? '파일'}
+                      </button>
+                      <button
+                        type="button"
+                        title="첨부에서 지우기"
+                        onClick={() => removeAttachment(a)}
+                        className="ml-auto shrink-0 rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-danger"
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </li>
                   ))}
                 </ul>

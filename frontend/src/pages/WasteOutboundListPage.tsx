@@ -108,6 +108,7 @@ export function WasteOutboundListPage() {
         filterKeys={['projectId', 'date', 'itemCode', 'vehicleNo', 'olbaro', 'dischargerName', 'transporterName', 'processorName']}
         onAdd={() => setOpen(true)}
         onDelete={remove}
+        reload={load}
         editForm={(row, done) => (
           <WasteOutboundFormPage
             embedded
