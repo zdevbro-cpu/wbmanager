@@ -13,6 +13,7 @@ import { ProjectManagementPage } from './pages/ProjectManagementPage';
 import { SystemAdminPage } from './pages/SystemAdminPage';
 import { DmsPage } from './pages/DmsPage';
 import { EntryPage } from './pages/EntryPage';
+import { MobileWeighPage } from './pages/MobileWeighPage';
 import { LedgerPage } from './pages/LedgerPage';
 import { AggregationPage } from './pages/AggregationPage';
 import { DailyReportPage } from './pages/DailyReportPage';
@@ -37,6 +38,8 @@ function Gate() {
     <Routes>
       {/* 시작 화면은 사이드바 없이 카드만 띄운다. */}
       <Route path="/" element={<EntryPage />} />
+      {/* 현장에서 휴대폰으로 쓰는 화면 — 사이드바 없이 한 화면만 쓴다. */}
+      <Route path="/mobile" element={<MobileWeighPage />} />
       <Route element={<Layout />}>
         <Route path="/inbound" element={<InboundListPage />} />
         <Route path="/outbound" element={<OutboundListPage />} />
