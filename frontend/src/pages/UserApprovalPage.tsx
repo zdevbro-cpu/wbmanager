@@ -4,7 +4,10 @@ import { api } from '../api/client';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { useAuth } from '../context/AuthContext';
 import { useEmployees } from '../hooks/useMasters';
-import { pageTitleCls, tableWrapCls, thCls, tdCls, trCls, outlineBtnCls } from '../components/ui/classes';
+import { FormModal } from '../components/FormModal';
+import { EMPLOYMENT_TYPES } from './EmployeeManagementPage';
+import type { Employee } from '../types';
+import { pageTitleCls, tableWrapCls, thCls, tdCls, trCls, outlineBtnCls, primaryBtnCls, inputCls } from '../components/ui/classes';
 import { kstStamp } from '../lib/datetime';
 import type { AppUser } from '../context/AuthContext';
 
@@ -24,8 +27,11 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
     load();
   }, []);
 
-  const setStatus = async (id: string, status: string) => {
-    await api.patch(`/api/auth/users/${id}/status`, { status });
+  // 승인은 그 자리에서 "이 사람이 누구이고 어떤 구분인지"를 정하고 넘어간다.
+  const [approving, setApproving] = useState<AppUser | null>(null);
+
+  const setStatus = async (id: string, status: string, extra?: { employeeId?: string; employmentType?: string }) => {
+    await api.patch(`/api/auth/users/${id}/status`, { status, ...extra });
     // 승인은 임직원을 새로 만들 수 있다. 목록을 다시 읽어야 연결이 화면에 보인다.
     reloadEmployees();
     load();
@@ -143,7 +149,7 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
                 <td className={tdCls}>
                   <div className="flex gap-1.5">
                     {u.status !== 'approved' && (
-                      <button type="button" onClick={() => setStatus(u.id, 'approved')} className={outlineBtnCls}>
+                      <button type="button" onClick={() => setApproving(u)} className={outlineBtnCls}>
                         승인
                       </button>
                     )}
@@ -174,6 +180,114 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
           </tbody>
         </table>
       </div>
+
+      {approving && (
+        <ApproveModal
+          user={approving}
+          employees={employees}
+          onClose={() => setApproving(null)}
+          onDone={async (extra) => {
+            await setStatus(approving.id, 'approved', extra);
+            setApproving(null);
+          }}
+        />
+      )}
     </div>
   );
 }
+
+// 승인은 들여보내는 결정이자 "이 사람이 누구인지" 정하는 자리다.
+// 여기서 정하지 않으면 고용 구분이 기본값으로 굳고, 공수표가 그 값으로 갈린다.
+function ApproveModal({
+  user,
+  employees,
+  onClose,
+  onDone,
+}: {
+  user: AppUser;
+  employees: Employee[];
+  onClose: () => void;
+  onDone: (extra: { employeeId?: string; employmentType?: string }) => Promise<void>;
+}) {
+  const sameName = employees.find((e) => e.name === (user.name ?? '').trim());
+  const [employeeId, setEmployeeId] = useState(sameName?.id ?? '');
+  const [employmentType, setEmploymentType] = useState(sameName?.employmentType ?? '정규직');
+  const [busy, setBusy] = useState(false);
+
+  const picked = employees.find((e) => e.id === employeeId);
+
+  return (
+    <FormModal title="가입 승인" icon={ShieldCheck} onClose={onClose}>
+      <div className="rounded-[10px] border border-border bg-input p-4">
+        <p className="mb-3 text-[13px] text-text-sub">
+          <b className="text-text-strong">{user.name ?? '-'}</b> · {user.email}
+          {user.phone ? ` · ${user.phone}` : ''}
+        </p>
+
+        <label className={approveLabelCls}>임직원</label>
+        <select
+          value={employeeId}
+          onChange={(e) => {
+            setEmployeeId(e.target.value);
+            const emp = employees.find((x) => x.id === e.target.value);
+            if (emp?.employmentType) setEmploymentType(emp.employmentType);
+          }}
+          className={`${inputCls} mb-1`}
+        >
+          <option value="">새로 등록 (이름·연락처로 만듭니다)</option>
+          {employees.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.name}
+              {e.department ? ` (${e.department})` : ''}
+            </option>
+          ))}
+        </select>
+        <p className="mb-3 text-[12px] text-text-faint">
+          {picked ? `${picked.name} 님으로 연결합니다.` : '같은 사람이 이미 있으면 위에서 고르세요. 없으면 새로 만듭니다.'}
+        </p>
+
+        <label className={approveLabelCls}>고용 구분</label>
+        <div className="flex flex-wrap gap-1.5">
+          {EMPLOYMENT_TYPES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setEmploymentType(t)}
+              className={`rounded-[8px] border px-3 py-1.5 text-[13px] font-semibold ${
+                employmentType === t ? 'border-primary bg-primary/15 text-primary' : 'border-border text-text-sub hover:bg-hover'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-[12px] text-text-faint">
+          공수표가 이 값으로 갈립니다 — 정규직은 근태(출근·연차 등), 그 밖은 공수로 셉니다.
+        </p>
+
+        <div className="mt-4 flex justify-end gap-2 border-t border-border pt-3">
+          <button type="button" onClick={onClose} className={outlineBtnCls}>
+            취소
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await onDone({ employeeId: employeeId || undefined, employmentType });
+              } finally {
+                setBusy(false);
+              }
+            }}
+            className={primaryBtnCls}
+          >
+            {busy ? '승인 중...' : '승인'}
+          </button>
+        </div>
+      </div>
+    </FormModal>
+  );
+}
+
+const approveLabelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';

@@ -114,6 +114,17 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
     reload();
   };
 
+  // 목록에서 고친 구분은 바로 저장하고, 화면의 값도 그 자리에서 바꾼다.
+  const setEmploymentTypeOf = async (id: string, employmentType: string) => {
+    setEmployees((prev) => prev.map((e) => (e.id === id ? { ...e, employmentType: employmentType || null } : e)));
+    try {
+      await api.patch(`/api/employees/${id}`, { employmentType });
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '구분을 바꾸지 못했습니다.');
+      reload();
+    }
+  };
+
   const reload = useCallback(() => {
     api.get<Employee[]>('/api/employees').then(setEmployees);
   }, []);
@@ -251,7 +262,21 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
                 <td className={tdCls}>{emp.name}</td>
                 <td className={`${tdCls} tabular`}>{emp.phone ?? '-'}</td>
                 <td className={tdCls}>{emp.companyName ?? '-'}</td>
-                <td className={tdCls}>{emp.employmentType ?? '-'}</td>
+                <td className={tdCls}>
+                  <select
+                    value={emp.employmentType ?? ''}
+                    onChange={(e) => setEmploymentTypeOf(emp.id, e.target.value)}
+                    title="공수표가 이 값으로 갈립니다 — 정규직은 근태, 그 밖은 공수"
+                    className="rounded-[6px] border border-border bg-input px-2 py-1 text-[12.5px] text-input-text"
+                  >
+                    <option value="">-</option>
+                    {EMPLOYMENT_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </td>
                 <td className={tdCls}>{[emp.department, emp.position].filter(Boolean).join(' / ') || '-'}</td>
                 <td className={`${tdCls} tabular`}>{emp.hireDate ? emp.hireDate.slice(0, 10) : '-'}</td>
                 <td className={`${tdCls} whitespace-nowrap`}>
