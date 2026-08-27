@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { toISO } from '../lib/date.js';
 import { rememberCodes } from '../lib/rememberCodes.js';
+import { attendManDays } from '../lib/attendCode.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { purgeMonthSelfies, purgeLaborSelfies } from '../lib/attendance.js';
 
@@ -145,6 +146,18 @@ function buildCell(body, month, day) {
   ];
   const data = { employeeId: body.employeeId, workDate: day, settleMonth: month };
   for (const k of pick) if (body[k] !== undefined) data[k] = body[k] === '' ? null : body[k];
+
+  // 근태코드만 고른 경우(정규직) 그 코드 몫의 공수를 대신 넣는다.
+  // 반차를 골라도 공수가 비어 있으면 인건비에 아무것도 안 잡히기 때문이다.
+  // 공수를 손으로 적어 보냈으면 그 값을 그대로 둔다.
+  if (data.attendCode && data.totalManDays == null) {
+    const derived = attendManDays(data.attendCode);
+    if (derived != null) data.totalManDays = derived;
+  }
+  // 공수와 단가가 모두 있으면 인건비도 함께 맞춘다.
+  if (data.totalManDays != null && data.unitCost != null && data.laborCost == null) {
+    data.laborCost = Math.round(Number(data.totalManDays) * Number(data.unitCost));
+  }
   return data;
 }
 

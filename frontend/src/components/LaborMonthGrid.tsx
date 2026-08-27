@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Lock, LockOpen, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { useEmployees, useCommonCodes } from '../hooks/useMasters';
+import { attendManDays, attendDays } from '../lib/attend';
 import { useAuth } from '../context/AuthContext';
 import { FormModal } from './FormModal';
 import { SearchSelect } from './SearchSelect';
@@ -66,8 +67,6 @@ const ATTEND_TONE: Record<string, string> = {
   결근: 'text-danger',
   휴무: 'text-text-faint',
 };
-// 그 날 나온 것으로 치는 근태 — 출근일수를 셀 때 쓴다.
-const PRESENT = new Set(['출근', '특근', '반차']);
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -131,7 +130,7 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
   // 임직원에 연결되지 않은 지난 자료는 이름만으로 한 줄을 만들어 합계에서 빠지지 않게 한다.
   const people = useMemo(() => {
     const tally = (mine: LaborRow[]) => ({
-      presentDays: mine.filter((r) => PRESENT.has(r.attendCode ?? '')).length,
+      presentDays: mine.reduce((sum, r) => sum + attendDays(r.attendCode), 0),
       manDays: mine.reduce((s, r) => s + num(r.totalManDays), 0),
       laborCost: mine.reduce((s, r) => s + num(r.laborCost), 0),
       mealCost: mine.reduce((s, r) => s + num(r.mealCost), 0),
@@ -549,6 +548,14 @@ function DayEditor({
                   </button>
                 ))}
               </div>
+              <p className="mt-1.5 text-[12px] text-text-faint">
+                고른 근태만큼 공수가 자동으로 잡힙니다 — 출근 1 · 반차 0.5 · 특근 1.5 · 연차/병가/결근/휴무 0
+                {f.attendCode && (
+                  <span className="ml-1 font-bold text-text-strong">
+                    (지금: {formatNumber(attendManDays(f.attendCode) ?? 0)}공수)
+                  </span>
+                )}
+              </p>
             </div>
           ) : (
             <>
