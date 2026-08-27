@@ -3,7 +3,8 @@ import { Truck, CheckCircle2, AlertTriangle, ScanLine } from 'lucide-react';
 import { api, API_BASE_URL } from '../api/client';
 import { registerVehicleAfterSave } from '../lib/vehicleRegister';
 import { auth } from '../lib/firebase';
-import { useProjects, useItemMasters, useCommonCodes } from '../hooks/useMasters';
+import { formatPhone } from '../lib/phone';
+import { useProjects, useItemMasters, useCommonCodes, useEmployees } from '../hooks/useMasters';
 import { MasterSelect } from '../components/MasterSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
 import { FileUpload } from '../components/FileUpload';
@@ -53,6 +54,7 @@ const OCR_LABEL: Record<keyof OcrFields, string> = {
 
 export function InboundFormPage({ embedded = false, onCreated, record = null, onSaved }: Props = {}) {
   const { projects } = useProjects();
+  const { employees } = useEmployees();
   const { items, quickCreate: quickCreateItem } = useItemMasters();
   const { labels: unloadingPointOptions } = useCommonCodes('하차지');
   const isEdit = !!record;
@@ -143,7 +145,12 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
       setOcr(f);
       if (f.weighDate && !inboundDate) setInboundDate(f.weighDate);
       if (f.vehicleNo && !vehicleNo) setVehicleNo(f.vehicleNo);
-      if (f.driverName && !driverName) setDriverName(f.driverName);
+      if (f.driverName && !driverName) {
+        setDriverName(f.driverName);
+        // 계근표에는 연락처가 찍히지 않는다. 이름이 임직원 마스터에 있으면 거기서 가져와 채운다.
+        const matchedDriver = employees.find((e) => e.name === f.driverName);
+        if (matchedDriver?.phone && !driverPhone) setDriverPhone(formatPhone(matchedDriver.phone));
+      }
       if (f.siteName && !unloadingPoint) setUnloadingPoint(f.siteName);
       if (f.grossWeight != null && !grossWeight) setGrossWeight(String(f.grossWeight));
       if (f.tareWeight != null && !tareWeight) setTareWeight(String(f.tareWeight));
