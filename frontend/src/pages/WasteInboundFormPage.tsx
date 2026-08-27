@@ -8,6 +8,8 @@ import { SearchSelect } from '../components/SearchSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
 import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
+import { OcrResult } from '../components/OcrResult';
+import { useCertificateOcr, type OcrFields } from '../hooks/useCertificateOcr';
 import { NumberInput } from '../components/ui/NumberInput';
 import { formatNumber } from '../lib/number';
 import { uploadStagedFiles } from '../lib/uploadStaged';
@@ -57,6 +59,23 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
   const [cubicMeter, setCubicMeter] = useState(initNum(record?.cubicMeter));
   const [memo, setMemo] = useState(record?.memo ?? '');
   const [certFiles, setCertFiles] = useState<File[]>([]);
+  // 계량증명서를 올리면 계근 항목을 읽어 빈 칸만 채운다. 이미 적은 값은 건드리지 않는다.
+  const { ocr, ocrBusy, ocrNote, runOcr } = useCertificateOcr();
+  const applyOcr = (f: OcrFields) => {
+      if (f.weighDate && !receiveDate) setReceiveDate(f.weighDate);
+      if (f.vehicleNo && !vehicleNo) setVehicleNo(f.vehicleNo);
+      if (f.driverName && !driverName) setDriverName(f.driverName);
+      if (f.siteName && !unloadingPoint) setUnloadingPoint(f.siteName);
+      if (f.dischargerName && !dischargerName) setDischargerName(f.dischargerName);
+      if (f.transporterName && !transporterName) setTransporterName(f.transporterName);
+      if (f.processorName && !processorName) setProcessorName(f.processorName);
+      if (f.grossWeight != null && !grossWeight) setGrossWeight(String(f.grossWeight));
+      if (f.tareWeight != null && !tareWeight) setTareWeight(String(f.tareWeight));
+      if (f.itemName && !itemCode) {
+        const matched = items.find((i) => i.itemName === f.itemName);
+        if (matched) setItemCode(matched.itemCode);
+      }
+  };
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [created, setCreated] = useState<WasteInbound | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -320,12 +339,21 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
 
           {/* 첨부는 두 칸씩 써서 좌우로 넓게 둔다 — 파일을 끌어다 놓기 편해야 한다. */}
           <div className="col-span-2">
-            <StagedFileUpload label="계량증명서" files={certFiles} setFiles={setCertFiles} />
+            <StagedFileUpload
+              label="계량증명서"
+              files={certFiles}
+              setFiles={setCertFiles}
+              onAdd={(picked) => runOcr(picked, applyOcr)}
+              busy={ocrBusy}
+              hint="올리면 계근 항목을 자동 인식합니다"
+            />
           </div>
           <div className="col-span-2">
             <StagedFileUpload label="참고 서류" files={refFiles} setFiles={setRefFiles} />
           </div>
         </div>
+
+        <OcrResult ocr={ocr} note={ocrNote} />
 
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 

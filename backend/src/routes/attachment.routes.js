@@ -3,6 +3,7 @@ import multer from 'multer';
 import { prisma } from '../lib/prisma.js';
 import { uploadToDrive, downloadFromDrive, trashInDrive } from '../lib/drive.js';
 import { decodeUploadName } from '../lib/fileName.js';
+import { fileAttachmentAsDocument } from '../lib/dmsFiling.js';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -45,7 +46,16 @@ router.post('/', upload.single('file'), async (req, res) => {
     },
   });
 
+  // 증빙을 문서로도 편입한다. 어디서 올린 파일인지 알면 분류도 정해져 있으므로 묻지 않는다.
+  // 편입이 실패해도 첨부 자체는 이미 저장됐으니 등록 흐름을 막지 않는다(응답 뒤에 처리).
   res.status(201).json(attachment);
+
+  fileAttachmentAsDocument({
+    attachment,
+    parentType,
+    parentId,
+    appUserId: req.appUser?.id ?? null,
+  });
 });
 
 // 증빙 파일 열람·내려받기 — 앱이 중계한다.

@@ -7,6 +7,8 @@ import { MasterSelect } from '../components/MasterSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
 import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
+import { OcrResult } from '../components/OcrResult';
+import { useCertificateOcr, type OcrFields } from '../hooks/useCertificateOcr';
 import { NumberInput } from '../components/ui/NumberInput';
 import { formatNumber } from '../lib/number';
 import { uploadStagedFiles } from '../lib/uploadStaged';
@@ -58,6 +60,20 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
   const [memo, setMemo] = useState(record?.memo ?? '');
   const [paidDate, setPaidDate] = useState(initDate(record?.paidDate));
   const [certFiles, setCertFiles] = useState<File[]>([]);
+  // 계량증명서를 올리면 계근 항목을 읽어 빈 칸만 채운다. 이미 적은 값은 건드리지 않는다.
+  const { ocr, ocrBusy, ocrNote, runOcr } = useCertificateOcr();
+  const applyOcr = (f: OcrFields) => {
+      if (f.weighDate && !outboundDate) setOutboundDate(f.weighDate);
+      if (f.vehicleNo && !vehicleNo) setVehicleNo(f.vehicleNo);
+      if (f.driverName && !driverName) setDriverName(f.driverName);
+      if (f.siteName && !loadingPoint) setLoadingPoint(f.siteName);
+      if (f.grossWeight != null && !grossWeight) setGrossWeight(String(f.grossWeight));
+      if (f.tareWeight != null && !tareWeight) setTareWeight(String(f.tareWeight));
+      if (f.itemName && !itemCode) {
+        const matched = items.find((i) => i.itemName === f.itemName);
+        if (matched) setItemCode(matched.itemCode);
+      }
+  };
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [created, setCreated] = useState<OutboundSale | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -362,9 +378,18 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
         </div>
 
         <div className="grid grid-cols-2 gap-x-4">
-          <StagedFileUpload label="계량증명서" files={certFiles} setFiles={setCertFiles} />
+          <StagedFileUpload
+              label="계량증명서"
+              files={certFiles}
+              setFiles={setCertFiles}
+              onAdd={(picked) => runOcr(picked, applyOcr)}
+              busy={ocrBusy}
+              hint="올리면 계근 항목을 자동 인식합니다"
+            />
           <StagedFileUpload label="참고 서류" files={refFiles} setFiles={setRefFiles} />
         </div>
+
+        <OcrResult ocr={ocr} note={ocrNote} />
 
         {error && <p className="text-[13px] text-danger">{error}</p>}
 
