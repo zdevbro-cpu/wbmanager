@@ -1,17 +1,50 @@
 // 계량증명서 OCR — Gemini 멀티모달로 이미지/PDF에서 계근 항목을 추출한다.
 // settlementmanager/server/services/ocrService.js와 같은 방식.
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { VertexAI } from '@google-cloud/vertexai';
 
-const apiKey = process.env.GEMINI_API_KEY;
 // 모델은 공급사 사정으로 사라진다 — 2.5-flash는 신규 사용이 막혀 인식이 전부 실패했다.
 // 다음에 또 바뀌어도 배포 없이 넘어갈 수 있게 환경변수로 뺀다.
 const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
-let model = null;
-if (apiKey) {
-  model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: MODEL_NAME });
-  console.log(`[ocr] 모델 ${MODEL_NAME}`);
-} else {
-  console.warn('[ocr] GEMINI_API_KEY 미설정 — OCR은 빈 결과를 반환합니다.');
+
+// 부르는 길이 둘이다.
+//  1) Vertex AI — 이 프로젝트 결제 계정으로 후불 과금된다. 키 파일이 필요 없고
+//     Cloud Run 서비스 계정 권한으로 부른다. 운영에서 쓸 길이다.
+//  2) AI Studio 키 — 선결제 크레딧이 떨어지면 멈춘다. Vertex를 켜기 전까지의 대비책.
+const vertexProject = process.env.VERTEX_PROJECT_ID;
+const vertexLocation = process.env.VERTEX_LOCATION || 'global';
+const apiKey = process.env.GEMINI_API_KEY;
+
+const vertexModel = vertexProject
+  ? new VertexAI({ project: vertexProject, location: vertexLocation }).getGenerativeModel({ model: MODEL_NAME })
+  : null;
+const keyModel = apiKey ? new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: MODEL_NAME }) : null;
+const model = vertexModel ?? keyModel;
+
+if (vertexModel) console.log(`[ocr] Vertex AI ${vertexProject}/${vertexLocation} · 모델 ${MODEL_NAME}`);
+else if (keyModel) console.log(`[ocr] AI Studio 키 · 모델 ${MODEL_NAME}`);
+else console.warn('[ocr] VERTEX_PROJECT_ID·GEMINI_API_KEY 모두 미설정 — OCR은 빈 결과를 반환합니다.');
+
+// 두 SDK는 요청·응답 모양이 조금 다르다. 부르는 쪽이 신경 쓰지 않도록 여기서 맞춘다.
+// Vertex가 아직 켜지지 않았거나 권한이 없으면 예전 키 방식으로 한 번 더 시도한다 —
+// 전환 중에 인식이 끊기지 않게 하기 위해서다.
+async function askModel(prompt, buffer, mimeType) {
+  const inlineData = { data: buffer.toString('base64'), mimeType };
+
+  if (vertexModel) {
+    try {
+      const res = await vertexModel.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }, { inlineData }] }],
+      });
+      return res.response?.candidates?.[0]?.content?.parts?.map((x) => x.text ?? '').join('') ?? '';
+    } catch (err) {
+      if (!keyModel) throw err;
+      console.warn('[ocr] Vertex 호출 실패 — API 키로 재시도:', String(err.message).split('\n')[0]);
+    }
+  }
+
+  const res = await keyModel.generateContent([prompt, { inlineData }]);
+  return res.response.text();
 }
 
 // 원본 계량증명서에 실제로 찍히는 항목 기준.
@@ -48,11 +81,7 @@ export function isOcrEnabled() {
 export async function readWeighingCertificate(buffer, mimeType = 'image/jpeg') {
   if (!model) return { enabled: false, fields: {} };
 
-  const result = await model.generateContent([
-    PROMPT,
-    { inlineData: { data: buffer.toString('base64'), mimeType } },
-  ]);
-  const text = result.response.text();
+  const text = await askModel(PROMPT, buffer, mimeType);
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) {
     console.warn('[ocr] JSON 추출 실패');
@@ -95,11 +124,7 @@ const VEHICLE_PROMPT = `이 이미지는 한국의 자동차등록증입니다. 
 export async function readVehicleRegistration(buffer, mimeType = 'image/jpeg') {
   if (!model) return { enabled: false, fields: {} };
 
-  const result = await model.generateContent([
-    VEHICLE_PROMPT,
-    { inlineData: { data: buffer.toString('base64'), mimeType } },
-  ]);
-  const text = result.response.text();
+  const text = await askModel(VEHICLE_PROMPT, buffer, mimeType);
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) {
     console.warn('[ocr] 차량등록증 JSON 추출 실패');
