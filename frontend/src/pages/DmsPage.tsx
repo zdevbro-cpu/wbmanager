@@ -211,6 +211,13 @@ export function DmsPage() {
   const [versionFor, setVersionFor] = useState<Doc | null>(null);
   const [detailFor, setDetailFor] = useState<Doc | null>(null);
   const [previewFor, setPreviewFor] = useState<PreviewDoc | null>(null);
+  // 문서를 찾는 길을 여러 갈래로 둔다 — 등록 시기, 실물 보관 상태, 파일 종류, 첨부 유무, 보존 기한.
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [physical, setPhysical] = useState('');
+  const [fileKind, setFileKind] = useState('');
+  const [hasAttachment, setHasAttachment] = useState('');
+  const [retention, setRetention] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -226,8 +233,14 @@ export function DmsPage() {
     if (selected) params.set('typeId', selected.id);
     if (projectId) params.set('projectId', projectId);
     if (q) params.set('q', q);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    if (physical) params.set('physical', physical);
+    if (fileKind) params.set('fileKind', fileKind);
+    if (hasAttachment) params.set('hasAttachment', hasAttachment);
+    if (retention) params.set('retention', retention);
     api.get<Doc[]>(`/api/dms/documents?${params.toString()}`).then(setDocs);
-  }, [selected, projectId, q]);
+  }, [selected, projectId, q, from, to, physical, fileKind, hasAttachment, retention]);
 
   useEffect(() => {
     loadTree();
@@ -469,24 +482,73 @@ export function DmsPage() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="문서명 · 문서번호 검색"
+          placeholder="문서명 · 문서번호 · 파일명 · 비고"
           className={`${inputCls} w-[220px] shrink-0`}
         />
 
-        {(projectId || selected || q) && (
+        <span className="shrink-0 text-[12px] text-text-faint">계근표 제외 · 보고서는 보관함에서</span>
+      </div>
+
+      {/* 둘째 줄 — 이름이 기억나지 않을 때 쓰는 길들. 언제 넣었는지, 원본은 어디 있는지, 어떤 파일인지로 좁힌다. */}
+      <div className={`${cardCls} mb-4 flex items-center gap-2 overflow-x-auto px-4 py-2.5`}>
+        <span className="shrink-0 text-[12px] font-bold text-text-sub">등록일</span>
+        <DateField value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputCls} w-[130px] shrink-0`} />
+        <span className="shrink-0 text-text-faint">~</span>
+        <DateField value={to} onChange={(e) => setTo(e.target.value)} className={`${inputCls} w-[130px] shrink-0`} />
+
+        <select value={physical} onChange={(e) => setPhysical(e.target.value)} className={`${inputCls} w-[150px] shrink-0`}>
+          <option value="">실물 문서 전체</option>
+          {PHYSICAL_STATUS.map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
+
+        <select value={fileKind} onChange={(e) => setFileKind(e.target.value)} className={`${inputCls} w-[140px] shrink-0`}>
+          <option value="">파일 종류 전체</option>
+          <option value="pdf">PDF</option>
+          <option value="image">이미지</option>
+          <option value="sheet">엑셀 · CSV</option>
+          <option value="doc">워드 · 한글</option>
+        </select>
+
+        <select
+          value={hasAttachment}
+          onChange={(e) => setHasAttachment(e.target.value)}
+          className={`${inputCls} w-[130px] shrink-0`}
+        >
+          <option value="">첨부 전체</option>
+          <option value="true">첨부 있음</option>
+          <option value="false">첨부 없음</option>
+        </select>
+
+        <select value={retention} onChange={(e) => setRetention(e.target.value)} className={`${inputCls} w-[150px] shrink-0`}>
+          <option value="">보존 기한 전체</option>
+          <option value="soon">90일 내 만료</option>
+          <option value="expired">만료 지남</option>
+        </select>
+
+        {(projectId || selected || q || from || to || physical || fileKind || hasAttachment || retention) && (
           <button
             type="button"
             onClick={() => {
               setProjectId('');
               setSelected(null);
               setQ('');
+              setFrom('');
+              setTo('');
+              setPhysical('');
+              setFileKind('');
+              setHasAttachment('');
+              setRetention('');
             }}
             className={`${outlineBtnCls} h-[38px] shrink-0 whitespace-nowrap px-3`}
           >
             <RotateCcw size={15} /> 초기화
           </button>
         )}
-        <span className="shrink-0 text-[12px] text-text-faint">계근표 제외 · 보고서는 보관함에서</span>
+        <span className="ml-auto shrink-0 text-[12px] text-text-faint">{docs.length}건</span>
       </div>
 
       {error && <p className="mb-3 text-[13px] text-danger">{error}</p>}
