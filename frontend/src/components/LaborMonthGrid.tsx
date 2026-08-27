@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Lock, LockOpen, Trash2 } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Download, Lock, LockOpen, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
+import { downloadFile } from '../lib/download';
 import { useEmployees, useCommonCodes } from '../hooks/useMasters';
 import { attendManDays, attendDays } from '../lib/attend';
 import { useAuth } from '../context/AuthContext';
@@ -69,6 +70,16 @@ const ATTEND_TONE: Record<string, string> = {
   결근: 'text-danger',
   휴무: 'text-text-faint',
 };
+
+// 왼쪽(이름·구분)과 오른쪽(개인 합계)은 자리에 붙여 두고 날짜만 스크롤한다.
+// 스무 날쯤 보이는 폭을 기준으로 삼았다 — 한 달을 다 보려면 가운데를 밀면 된다.
+const NAME_W = 116;
+const TYPE_W = 72;
+const SUM_W = 68;
+// 합계 열 다섯을 오른쪽부터 붙인다.
+const sumRight = (i: number) => (4 - i) * SUM_W;
+const stickyL = 'sticky z-20 bg-card';
+const stickyR = 'sticky z-20 bg-card';
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -226,12 +237,26 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
           </span>
         )}
 
+        {/* 월 공수표 — A4 가로 한 장에 그 달 전체가 들어간다. */}
+        <button
+          type="button"
+          onClick={() =>
+            downloadFile(
+              `/api/labors/export?month=${month}${defaultProjectId ? `&projectId=${defaultProjectId}` : ''}`,
+              `${month}_공수표.xlsx`,
+            )
+          }
+          className={`${outlineBtnCls} ml-auto`}
+        >
+          <Download size={15} /> 엑셀 출력
+        </button>
+
         {isAdmin && (
           <button
             type="button"
             disabled={busy}
             onClick={() => settle(closed ? 'open' : 'close')}
-            className={`${closed ? outlineBtnCls : primaryBtnCls} ml-auto`}
+            className={closed ? outlineBtnCls : primaryBtnCls}
           >
             {closed ? '마감 열기' : '이 달 마감'}
           </button>
@@ -242,14 +267,21 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
         <table className="w-max min-w-full border-collapse">
           <thead>
             <tr className="border-y border-border">
-              <th className={`${thCls} sticky left-0 z-10 whitespace-nowrap bg-card`}>이름</th>
-              <th className={`${thCls} whitespace-nowrap`}>구분</th>
+              <th className={`${thCls} ${stickyL} left-0 whitespace-nowrap`} style={{ width: NAME_W, minWidth: NAME_W }}>
+                이름
+              </th>
+              <th
+                className={`${thCls} ${stickyL} whitespace-nowrap`}
+                style={{ left: NAME_W, width: TYPE_W, minWidth: TYPE_W }}
+              >
+                구분
+              </th>
               {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
                 const w = weekdayOf(month, d);
                 return (
                   <th
                     key={d}
-                    className={`w-[30px] px-0 py-1.5 text-center text-[11px] font-bold ${
+                    className={`w-[28px] px-0 py-1.5 text-center text-[11px] font-bold ${
                       w === 0 ? 'text-danger' : w === 6 ? 'text-primary' : 'text-text-sub'
                     }`}
                   >
@@ -258,17 +290,24 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
                   </th>
                 );
               })}
-              <th className={`${thNumCls} whitespace-nowrap`}>출근</th>
-              <th className={`${thNumCls} whitespace-nowrap`}>공수</th>
-              <th className={`${thNumCls} whitespace-nowrap`}>인건비</th>
-              <th className={`${thNumCls} whitespace-nowrap`}>식대</th>
-              <th className={`${thNumCls} whitespace-nowrap`}>기타</th>
+              {['출근', '공수', '인건비', '식대', '기타'].map((label, i) => (
+                <th
+                  key={label}
+                  className={`${thNumCls} ${stickyR} whitespace-nowrap`}
+                  style={{ right: sumRight(i), width: SUM_W, minWidth: SUM_W }}
+                >
+                  {label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {people.map((p) => (
               <tr key={p.key} className="border-b border-border">
-                <td className="sticky left-0 z-10 whitespace-nowrap bg-card px-3 py-1.5 text-[13px] font-semibold text-text-strong">
+                <td
+                  className={`${stickyL} left-0 whitespace-nowrap px-3 py-1.5 text-[13px] font-semibold text-text-strong`}
+                  style={{ width: NAME_W, minWidth: NAME_W }}
+                >
                   {p.name}
                   {!p.employeeId &&
                     (isAdmin ? (
@@ -288,7 +327,12 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
                     ))}
                   {p.draft > 0 && <span className="ml-1 text-[11px] font-bold text-warning">임시 {p.draft}</span>}
                 </td>
-                <td className="whitespace-nowrap px-3 py-1.5 text-[12.5px] text-text-sub">{p.type}</td>
+                <td
+                  className={`${stickyL} whitespace-nowrap px-3 py-1.5 text-[12.5px] text-text-sub`}
+                  style={{ left: NAME_W, width: TYPE_W, minWidth: TYPE_W }}
+                >
+                  {p.type}
+                </td>
                 {Array.from({ length: days }, (_, i) => i + 1).map((d) => {
                   const date = dayKey(month, d);
                   const cell = cells.get(`${p.key}|${date}`);
@@ -318,11 +362,15 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
                     </td>
                   );
                 })}
-                <td className={tdNumCls}>{p.presentDays || ''}</td>
-                <td className={tdNumCls}>{p.manDays ? formatNumber(p.manDays) : ''}</td>
-                <td className={tdNumCls}>{p.laborCost ? formatNumber(p.laborCost) : ''}</td>
-                <td className={tdNumCls}>{p.mealCost ? formatNumber(p.mealCost) : ''}</td>
-                <td className={tdNumCls}>{p.etcCost ? formatNumber(p.etcCost) : ''}</td>
+                {[p.presentDays, p.manDays, p.laborCost, p.mealCost, p.etcCost].map((v, i) => (
+                  <td
+                    key={i}
+                    className={`${tdNumCls} ${stickyR}`}
+                    style={{ right: sumRight(i), width: SUM_W, minWidth: SUM_W }}
+                  >
+                    {v ? formatNumber(v) : ''}
+                  </td>
+                ))}
               </tr>
             ))}
             {people.length === 0 && (
@@ -335,13 +383,23 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
           </tbody>
           <tfoot>
             <tr className="border-t border-border bg-hover/40">
-              <td className="sticky left-0 z-10 bg-card px-3 py-2 text-[13px] font-extrabold text-text-strong">합계</td>
-              <td colSpan={days + 1} />
-              <td className={`${tdNumCls} font-extrabold`}>{totals.presentDays || ''}</td>
-              <td className={`${tdNumCls} font-extrabold`}>{totals.manDays ? formatNumber(totals.manDays) : ''}</td>
-              <td className={`${tdNumCls} font-extrabold`}>{totals.laborCost ? formatNumber(totals.laborCost) : ''}</td>
-              <td className={`${tdNumCls} font-extrabold`}>{totals.mealCost ? formatNumber(totals.mealCost) : ''}</td>
-              <td className={`${tdNumCls} font-extrabold`}>{totals.etcCost ? formatNumber(totals.etcCost) : ''}</td>
+              <td
+                className={`${stickyL} left-0 px-3 py-2 text-[13px] font-extrabold text-text-strong`}
+                style={{ width: NAME_W, minWidth: NAME_W }}
+              >
+                합계
+              </td>
+              <td className={stickyL} style={{ left: NAME_W, width: TYPE_W, minWidth: TYPE_W }} />
+              <td colSpan={days} />
+              {[totals.presentDays, totals.manDays, totals.laborCost, totals.mealCost, totals.etcCost].map((v, i) => (
+                <td
+                  key={i}
+                  className={`${tdNumCls} ${stickyR} font-extrabold`}
+                  style={{ right: sumRight(i), width: SUM_W, minWidth: SUM_W }}
+                >
+                  {v ? formatNumber(v) : ''}
+                </td>
+              ))}
             </tr>
           </tfoot>
         </table>
