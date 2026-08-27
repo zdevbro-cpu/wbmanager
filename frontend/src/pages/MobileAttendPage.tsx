@@ -53,7 +53,9 @@ export function MobileAttendPage() {
   // 앞 카메라를 화면 안에서 직접 연다. 사진 앱으로 넘기면 기기마다 뒤 카메라가 열린다.
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const facingRef = useRef<'user' | 'environment'>('user');
   const [camOpen, setCamOpen] = useState(false);
+  const [facingNote, setFacingNote] = useState('');
 
   const [place, setPlace] = useState<{ lat: number; lng: number } | null>(null);
   const [placeNote, setPlaceNote] = useState('');
@@ -114,14 +116,42 @@ export function MobileAttendPage() {
 
   useEffect(() => stopCam, [stopCam]);
 
-  const openCam = async () => {
-    setError('');
+  // 앞 카메라를 확실히 잡는다.
+  // ideal만 주면 기기에 따라 뒤 카메라가 열린다. exact로 먼저 조르고,
+  // 그래도 아니면 기기 목록에서 앞 카메라를 찾아 그 기기를 지정한다.
+  const getCam = async (facing: 'user' | 'environment') => {
+    const size = { width: { ideal: 1280 }, height: { ideal: 960 } };
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'user' }, width: { ideal: 1280 }, height: { ideal: 960 } },
-        audio: false,
-      });
+      return await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: facing }, ...size }, audio: false });
+    } catch {
+      /* exact를 못 맞추는 기기가 있다 — 아래로 내려간다 */
+    }
+
+    // 이름으로 앞·뒤를 가려 그 기기를 직접 지정한다.
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter((d) => d.kind === 'videoinput');
+      const wanted = facing === 'user' ? /front|user|전면|셀피|selfie/i : /back|rear|environment|후면/i;
+      const hit = cams.find((d) => wanted.test(d.label));
+      if (hit) {
+        return await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: hit.deviceId }, ...size }, audio: false });
+      }
+    } catch {
+      /* 기기 목록을 못 읽는 경우 — 마지막 방법으로 넘어간다 */
+    }
+
+    return navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, ...size }, audio: false });
+  };
+
+  const openCam = async (facing: 'user' | 'environment' = facingRef.current) => {
+    setError('');
+    stopCam();
+    try {
+      const stream = await getCam(facing);
+      facingRef.current = facing;
       streamRef.current = stream;
+      // 실제로 어느 쪽이 열렸는지 — 화면에 그대로 알려 준다.
+      setFacingNote(stream.getVideoTracks()[0]?.getSettings().facingMode ?? '');
       setCamOpen(true);
     } catch {
       // 카메라를 열 수 없는 기기·브라우저에서는 사진 앱으로 넘긴다.
@@ -339,8 +369,18 @@ export function MobileAttendPage() {
             playsInline
             muted
             className="mb-2 w-full rounded-[12px] border border-border"
-            style={{ transform: 'scaleX(-1)' }}
+            style={{ transform: facingNote === 'environment' ? undefined : 'scaleX(-1)' }}
           />
+          <div className="mb-2 flex items-center gap-2 text-[12.5px] text-text-sub">
+            <span>{facingNote === 'environment' ? '뒤 카메라' : '앞 카메라'}</span>
+            <button
+              type="button"
+              onClick={() => openCam(facingRef.current === 'user' ? 'environment' : 'user')}
+              className="underline"
+            >
+              카메라 전환
+            </button>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -361,7 +401,7 @@ export function MobileAttendPage() {
       ) : (
         <button
           type="button"
-          onClick={openCam}
+          onClick={() => openCam('user')}
           className="mb-3 flex w-full items-center justify-center gap-2 rounded-[12px] border border-primary bg-primary/10 px-3 py-4 text-[16px] font-bold text-primary"
         >
           <Camera size={18} /> {photo ? '다시 찍기' : '셀카 찍기'}
