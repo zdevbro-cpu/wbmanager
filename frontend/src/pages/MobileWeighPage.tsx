@@ -102,6 +102,12 @@ export function MobileWeighPage() {
   }, [loadToday]);
   const net = Number(grossWeight || 0) - Number(tareWeight || 0) - Number(lossWeight || 0);
 
+  // 임직원과 외부 운전자를 한 목록으로 본다. 화면의 운전자 선택과 같은 곳이다.
+  const driverOptions = [
+    ...employees.map((e) => ({ name: e.name, phone: e.phone ?? '' })),
+    ...drivers.filter((d) => !employees.some((e) => e.name === d.name)).map((d) => ({ name: d.name, phone: d.phone ?? '' })),
+  ];
+
   // 사진에서 읽은 값으로 빈 칸만 채운다. 손으로 고친 값은 건드리지 않는다.
   const apply = (f: OcrFields) => {
     if (f.weighDate) setDate(f.weighDate);
@@ -111,13 +117,20 @@ export function MobileWeighPage() {
     if (f.tareWeight != null && !tareWeight) setTareWeight(String(f.tareWeight));
     if (f.driverName && !driverName) {
       setDriverName(f.driverName);
-      const known = employees.find((e) => e.name === f.driverName) ?? drivers.find((d) => d.name === f.driverName);
+      const known = driverOptions.find((d) => d.name === f.driverName);
       if (known?.phone && !driverPhone) setDriverPhone(formatPhone(known.phone));
     }
     if (f.itemName && !itemCode) {
       const matched = items.find((i) => i.itemName === f.itemName);
       if (matched) setItemCode(matched.itemCode);
     }
+  };
+
+  // 이름을 고르거나 적으면 등록된 연락처를 채운다. 이미 적어 둔 번호는 건드리지 않는다.
+  const pickDriver = (name: string) => {
+    setDriverName(name);
+    const known = driverOptions.find((d) => d.name === name.trim());
+    if (known?.phone) setDriverPhone(formatPhone(known.phone));
   };
 
   const takePhoto = (picked: File[]) => {
@@ -361,7 +374,20 @@ export function MobileWeighPage() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>운전자</label>
-            <input value={driverName} onChange={(e) => setDriverName(e.target.value)} className={field} />
+            <input
+              list="mobile-driver-options"
+              value={driverName}
+              onChange={(e) => pickDriver(e.target.value)}
+              placeholder="고르거나 직접 입력"
+              className={field}
+            />
+            <datalist id="mobile-driver-options">
+              {driverOptions.map((d) => (
+                <option key={d.name} value={d.name}>
+                  {d.phone}
+                </option>
+              ))}
+            </datalist>
           </div>
           <div>
             <label className={labelCls}>연락처</label>
