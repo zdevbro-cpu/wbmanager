@@ -338,7 +338,7 @@ function PriceRegisterForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="mb-3 flex w-full flex-wrap items-center gap-2 rounded-[12px] border border-border bg-card px-4 py-2.5"
+      className="mb-3 flex w-full items-center gap-2 rounded-[12px] border border-border bg-card px-4 py-2.5"
     >
       <span className="mr-1 whitespace-nowrap text-[13px] font-extrabold text-text-strong">품목 추정단가 등록</span>
       <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} w-[160px] min-w-0`}>
@@ -372,7 +372,12 @@ function PriceRegisterForm({
         {busy ? '등록 중...' : '등록'}
       </button>
       {note && (
-        <span className={`text-[12.5px] ${note.tone === 'ok' ? 'text-success' : 'text-danger'}`}>{note.text}</span>
+        <span
+          title={note.text}
+          className={`min-w-0 flex-1 truncate text-[12.5px] ${note.tone === 'ok' ? 'text-success' : 'text-danger'}`}
+        >
+          {note.text}
+        </span>
       )}
     </form>
   );
