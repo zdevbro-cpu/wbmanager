@@ -341,7 +341,13 @@ function PriceRegisterForm({
       className="mb-3 flex w-full items-center gap-2 rounded-[12px] border border-border bg-card px-4 py-2.5"
     >
       <span className="mr-1 whitespace-nowrap text-[13px] font-extrabold text-text-strong">품목 추정단가 등록</span>
-      <select value={itemCode} onChange={(e) => setItemCode(e.target.value)} className={`${inputCls} w-[160px] min-w-0`}>
+      {/* 칸마다 필요한 폭이 다르다 — 이름은 길고, 단가와 날짜는 자릿수가 정해져 있다.
+          날짜칸은 감싼 상자에 폭을 줘야 한다. 안쪽 입력에만 주면 상자가 눌려 글자가 잘린다. */}
+      <select
+        value={itemCode}
+        onChange={(e) => setItemCode(e.target.value)}
+        className={`${inputCls} min-w-[150px] flex-1`}
+      >
         <option value="">품목 선택</option>
         {items.map((i) => (
           <option key={i.itemCode} value={i.itemCode}>
@@ -349,13 +355,14 @@ function PriceRegisterForm({
           </option>
         ))}
       </select>
-      <NumberInput
-        placeholder="단가"
-        value={price}
-        onChange={setPrice}
-        className={`${inputCls} tabular w-[110px] min-w-0 text-right`}
-      />
-      <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} w-[170px] min-w-0`}>
+      <div className="w-[130px] shrink-0">
+        <NumberInput placeholder="단가" value={price} onChange={setPrice} className={`${inputCls} tabular text-right`} />
+      </div>
+      <select
+        value={projectId}
+        onChange={(e) => setProjectId(e.target.value)}
+        className={`${inputCls} min-w-[170px] flex-1`}
+      >
         <option value="">전체 적용</option>
         {projects.map((p) => (
           <option key={p.id} value={p.id}>
@@ -363,11 +370,9 @@ function PriceRegisterForm({
           </option>
         ))}
       </select>
-      <DateField
-        value={effectiveDate}
-        onChange={(e) => setEffectiveDate(e.target.value)}
-        className={`${inputCls} w-[150px] min-w-0`}
-      />
+      <div className="w-[150px] shrink-0">
+        <DateField value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} />
+      </div>
       <button type="submit" disabled={busy} className={`${primaryBtnCls} shrink-0 whitespace-nowrap`}>
         {busy ? '등록 중...' : '등록'}
       </button>
