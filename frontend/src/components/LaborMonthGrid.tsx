@@ -8,6 +8,7 @@ import { FormModal } from './FormModal';
 import { SearchSelect } from './SearchSelect';
 import { NumberInput } from './ui/NumberInput';
 import { formatNumber } from '../lib/number';
+import type { Employee } from '../types';
 import { kstToday, kstStamp } from '../lib/datetime';
 import {
   cardCls,
@@ -400,6 +401,7 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
         <DayEditor
           key={`${editing.employeeId}|${editing.date}`}
           info={editing}
+          person={employees.find((e) => e.id === editing.employeeId)}
           row={cells.get(`${editing.employeeId}|${editing.date}`)}
           projects={projects}
           defaultProjectId={defaultProjectId}
@@ -419,6 +421,7 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
 // 하루 한 칸 — 근태 또는 공수, 그리고 그 사람에게 그날 든 비용.
 function DayEditor({
   info,
+  person,
   row,
   projects,
   defaultProjectId,
@@ -428,6 +431,7 @@ function DayEditor({
   onSaved,
 }: {
   info: { employeeId: string; name: string; type: string; date: string };
+  person?: Employee;
   row?: LaborRow;
   projects: Project[];
   defaultProjectId: string;
@@ -441,9 +445,9 @@ function DayEditor({
     projectId: row?.projectId ?? defaultProjectId ?? '',
     attendCode: row?.attendCode ?? (regular ? '출근' : ''),
     totalManDays: row?.totalManDays ?? (regular ? '' : '1'),
-    unitCost: row?.unitCost ?? '',
-    mealCost: row?.mealCost ?? '',
-    suppliesCost: row?.suppliesCost ?? '',
+    unitCost: row?.unitCost ?? person?.unitCost ?? '',
+    mealCost: row?.mealCost ?? person?.mealCost ?? '',
+    suppliesCost: row?.suppliesCost ?? person?.etcCost ?? '',
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

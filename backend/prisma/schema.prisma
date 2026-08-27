@@ -256,9 +256,9 @@ model Inbound {
   storageZone    String?     @map("storage_zone")
   memo           String?     @map("memo") // 비고
   // 모바일에서 올린 건은 임시저장으로 들어온다. 사무실에서 확인하고 정상등록으로 바꾼다.
-  isDraft         Boolean   @default(false) @map("is_draft")
+  isDraft        Boolean     @default(false) @map("is_draft")
   // 누가 올렸는지. 모바일에서 "오늘 내가 올린 건"을 뽑는 데 쓴다.
-  createdById     String?   @map("created_by_id")
+  createdById    String?     @map("created_by_id")
   createdAt      DateTime    @default(now()) @map("created_at")
   deletedAt      DateTime?   @map("deleted_at") // 소프트 삭제
 
@@ -291,9 +291,9 @@ model WasteInbound {
   netWeight      Decimal     @map("net_weight") @db.Decimal(12, 3) // 입고량 = 총중량 - 공차중량 - 감량
   memo           String?     @map("memo")
   // 모바일에서 올린 건은 임시저장으로 들어온다. 사무실에서 확인하고 정상등록으로 바꾼다.
-  isDraft         Boolean   @default(false) @map("is_draft")
+  isDraft        Boolean     @default(false) @map("is_draft")
   // 누가 올렸는지. 모바일에서 "오늘 내가 올린 건"을 뽑는 데 쓴다.
-  createdById     String?   @map("created_by_id")
+  createdById    String?     @map("created_by_id")
   createdAt      DateTime    @default(now()) @map("created_at")
   deletedAt      DateTime?   @map("deleted_at") // 소프트 삭제
 
@@ -382,9 +382,9 @@ model OutboundSale {
   isPaid           Boolean    @default(false) @map("is_paid")
   paidDate         DateTime?  @map("paid_date") // 입금일
   // 모바일에서 올린 건은 임시저장으로 들어온다. 사무실에서 확인하고 정상등록으로 바꾼다.
-  isDraft         Boolean   @default(false) @map("is_draft")
+  isDraft          Boolean    @default(false) @map("is_draft")
   // 누가 올렸는지. 모바일에서 "오늘 내가 올린 건"을 뽑는 데 쓴다.
-  createdById     String?   @map("created_by_id")
+  createdById      String?    @map("created_by_id")
   createdAt        DateTime   @default(now()) @map("created_at")
   deletedAt        DateTime?  @map("deleted_at") // 소프트 삭제
 
@@ -430,9 +430,9 @@ model WasteOutbound {
   handoverDate    DateTime?   @map("handover_date") // 인계일
   olbaroMemo      String?     @map("olbaro_memo") // 기준업체량 등 메모
   // 모바일에서 올린 건은 임시저장으로 들어온다. 사무실에서 확인하고 정상등록으로 바꾼다.
-  isDraft         Boolean   @default(false) @map("is_draft")
+  isDraft         Boolean     @default(false) @map("is_draft")
   // 누가 올렸는지. 모바일에서 "오늘 내가 올린 건"을 뽑는 데 쓴다.
-  createdById     String?   @map("created_by_id")
+  createdById     String?     @map("created_by_id")
   createdAt       DateTime    @default(now()) @map("created_at")
   deletedAt       DateTime?   @map("deleted_at") // 소프트 삭제
 
@@ -503,9 +503,9 @@ model Labor {
   faceVerdict     String?   @map("face_verdict")
   faceNote        String?   @map("face_note")
 
-  settleMonth String?  @map("settle_month") // 'YYYY-MM'
-  isDraft     Boolean  @default(false) @map("is_draft") // 현장에서 올라와 사무실 확인을 기다리는 건
-  createdById String?  @map("created_by_id")
+  settleMonth String? @map("settle_month") // 'YYYY-MM'
+  isDraft     Boolean @default(false) @map("is_draft") // 현장에서 올라와 사무실 확인을 기다리는 건
+  createdById String? @map("created_by_id")
 
   attachments Attachment[]
 
@@ -582,6 +582,12 @@ model Employee {
   department     String?   @map("department")
   hireDate       DateTime? @map("hire_date")
   createdAt      DateTime  @default(now()) @map("created_at")
+
+  // 정규직 외 인원의 품값 기준 — 승인 자리에서 한 번 적어 두면 공수표가 이 값으로 채워진다.
+  // 그날 사정이 다르면 공수표에서 고칠 수 있고, 고친 값이 그 하루에만 남는다.
+  unitCost Decimal? @map("unit_cost") @db.Decimal(14, 2) // 1공수 단가
+  mealCost Decimal? @map("meal_cost") @db.Decimal(14, 2) // 하루 식대
+  etcCost  Decimal? @map("etc_cost") @db.Decimal(14, 2) // 하루 기타비용
 
   // 출퇴근 셀카를 견줄 기준 사진
   photoDriveId  String?   @map("photo_drive_id")

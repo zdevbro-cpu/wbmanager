@@ -8,6 +8,7 @@ import { EMPLOYMENT_TYPES } from './EmployeeManagementPage';
 import { FormModal } from '../components/FormModal';
 import { EntityDocuments } from '../components/EntityDocuments';
 import { QrCode } from '../components/QrCode';
+import { NumberInput } from '../components/ui/NumberInput';
 import { Badge } from '../components/ui/Badge';
 import { primaryBtnCls, outlineBtnCls, inputCls } from '../components/ui/classes';
 import type { Employee, EmployeeCertification, EmployeeTraining } from '../types';
@@ -300,6 +301,10 @@ function BasicInfoForm({
   const [position, setPosition] = useState(emp.position ?? '');
   const [hireDate, setHireDate] = useState(emp.hireDate ? emp.hireDate.slice(0, 10) : '');
   const [employmentType, setEmploymentType] = useState(emp.employmentType ?? '정규직');
+  // 정규직 외 인원의 품값 기준 — 공수표가 이 값으로 채워진다.
+  const [unitCost, setUnitCost] = useState(emp.unitCost ?? '');
+  const [mealCost, setMealCost] = useState(emp.mealCost ?? '');
+  const [etcCost, setEtcCost] = useState(emp.etcCost ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -369,7 +374,17 @@ function BasicInfoForm({
     setError('');
     setSaving(true);
     try {
-      await api.patch(`/api/employees/${emp.id}`, { name, phone, department, position, hireDate, employmentType });
+      await api.patch(`/api/employees/${emp.id}`, {
+        name,
+        phone,
+        department,
+        position,
+        hireDate,
+        employmentType,
+        unitCost,
+        mealCost,
+        etcCost,
+      });
       onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장하지 못했습니다.');
@@ -440,6 +455,24 @@ function BasicInfoForm({
             ))}
           </datalist>
         </div>
+
+        {/* 정규직 외 인원만 품값을 정해 둔다 — 정규직은 근태로 세고 단가를 쓰지 않는다. */}
+        {employmentType !== '정규직' && (
+          <>
+            <div>
+              <label className={label}>1공수 단가(원)</label>
+              <NumberInput value={unitCost} onChange={setUnitCost} />
+            </div>
+            <div>
+              <label className={label}>하루 식대(원)</label>
+              <NumberInput value={mealCost} onChange={setMealCost} />
+            </div>
+            <div>
+              <label className={label}>하루 기타비용(원)</label>
+              <NumberInput value={etcCost} onChange={setEtcCost} />
+            </div>
+          </>
+        )}
       </div>
 
       {/* 기준 사진 — 현장에서 찍은 셀카와 견주는 데 쓴다. */}

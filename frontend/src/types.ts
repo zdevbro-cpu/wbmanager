@@ -397,6 +397,10 @@ export interface Employee {
   companyName?: string | null;
   department?: string | null;
   hireDate?: string | null;
+  /** 정규직 외 인원의 품값 기준 — 공수표가 이 값으로 채워진다. */
+  unitCost?: string | null;
+  mealCost?: string | null;
+  etcCost?: string | null;
   certifications?: EmployeeCertification[];
   trainings?: EmployeeTraining[];
   /** 출퇴근 셀카를 견줄 기준 사진 */

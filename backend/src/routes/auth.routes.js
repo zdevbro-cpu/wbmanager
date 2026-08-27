@@ -74,7 +74,7 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
 
 // 관리자: 승인/거절
 router.patch('/users/:id/status', requireAuth, requireAdmin, async (req, res) => {
-  const { status, employeeId, employmentType } = req.body;
+  const { status, employeeId, employmentType, unitCost, mealCost, etcCost } = req.body;
   if (!['approved', 'rejected', 'pending'].includes(status)) {
     return res.status(400).json({ error: 'status는 approved/rejected/pending 중 하나여야 합니다.' });
   }
@@ -87,21 +87,34 @@ router.patch('/users/:id/status', requireAuth, requireAdmin, async (req, res) =>
   // "관리자에게 연결을 요청하세요"만 뜬다. 승인과 동시에 사람을 잇는다.
   // 승인하는 사람이 고른 임직원·고용 구분을 그대로 쓴다.
   const linked =
-    status === 'approved' && !user.employeeId ? await linkEmployee(user, { employeeId, employmentType }) : null;
+    status === 'approved' && !user.employeeId ? await linkEmployee(user, { employeeId, employmentType, unitCost, mealCost, etcCost }) : null;
   res.json(linked ?? user);
 });
 
 // 같은 이름의 임직원이 있으면 그 사람으로, 없으면 계정 정보로 한 명 만들어 잇는다.
 // 승인은 "이 사람을 들이겠다"는 결정이므로, 임직원 기록이 없다는 이유로 막지 않는다.
 // 고용 구분은 기본값으로 들어가니 임직원 관리에서 확인해 고친다.
+// 승인 화면에서 적은 품값. 적지 않은 항목은 건드리지 않는다.
+function costPatch(opts) {
+  const data = {};
+  for (const k of ['unitCost', 'mealCost', 'etcCost']) {
+    if (opts[k] !== undefined) data[k] = opts[k] === '' || opts[k] === null ? null : Number(opts[k]);
+  }
+  return data;
+}
+
 async function linkEmployee(user, opts = {}) {
   // 승인 화면에서 사람을 고른 경우 — 그 사람으로 잇는다. 구분을 함께 골랐으면 그것도 반영한다.
   if (opts.employeeId) {
     const picked = await prisma.employee.findUnique({ where: { id: opts.employeeId } });
     if (!picked) return null;
-    if (opts.employmentType && opts.employmentType !== picked.employmentType) {
-      await prisma.employee.update({ where: { id: picked.id }, data: { employmentType: opts.employmentType } });
-    }
+    const patch = {
+      ...(opts.employmentType && opts.employmentType !== picked.employmentType
+        ? { employmentType: opts.employmentType }
+        : {}),
+      ...costPatch(opts),
+    };
+    if (Object.keys(patch).length) await prisma.employee.update({ where: { id: picked.id }, data: patch });
     return prisma.appUser.update({ where: { id: user.id }, data: { employeeId: picked.id } });
   }
 
@@ -110,9 +123,13 @@ async function linkEmployee(user, opts = {}) {
 
   const found = await prisma.employee.findFirst({ where: { name } });
   if (found) {
-    if (opts.employmentType && opts.employmentType !== found.employmentType) {
-      await prisma.employee.update({ where: { id: found.id }, data: { employmentType: opts.employmentType } });
-    }
+    const patch = {
+      ...(opts.employmentType && opts.employmentType !== found.employmentType
+        ? { employmentType: opts.employmentType }
+        : {}),
+      ...costPatch(opts),
+    };
+    if (Object.keys(patch).length) await prisma.employee.update({ where: { id: found.id }, data: patch });
     return prisma.appUser.update({ where: { id: user.id }, data: { employeeId: found.id } });
   }
 
@@ -123,6 +140,7 @@ async function linkEmployee(user, opts = {}) {
       empCode: await nextEmpCode(),
       // 승인하는 사람이 고른 구분. 고르지 않았으면 기본값이 들어간다.
       ...(opts.employmentType ? { employmentType: opts.employmentType } : {}),
+      ...costPatch(opts),
     },
   });
 

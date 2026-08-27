@@ -116,6 +116,22 @@ router.put('/cell', async (req, res) => {
     const existing = await prisma.labor.findFirst({ where: { employeeId, workDate: day } });
     const data = buildCell(req.body, month, day);
 
+    // 단가·식대·기타비용을 적지 않았으면 그 사람에게 정해 둔 값으로 채운다.
+    // 승인 자리에서 한 번 적어 두면 공수표에서는 날짜와 근태만 고르면 되게 하려는 것이다.
+    const person = await prisma.employee.findUnique({ where: { id: employeeId } });
+    if (person) {
+      if (data.unitCost == null && person.unitCost != null) data.unitCost = person.unitCost;
+      if (data.mealCost == null && person.mealCost != null) data.mealCost = person.mealCost;
+      if (data.suppliesCost == null && person.etcCost != null) data.suppliesCost = person.etcCost;
+      if (data.totalManDays != null && data.unitCost != null && req.body.laborCost == null) {
+        data.laborCost = Math.round(Number(data.totalManDays) * Number(data.unitCost));
+      }
+      if (req.body.totalAmount == null) {
+        data.totalAmount =
+          Number(data.laborCost ?? 0) + Number(data.mealCost ?? 0) + Number(data.suppliesCost ?? 0) || null;
+      }
+    }
+
     const row = existing
       ? await prisma.labor.update({ where: { id: existing.id }, data })
       : await prisma.labor.create({ data: { ...data, createdById: req.appUser?.id ?? null } });
