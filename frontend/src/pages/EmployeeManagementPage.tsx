@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Users, Plus, Trash2, CheckCircle2, Eye } from 'lucide-react';
+import { Users, Plus, Trash2, CheckCircle2, Eye, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
 import { formatPhone } from '../lib/phone';
 import { useCommonCodes } from '../hooks/useMasters';
@@ -13,6 +13,7 @@ import {
   primaryBtnCls,
   outlineBtnCls,
   inputCls,
+  cardCls,
   tableWrapCls,
   thCls,
   tdCls,
@@ -97,6 +98,11 @@ export const EMPLOYMENT_TYPES = ['정규직', '프리랜서', '현장직', '타�
 
 export function EmployeeManagementPage({ embedded = false }: { embedded?: boolean }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [q, setQ] = useState('');
+  const [department, setDepartment] = useState('');
+  const [position, setPosition] = useState('');
+  const [employmentType, setEmploymentType] = useState('');
+  const [expiring, setExpiring] = useState('');
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<Employee | null>(null);
 
@@ -115,17 +121,110 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
     reload();
   }, [reload]);
 
+  // 자격증 만료·교육 예정이 30일 안쪽인 사람을 찾는다. 알림 화면과 같은 기준이다.
+  const hasExpiring = (emp: Employee) => {
+    const soon = (v?: string | null) => {
+      const left = daysLeft(v);
+      return left != null && left <= 30;
+    };
+    return (
+      (emp.certifications ?? []).some((c) => soon(c.expiryDate)) ||
+      (emp.trainings ?? []).some((t) => soon(t.nextDueDate))
+    );
+  };
+
+  const visible = employees.filter((emp) => {
+    const keyword = q.trim().toLowerCase();
+    if (keyword) {
+      const hay = [emp.empCode, emp.name, emp.phone, emp.companyName].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(keyword)) return false;
+    }
+    if (department && emp.department !== department) return false;
+    if (position && emp.position !== position) return false;
+    if (employmentType && emp.employmentType !== employmentType) return false;
+    if (expiring === 'true' && !hasExpiring(emp)) return false;
+    if (expiring === 'false' && hasExpiring(emp)) return false;
+    return true;
+  });
+
+  const used = (pick: (e: Employee) => string | null | undefined) =>
+    [...new Set(employees.map(pick).filter(Boolean))].sort() as string[];
+
   return (
     <div>
       <div className="mb-5 flex items-center gap-2">
         {!embedded && <Users size={20} className="text-primary" />}
         {!embedded && <h1 className={pageTitleCls}>임직원 관리</h1>}
         <span className={embedded ? sectionTitleCls : 'ml-1 text-[13px] text-text-sub'}>
-          {embedded ? '임직원 목록' : `${employees.length}명`}
+          {embedded
+            ? '임직원 목록'
+            : visible.length === employees.length
+              ? `${employees.length}명`
+              : `${visible.length}명 / 전체 ${employees.length}명`}
         </span>
         <button type="button" onClick={() => setOpen(true)} className={`${primaryBtnCls} ml-auto`}>
           <Plus size={15} /> 임직원 등록
         </button>
+      </div>
+
+      <div
+        className={`${cardCls} mb-4 grid items-center gap-2 px-4 py-2.5`}
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}
+      >
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="사번 · 성명 · 연락처"
+          className={`${inputCls} w-full min-w-0`}
+        />
+        <select value={department} onChange={(e) => setDepartment(e.target.value)} className={`${inputCls} w-full min-w-0`}>
+          <option value="">부서 전체</option>
+          {used((e) => e.department).map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
+        <select value={position} onChange={(e) => setPosition(e.target.value)} className={`${inputCls} w-full min-w-0`}>
+          <option value="">직급 전체</option>
+          {used((e) => e.position).map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
+        <select
+          value={employmentType}
+          onChange={(e) => setEmploymentType(e.target.value)}
+          className={`${inputCls} w-full min-w-0`}
+        >
+          <option value="">구분 전체</option>
+          {EMPLOYMENT_TYPES.map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
+        <select value={expiring} onChange={(e) => setExpiring(e.target.value)} className={`${inputCls} w-full min-w-0`}>
+          <option value="">자격·교육 전체</option>
+          <option value="true">30일 내 만료·예정</option>
+          <option value="false">해당 없음</option>
+        </select>
+        {(q || department || position || employmentType || expiring) && (
+          <button
+            type="button"
+            onClick={() => {
+              setQ('');
+              setDepartment('');
+              setPosition('');
+              setEmploymentType('');
+              setExpiring('');
+            }}
+            className={`${outlineBtnCls} h-[38px] w-full min-w-0 justify-center px-2`}
+          >
+            <RotateCcw size={15} /> 초기화
+          </button>
+        )}
       </div>
 
       <div className={`${tableWrapCls} overflow-x-auto`}>
@@ -145,7 +244,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
             </tr>
           </thead>
           <tbody>
-            {employees.map((emp) => (
+            {visible.map((emp) => (
               <tr key={emp.id} className={trCls}>
                 <td className={`${tdCls} tabular whitespace-nowrap`}>{emp.empCode ?? '-'}</td>
                 <td className={tdCls}>{emp.name}</td>
