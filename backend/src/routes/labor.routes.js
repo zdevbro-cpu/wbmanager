@@ -5,6 +5,7 @@ import { rememberCodes } from '../lib/rememberCodes.js';
 import { attendManDays } from '../lib/attendCode.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { purgeMonthSelfies, purgeLaborSelfies } from '../lib/attendance.js';
+import { buildLaborWorkbook } from '../lib/laborSheet.js';
 
 const router = Router();
 
@@ -47,6 +48,25 @@ router.get('/', async (req, res) => {
     orderBy: [{ workDate: 'desc' }, { workerName: 'asc' }],
   });
   res.json(rows);
+});
+
+// 월 공수표 엑셀 — A4 가로 한 장에 그 달 전체가 들어간다.
+router.get('/export', async (req, res) => {
+  const { month, projectId } = req.query;
+  if (!MONTH.test(month ?? '')) return res.status(400).json({ error: 'month는 YYYY-MM 형식입니다.' });
+  try {
+    const { wb, fileName } = await buildLaborWorkbook(month, projectId || undefined);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="labor.xlsx"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    );
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (e) {
+    console.error('[labor] 엑셀 생성 실패:', e);
+    res.status(500).json({ error: '엑셀을 만들지 못했습니다.' });
+  }
 });
 
 // 그 달이 열려 있는지 — 화면에서 입력을 잠글지 정하는 값이다.
