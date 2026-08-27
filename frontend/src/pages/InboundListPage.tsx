@@ -79,6 +79,7 @@ export function InboundListPage() {
         suggestions={suggestions}
         onAdd={() => setOpen(true)}
         onDelete={remove}
+        reload={load}
         editForm={(row, done) => (
           <InboundFormPage
             embedded

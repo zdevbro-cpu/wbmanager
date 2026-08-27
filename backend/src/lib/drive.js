@@ -49,6 +49,17 @@ export async function uploadToDrive({ buffer, fileName, mimeType }) {
   };
 }
 
+// 잘못 올린 파일을 치운다. 영구 삭제가 아니라 휴지통으로 보내
+// 실수로 지운 경우 드라이브에서 되살릴 수 있게 한다.
+export async function trashInDrive(fileId) {
+  const drive = getDriveClient();
+  await drive.files.update({
+    fileId,
+    requestBody: { trashed: true },
+    supportsAllDrives: true,
+  });
+}
+
 // DMS 열람·다운로드는 앱을 거친다 — 드라이브 링크를 화면에 노출하지 않기 위해서다.
 // 설계 근거: docs/dms-design.md 1장 원칙 2.
 export async function downloadFromDrive(fileId) {

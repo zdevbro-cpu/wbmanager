@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { prisma } from '../lib/prisma.js';
-import { uploadToDrive, downloadFromDrive } from '../lib/drive.js';
+import { uploadToDrive, downloadFromDrive, trashInDrive } from '../lib/drive.js';
 import { decodeUploadName } from '../lib/fileName.js';
 
 const router = Router();
@@ -64,6 +64,25 @@ router.get('/:id/content', async (req, res) => {
     console.error('[attachment] 내려받기 실패:', err.message);
     res.status(502).json({ error: '드라이브에서 파일을 가져오지 못했습니다.' });
   }
+});
+
+// 잘못 올린 증빙을 치운다. 파일을 바꿔 붙이려면 지울 수 있어야 한다.
+// 드라이브 파일은 휴지통으로 보내고, 지우지 못해도 목록에서는 사라지게 한다.
+router.delete('/:id', async (req, res) => {
+  const item = await prisma.attachment.findUnique({ where: { id: req.params.id } });
+  if (!item) return res.status(404).json({ error: '첨부를 찾을 수 없습니다.' });
+
+  if (item.driveFileId) {
+    try {
+      await trashInDrive(item.driveFileId);
+    } catch (err) {
+      // 드라이브에서 이미 지워졌거나 권한이 없을 수 있다. 기록만 남기고 연결은 끊는다.
+      console.error('[attachment] 드라이브 휴지통 이동 실패:', err.message);
+    }
+  }
+
+  await prisma.attachment.delete({ where: { id: item.id } });
+  res.json({ ok: true });
 });
 
 export default router;

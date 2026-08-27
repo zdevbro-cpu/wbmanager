@@ -93,6 +93,7 @@ export function OutboundListPage() {
         suggestions={suggestions}
         onAdd={() => setOpen(true)}
         onDelete={remove}
+        reload={load}
         editForm={(row, done) => (
           <OutboundFormPage
             embedded
