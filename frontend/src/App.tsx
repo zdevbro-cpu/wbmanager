@@ -20,6 +20,7 @@ import { AggregationPage } from './pages/AggregationPage';
 import { DailyReportPage } from './pages/DailyReportPage';
 import { TransportCostPage } from './pages/TransportCostPage';
 import { LaborPage } from './pages/LaborPage';
+import { LaborPlanPage } from './pages/LaborPlanPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { PnlPage } from './pages/PnlPage';
 import { WasteManagementPage } from './pages/WasteManagementPage';
@@ -63,6 +64,7 @@ function Gate() {
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/transports" element={<TransportCostPage />} />
         <Route path="/labors" element={<LaborPage />} />
+        <Route path="/labor-plan" element={<LaborPlanPage />} />
         <Route path="/pnl" element={<PnlPage />} />
         <Route path="/waste" element={<WasteManagementPage />} />
         <Route path="/assets" element={<AssetManagementPage />} />

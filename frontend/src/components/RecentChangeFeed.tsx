@@ -39,7 +39,7 @@ const TARGET_LABEL: Record<string, string> = {
   ledger: '통합 원장 조회',
   transports: '운반비 관리',
   labors: '공수표 관리',
-  'labor-plans': '공수표 관리 · 인력투입계획',
+  'labor-plans': '현장인력계획',
   attendances: '공수표 관리 · 출퇴근',
   reports: '보고서 보관함',
   pnl: '손익보고서',

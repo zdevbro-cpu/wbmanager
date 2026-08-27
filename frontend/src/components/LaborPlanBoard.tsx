@@ -63,7 +63,7 @@ const colorOf = (type: string) => TYPE_COLOR[type] ?? TYPE_COLOR.미지정;
 
 
 
-// 인력투입계획 — 프로젝트 아래에 구간을 잡고, 그 구간의 계획 공수와 공수표에 쌓인 실행 공수를 견준다.
+// 현장인력계획 — 프로젝트 아래에 구간을 잡고, 그 구간의 계획 공수와 공수표에 쌓인 실행 공수를 견준다.
 // 사람을 지목하지 않는다. 한 사람이 여러 프로젝트를 도는 현장이라 원가에 맞는 단위는 공수다.
 export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Project[]; defaultProjectId: string }) {
   const [month, setMonth] = useState(kstThisMonth());

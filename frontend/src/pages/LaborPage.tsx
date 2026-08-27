@@ -19,7 +19,6 @@ import {
   trCls,
 } from '../components/ui/classes';
 import { LaborMonthGrid } from '../components/LaborMonthGrid';
-import { LaborPlanBoard } from '../components/LaborPlanBoard';
 
 
 interface Labor {
@@ -48,7 +47,7 @@ export function LaborPage() {
   const [rows, setRows] = useState<Labor[]>([]);
   const [projectId, setProjectId] = useState('');
   // 월 근태·공수가 기본 화면이다. 지금까지 쓰던 날짜별 목록은 탭으로 그대로 남긴다.
-  const [tab, setTab] = useState<'month' | 'plan' | 'list'>('month');
+  const [tab, setTab] = useState<'month' | 'list'>('month');
 
   const load = useCallback(() => {
     const params = new URLSearchParams();
@@ -114,7 +113,7 @@ export function LaborPage() {
         </span>
         <div className="ml-auto flex items-center gap-2">
           <div className="flex rounded-[9px] border border-border p-0.5">
-            {([['month', '월 근태·공수'], ['plan', '인력투입계획'], ['list', '날짜별 목록']] as const).map(([k, label]) => (
+            {([['month', '월 근태·공수'], ['list', '날짜별 목록']] as const).map(([k, label]) => (
               <button
                 key={k}
                 type="button"
@@ -131,8 +130,6 @@ export function LaborPage() {
       </div>
 
       {tab === 'month' && <LaborMonthGrid projects={projects} defaultProjectId={projectId} />}
-
-      {tab === 'plan' && <LaborPlanBoard projects={projects} defaultProjectId={projectId} />}
 
       {tab === 'list' && (
         <>
