@@ -5,6 +5,7 @@ import { Badge, type BadgeTone } from '../components/ui/Badge';
 import { useAuth } from '../context/AuthContext';
 import { useEmployees } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
+import { NumberInput } from '../components/ui/NumberInput';
 import { EMPLOYMENT_TYPES } from './EmployeeManagementPage';
 import type { Employee } from '../types';
 import { pageTitleCls, tableWrapCls, thCls, tdCls, trCls, outlineBtnCls, primaryBtnCls, inputCls } from '../components/ui/classes';
@@ -30,7 +31,7 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
   // 승인은 그 자리에서 "이 사람이 누구이고 어떤 구분인지"를 정하고 넘어간다.
   const [approving, setApproving] = useState<AppUser | null>(null);
 
-  const setStatus = async (id: string, status: string, extra?: { employeeId?: string; employmentType?: string }) => {
+  const setStatus = async (id: string, status: string, extra?: { employeeId?: string; employmentType?: string; unitCost?: string; mealCost?: string; etcCost?: string }) => {
     await api.patch(`/api/auth/users/${id}/status`, { status, ...extra });
     // 승인은 임직원을 새로 만들 수 있다. 목록을 다시 읽어야 연결이 화면에 보인다.
     reloadEmployees();
@@ -207,12 +208,17 @@ function ApproveModal({
   user: AppUser;
   employees: Employee[];
   onClose: () => void;
-  onDone: (extra: { employeeId?: string; employmentType?: string }) => Promise<void>;
+  onDone: (extra: { employeeId?: string; employmentType?: string; unitCost?: string; mealCost?: string; etcCost?: string }) => Promise<void>;
 }) {
   const sameName = employees.find((e) => e.name === (user.name ?? '').trim());
   const [employeeId, setEmployeeId] = useState(sameName?.id ?? '');
   const [employmentType, setEmploymentType] = useState(sameName?.employmentType ?? '정규직');
+  // 정규직 외 인원은 품값을 여기서 한 번에 정한다 — 공수표에서 매번 단가를 다시 적지 않게 한다.
+  const [unitCost, setUnitCost] = useState(sameName?.unitCost ?? '');
+  const [mealCost, setMealCost] = useState(sameName?.mealCost ?? '');
+  const [etcCost, setEtcCost] = useState(sameName?.etcCost ?? '');
   const [busy, setBusy] = useState(false);
+  const paid = employmentType !== '정규직';
 
   const picked = employees.find((e) => e.id === employeeId);
 
@@ -231,6 +237,11 @@ function ApproveModal({
             setEmployeeId(e.target.value);
             const emp = employees.find((x) => x.id === e.target.value);
             if (emp?.employmentType) setEmploymentType(emp.employmentType);
+            if (emp) {
+              setUnitCost(emp.unitCost ?? '');
+              setMealCost(emp.mealCost ?? '');
+              setEtcCost(emp.etcCost ?? '');
+            }
           }}
           className={`${inputCls} mb-1`}
         >
@@ -265,6 +276,29 @@ function ApproveModal({
           공수표가 이 값으로 갈립니다 — 정규직은 근태(출근·연차 등), 그 밖은 공수로 셉니다.
         </p>
 
+        {paid && (
+          <div className="mt-4 border-t border-border pt-3">
+            <label className={approveLabelCls}>품값 기준</label>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <span className="mb-1 block text-[12px] text-text-faint">1공수 단가(원)</span>
+                <NumberInput value={unitCost} onChange={setUnitCost} />
+              </div>
+              <div>
+                <span className="mb-1 block text-[12px] text-text-faint">하루 식대(원)</span>
+                <NumberInput value={mealCost} onChange={setMealCost} />
+              </div>
+              <div>
+                <span className="mb-1 block text-[12px] text-text-faint">하루 기타비용(원)</span>
+                <NumberInput value={etcCost} onChange={setEtcCost} />
+              </div>
+            </div>
+            <p className="mt-2 text-[12px] text-text-faint">
+              여기서 한 번 적어 두면 공수표는 날짜와 공수만 고르면 됩니다. 그날 사정이 다르면 공수표에서 고칠 수 있습니다.
+            </p>
+          </div>
+        )}
+
         <div className="mt-4 flex justify-end gap-2 border-t border-border pt-3">
           <button type="button" onClick={onClose} className={outlineBtnCls}>
             취소
@@ -275,7 +309,11 @@ function ApproveModal({
             onClick={async () => {
               setBusy(true);
               try {
-                await onDone({ employeeId: employeeId || undefined, employmentType });
+                await onDone({
+                  employeeId: employeeId || undefined,
+                  employmentType,
+                  ...(paid ? { unitCost, mealCost, etcCost } : {}),
+                });
               } finally {
                 setBusy(false);
               }

@@ -286,7 +286,14 @@ function LaborForm({
 
   const pickWorker = (name: string) => {
     const emp = employees.find((e) => e.name === name);
-    set({ workerName: name, ...(emp?.employmentType ? { workerType: emp.employmentType } : {}) });
+    // 그 사람에게 정해 둔 품값을 끌어온다 — 아직 비어 있는 칸만 채우고, 적어 둔 값은 그대로 둔다.
+    set({
+      workerName: name,
+      ...(emp?.employmentType ? { workerType: emp.employmentType } : {}),
+      ...(emp?.unitCost && !f.unitCost ? { unitCost: emp.unitCost } : {}),
+      ...(emp?.mealCost && !f.mealCost ? { mealCost: emp.mealCost } : {}),
+      ...(emp?.etcCost && !f.suppliesCost ? { suppliesCost: emp.etcCost } : {}),
+    });
   };
 
   const submit = async (e: React.FormEvent) => {

@@ -100,7 +100,8 @@ router.post('/', async (req, res) => {
 // 기본정보 수정. 사번(empCode)은 근태 QR 식별자로 쓰이므로 바꾸지 않는다.
 // 보낸 항목만 반영해, 일부만 고쳐도 나머지가 지워지지 않게 한다.
 router.patch('/:id', async (req, res) => {
-  const { name, phone, companyName, department, position, hireDate, employmentType } = req.body;
+  const { name, phone, companyName, department, position, hireDate, employmentType, unitCost, mealCost, etcCost } =
+    req.body;
   if (name !== undefined && !String(name).trim()) {
     return res.status(400).json({ error: '성명은 비울 수 없습니다.' });
   }
@@ -116,6 +117,10 @@ router.patch('/:id', async (req, res) => {
       ...(hireDate !== undefined ? { hireDate: toISO(hireDate) } : {}),
       // 공수표가 이 값으로 갈린다 — 정규직은 근태, 그 밖은 공수.
       ...(employmentType !== undefined ? { employmentType: employmentType || null } : {}),
+      // 정규직 외 인원의 품값 기준 — 공수표가 이 값으로 채워진다.
+      ...(unitCost !== undefined ? { unitCost: unitCost === '' || unitCost === null ? null : Number(unitCost) } : {}),
+      ...(mealCost !== undefined ? { mealCost: mealCost === '' || mealCost === null ? null : Number(mealCost) } : {}),
+      ...(etcCost !== undefined ? { etcCost: etcCost === '' || etcCost === null ? null : Number(etcCost) } : {}),
     },
     include: {
       certifications: { orderBy: [{ expiryDate: 'desc' }, { acquiredDate: 'desc' }] },
