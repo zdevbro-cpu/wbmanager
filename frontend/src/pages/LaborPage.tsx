@@ -265,6 +265,7 @@ function LaborForm({
   const [f, setF] = useState({
     projectId: defaultProjectId,
     workDate: kstToday(),
+    employeeId: '',
     workerName: '',
     workerType: '정규직',
     totalManDays: '1',
@@ -289,6 +290,8 @@ function LaborForm({
     // 그 사람에게 정해 둔 품값을 끌어온다 — 아직 비어 있는 칸만 채우고, 적어 둔 값은 그대로 둔다.
     set({
       workerName: name,
+      // 임직원에 연결해 보낸다 — 월 표의 칸과 같은 줄을 가리키게 하기 위해서다.
+      employeeId: emp?.id ?? '',
       ...(emp?.employmentType ? { workerType: emp.employmentType } : {}),
       ...(emp?.unitCost && !f.unitCost ? { unitCost: emp.unitCost } : {}),
       ...(emp?.mealCost && !f.mealCost ? { mealCost: emp.mealCost } : {}),
@@ -312,6 +315,7 @@ function LaborForm({
       await api.post('/api/labors', {
         projectId: f.projectId,
         workDate: f.workDate,
+        employeeId: f.employeeId || undefined,
         workerName: f.workerName.trim(),
         workerType: f.workerType || undefined,
         totalManDays: Number(f.totalManDays || 0),

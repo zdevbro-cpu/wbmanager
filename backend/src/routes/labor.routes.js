@@ -112,36 +112,53 @@ router.put('/cell', async (req, res) => {
     const month = monthOf(workDate);
     await assertOpen(month);
 
-    const day = toISO(workDate);
-    const existing = await prisma.labor.findFirst({ where: { employeeId, workDate: day } });
-    const data = buildCell(req.body, month, day);
-
-    // 단가·식대·기타비용을 적지 않았으면 그 사람에게 정해 둔 값으로 채운다.
-    // 승인 자리에서 한 번 적어 두면 공수표에서는 날짜와 근태만 고르면 되게 하려는 것이다.
-    const person = await prisma.employee.findUnique({ where: { id: employeeId } });
-    if (person) {
-      if (data.unitCost == null && person.unitCost != null) data.unitCost = person.unitCost;
-      if (data.mealCost == null && person.mealCost != null) data.mealCost = person.mealCost;
-      if (data.suppliesCost == null && person.etcCost != null) data.suppliesCost = person.etcCost;
-      if (data.totalManDays != null && data.unitCost != null && req.body.laborCost == null) {
-        data.laborCost = Math.round(Number(data.totalManDays) * Number(data.unitCost));
-      }
-      if (req.body.totalAmount == null) {
-        data.totalAmount =
-          Number(data.laborCost ?? 0) + Number(data.mealCost ?? 0) + Number(data.suppliesCost ?? 0) || null;
-      }
-    }
-
-    const row = existing
-      ? await prisma.labor.update({ where: { id: existing.id }, data })
-      : await prisma.labor.create({ data: { ...data, createdById: req.appUser?.id ?? null } });
-
-    await rememberCodes([['작업자', req.body.workerName]]);
+    const row = await saveDay(req, month);
     res.json(row);
   } catch (e) {
     fail(res, e);
   }
 });
+
+// 한 사람의 하루를 저장한다 — 월 표의 칸과 '공수 등록'이 같은 자리를 쓴다.
+// 같은 사람·같은 날이 이미 있으면 고치고, 없으면 만든다. 그래서 한 사람의 하루는 한 줄뿐이다.
+// 사람을 가리는 키는 임직원 연결이 있으면 그 연결, 없으면 이름이다.
+async function saveDay(req, month) {
+  const body = req.body;
+  const day = toISO(body.workDate);
+  const data = buildCell(body, month, day);
+
+  const where = body.employeeId
+    ? { employeeId: body.employeeId, workDate: day }
+    : { employeeId: null, workerName: (body.workerName ?? '').trim() || null, workDate: day };
+  const existing = await prisma.labor.findFirst({ where });
+
+  // 단가·식대·기타비용을 적지 않았으면 그 사람에게 정해 둔 값으로 채운다.
+  // 승인 자리에서 한 번 적어 두면 공수표에서는 날짜와 공수만 고르면 되게 하려는 것이다.
+  const person = body.employeeId
+    ? await prisma.employee.findUnique({ where: { id: body.employeeId } })
+    : (body.workerName ?? '').trim()
+      ? await prisma.employee.findFirst({ where: { name: body.workerName.trim() } })
+      : null;
+  if (person) {
+    if (data.unitCost == null && person.unitCost != null) data.unitCost = person.unitCost;
+    if (data.mealCost == null && person.mealCost != null) data.mealCost = person.mealCost;
+    if (data.suppliesCost == null && person.etcCost != null) data.suppliesCost = person.etcCost;
+    if (data.totalManDays != null && data.unitCost != null && body.laborCost == null) {
+      data.laborCost = Math.round(Number(data.totalManDays) * Number(data.unitCost));
+    }
+    if (body.totalAmount == null) {
+      data.totalAmount =
+        Number(data.laborCost ?? 0) + Number(data.mealCost ?? 0) + Number(data.suppliesCost ?? 0) || null;
+    }
+  }
+
+  const row = existing
+    ? await prisma.labor.update({ where: { id: existing.id }, data })
+    : await prisma.labor.create({ data: { ...data, createdById: req.appUser?.id ?? null } });
+
+  await rememberCodes([['작업자', body.workerName]]);
+  return row;
+}
 
 // 칸에서 보내는 값만 반영한다. 보내지 않은 항목은 건드리지 않는다.
 function buildCell(body, month, day) {
@@ -183,10 +200,7 @@ router.post('/', async (req, res) => {
     if (!projectId || !workDate) return res.status(400).json({ error: 'projectId, workDate는 필수입니다.' });
     const month = monthOf(workDate);
     await assertOpen(month);
-    const row = await prisma.labor.create({
-      data: { ...req.body, workDate: toISO(workDate), settleMonth: month, createdById: req.appUser?.id ?? null },
-    });
-    await rememberCodes([['작업자', req.body.workerName]]);
+    const row = await saveDay(req, month);
     res.status(201).json(row);
   } catch (e) {
     fail(res, e);
