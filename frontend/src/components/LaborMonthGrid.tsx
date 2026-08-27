@@ -248,7 +248,7 @@ export function LaborMonthGrid({ projects, defaultProjectId }: { projects: Proje
           }
           className={`${outlineBtnCls} ml-auto`}
         >
-          <Download size={15} /> 엑셀 출력
+          <Download size={15} /> 엑셀 다운로드
         </button>
 
         {isAdmin && (
