@@ -39,13 +39,11 @@ interface ChartRow {
 }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
-const DAY_W = 34; // '2.5/3' 처럼 다섯 자가 들어가야 한다
-const NAME_W = 116;
+const LABEL_W = 150;
 const SUM_W = 72;
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
 
 const weekdayOf = (date: string) => new Date(`${date}T00:00:00`).getDay();
-const dayNo = (date: string) => Number(date.slice(8, 10));
 
 // 봐야 할 것은 계획과 실행 두 값이 아니라 그 차이다 —
 // 모자란 날, 맞은 날, 넘친 날. 그래서 칸 색은 달성 상태를 뜻한다.
@@ -62,49 +60,8 @@ const TYPE_COLOR: Record<string, string> = {
 };
 const colorOf = (type: string) => TYPE_COLOR[type] ?? TYPE_COLOR.미지정;
 
-// 모자람(빨강) · 맞음(초록) · 넘침(파랑) · 계획만 있고 아직 안 온 날(회색 윤곽)
-const GAP = {
-  short: '239, 68, 68',
-  ok: '22, 163, 74',
-  over: '37, 99, 235',
-  idle: '100, 116, 139',
-};
 
-function gapTone(plan: number, actual: number) {
-  if (!plan && !actual) return null;
-  if (!plan) return GAP.over; // 계획에 없던 투입
-  if (!actual) return GAP.short;
-  if (actual < plan) return GAP.short;
-  if (actual > plan) return GAP.over;
-  return GAP.ok;
-}
 
-// 한 칸에 실행/계획을 함께 적는다. 짙기는 차이의 크기다 — 많이 모자랄수록 짙다.
-function Cell({ plan, actual }: { plan: number; actual: number }) {
-  const rgb = gapTone(plan, actual);
-  if (!rgb) return <div className="h-[22px]" />;
-
-  const base = plan || actual;
-  const diff = Math.abs(actual - plan);
-  const weight = Math.min(1, 0.35 + (base ? diff / base : 1) * 0.65);
-  const strong = weight >= 0.7;
-
-  return (
-    <div className="px-[2px] py-[2px]">
-      <div
-        title={`계획 ${formatNumber(plan)} · 실행 ${formatNumber(actual)}공수`}
-        className="flex h-[22px] items-center justify-center rounded-[3px] text-[10px] font-bold leading-none"
-        style={{
-          backgroundColor: `rgba(${rgb}, ${weight})`,
-          color: strong ? '#fff' : `rgb(${rgb})`,
-          boxShadow: strong ? undefined : `inset 0 0 0 1px rgba(${rgb}, 0.6)`,
-        }}
-      >
-        {formatNumber(actual)}/{formatNumber(plan)}
-      </div>
-    </div>
-  );
-}
 
 // 인력투입계획 — 프로젝트 아래에 구간을 잡고, 그 구간의 계획 공수와 공수표에 쌓인 실행 공수를 견준다.
 // 사람을 지목하지 않는다. 한 사람이 여러 프로젝트를 도는 현장이라 원가에 맞는 단위는 공수다.
@@ -142,6 +99,59 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
     [rows],
   );
 
+  // 이 달에 걸친 계획만 막대로 그린다. 막대 하나가 계획 한 건이다.
+  // 실행은 그 구분·그 구간의 공수를 모아 견준다. 같은 구분의 계획이 겹치면
+  // 그 날 실행이 양쪽에 다 잡히므로, 겹치게 잡지 않는 것을 전제로 한다.
+  const monthPlans = useMemo(() => {
+    if (!chart.days.length) return [];
+    const first = chart.days[0];
+    const last = chart.days[chart.days.length - 1];
+    const byType = new Map(chart.rows.map((r) => [r.employmentType, r]));
+
+    return plans
+      .filter((p) => p.startDate.slice(0, 10) <= last && p.endDate.slice(0, 10) >= first)
+      .map((p) => {
+        const from = p.startDate.slice(0, 10) < first ? first : p.startDate.slice(0, 10);
+        const to = p.endDate.slice(0, 10) > last ? last : p.endDate.slice(0, 10);
+        const span = chart.days.filter((d) => d >= from && d <= to);
+        const row = byType.get(p.employmentType ?? '미지정');
+        const actualTotal = span.reduce((sum, d) => sum + (row?.actual[d] ?? 0), 0);
+        const planTotal = span.length * Number(p.manDays || 0);
+        return {
+          ...p,
+          offset: chart.days.indexOf(from),
+          days: span.length,
+          planTotal,
+          actualTotal,
+          rate: planTotal ? actualTotal / planTotal : 0,
+        };
+      })
+      .sort((a, b) => employmentRank(a.employmentType) - employmentRank(b.employmentType) || a.offset - b.offset);
+  }, [plans, chart]);
+
+  const dayCount = chart.days.length || 1;
+
+  // 눈금은 1일과 5일 간격, 그리고 말일.
+  const ticks = useMemo(() => {
+    const t = [1];
+    for (let d = 5; d < dayCount; d += 5) t.push(d);
+    t.push(dayCount);
+    return [...new Set(t)];
+  }, [dayCount]);
+
+  // 하루 합계 — 구분을 모두 더한 값. 하루 단위는 이 한 줄에서만 본다.
+  const dayTotals = useMemo(() => {
+    const plan: Record<string, number> = {};
+    const actual: Record<string, number> = {};
+    for (const d of chart.days) {
+      plan[d] = chart.rows.reduce((s, r) => s + (r.plan[d] ?? 0), 0);
+      actual[d] = chart.rows.reduce((s, r) => s + (r.actual[d] ?? 0), 0);
+    }
+    return { plan, actual };
+  }, [chart]);
+
+  const dayMax = Math.max(...chart.days.map((d) => Math.max(dayTotals.plan[d] ?? 0, dayTotals.actual[d] ?? 0)), 1);
+
   const remove = async (p: Plan) => {
     if (!window.confirm('이 계획 줄을 지울까요?')) return;
     await api.del(`/api/labor-plans/${p.id}`);
@@ -177,18 +187,8 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
             <span className="ml-1 text-text-faint">(달성 {Math.round((totals.actual / totals.plan) * 100)}%)</span>
           )}
         </span>
-        <span className="ml-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-faint">
-          {[
-            ['모자람', GAP.short],
-            ['맞음', GAP.ok],
-            ['넘침', GAP.over],
-          ].map(([label, rgb]) => (
-            <span key={label} className="flex items-center gap-1">
-              <span className="inline-block h-[10px] w-[14px] rounded-[2px]" style={{ backgroundColor: `rgb(${rgb})` }} />
-              {label}
-            </span>
-          ))}
-          <span>칸 안 숫자는 실행/계획</span>
+        <span className="ml-3 text-[11px] text-text-faint">
+          막대 길이는 기간, 채움은 달성률입니다 · 색은 고용 구분
         </span>
         <button type="button" onClick={() => setAdding(true)} className={`${primaryBtnCls} ml-auto`}>
           <Plus size={15} /> 구간 추가
@@ -208,97 +208,133 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
         />
       )}
 
-      {/* 계획·실행 막대 — 왼쪽 구분과 오른쪽 합계는 붙박이, 가운데 날짜만 민다. */}
-      <div className={`${tableWrapCls} overflow-x-auto`}>
-        <table className="w-max min-w-full border-collapse">
-          <thead>
-            <tr className="border-y border-border">
-              <th
-                className={`${thCls} sticky left-0 z-20 whitespace-nowrap bg-card`}
-                style={{ width: NAME_W, minWidth: NAME_W }}
-              >
-                구분
-              </th>
-              {chart.days.map((d) => {
-                const w = weekdayOf(d);
-                return (
-                  <th
-                    key={d}
-                    className={`px-0 py-1.5 text-center text-[11px] font-bold ${
-                      w === 0 ? 'text-danger' : w === 6 ? 'text-primary' : 'text-text-sub'
-                    }`}
-                    style={{ width: DAY_W, minWidth: DAY_W }}
+      {/* 계획은 구간이 단위다 — 한 계획이 막대 하나다.
+          하루하루는 아래 합계 한 줄에서만 본다. 같은 것을 31칸으로 펴면 구조가 사라진다. */}
+      <div className={`${cardCls} mb-4 p-3`}>
+        {monthPlans.length === 0 ? (
+          <p className="py-8 text-center text-[13px] text-text-faint">
+            이 달에 잡힌 계획이 없습니다. 오른쪽 위 구간 추가로 계획을 세웁니다.
+          </p>
+        ) : (
+          <>
+            {/* 날짜 눈금 */}
+            <div className="mb-1 flex items-end gap-3">
+              <div className="shrink-0" style={{ width: LABEL_W }} />
+              <div className="relative h-[14px] flex-1">
+                {ticks.map((t) => (
+                  <span
+                    key={t}
+                    className="absolute -translate-x-1/2 text-[10.5px] text-text-faint"
+                    style={{ left: `${((t - 0.5) / dayCount) * 100}%` }}
                   >
-                    {dayNo(d)}
-                    <span className="block text-[10px] font-normal opacity-70">{WEEK[w]}</span>
-                  </th>
-                );
-              })}
-              {['계획', '실행', '달성'].map((label, i) => (
-                <th
-                  key={label}
-                  className={`${thNumCls} sticky z-20 whitespace-nowrap bg-card`}
-                  style={{ right: (2 - i) * SUM_W, width: SUM_W, minWidth: SUM_W }}
-                >
-                  {label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              return (
-                <tr key={r.employmentType} className="border-b border-border">
-                  <td
-                    className="sticky left-0 z-20 whitespace-nowrap bg-card px-3 py-1.5 text-[13px] font-semibold text-text-strong"
-                    style={{ width: NAME_W, minWidth: NAME_W }}
-                  >
-                    <span className="flex items-center gap-1.5">
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <div className="shrink-0 text-right text-[10.5px] text-text-faint" style={{ width: SUM_W * 2 }}>
+                계획 · 실행 · 달성
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              {monthPlans.map((p) => (
+                <div key={p.id} className="flex items-center gap-3">
+                  <div className="shrink-0 truncate" style={{ width: LABEL_W }}>
+                    <span className="flex items-center gap-1.5 text-[13px] font-semibold text-text-strong">
                       <span
                         className="inline-block h-[9px] w-[9px] shrink-0 rounded-full"
-                        style={{ backgroundColor: `rgb(${colorOf(r.employmentType)})` }}
+                        style={{ backgroundColor: `rgb(${colorOf(p.employmentType ?? '미지정')})` }}
                       />
-                      {r.employmentType}
+                      {p.employmentType ?? '미지정'}
                     </span>
-                    <span className="block text-[11px] font-normal text-text-faint">실행 / 계획</span>
-                  </td>
-                  {chart.days.map((d) => {
-                    const w = weekdayOf(d);
-                    return (
-                      <td
-                        key={d}
-                        className={`p-0 align-bottom ${w === 0 || w === 6 ? 'bg-hover/40' : ''}`}
-                        style={{ width: DAY_W, minWidth: DAY_W }}
-                      >
-                        <Cell plan={r.plan[d] ?? 0} actual={r.actual[d] ?? 0} />
-                      </td>
-                    );
-                  })}
-                  {[
-                    formatNumber(r.planTotal),
-                    formatNumber(r.actualTotal),
-                    r.planTotal ? `${Math.round((r.actualTotal / r.planTotal) * 100)}%` : '-',
-                  ].map((v, i) => (
-                    <td
-                      key={i}
-                      className={`${tdNumCls} sticky z-20 bg-card ${i === 2 ? 'font-extrabold text-text-strong' : ''}`}
-                      style={{ right: (2 - i) * SUM_W, width: SUM_W, minWidth: SUM_W }}
+                    <span className="block text-[11px] text-text-faint">
+                      하루 {formatNumber(p.manDays)}공수 · {p.days}일
+                    </span>
+                  </div>
+
+                  {/* 막대 — 길이가 기간, 채움이 달성률이다. */}
+                  <div className="relative h-[26px] flex-1 rounded-[5px] bg-hover/50">
+                    {/* 주말 자리를 옅게 깔아 주 단위가 보이게 한다. */}
+                    {chart.days.map((d, i) =>
+                      weekdayOf(d) === 0 || weekdayOf(d) === 6 ? (
+                        <span
+                          key={d}
+                          className="absolute top-0 bottom-0 bg-black/15"
+                          style={{ left: `${(i / dayCount) * 100}%`, width: `${(1 / dayCount) * 100}%` }}
+                        />
+                      ) : null,
+                    )}
+                    <div
+                      className="absolute top-0 bottom-0 overflow-hidden rounded-[5px]"
+                      style={{
+                        left: `${(p.offset / dayCount) * 100}%`,
+                        width: `${(p.days / dayCount) * 100}%`,
+                        backgroundColor: `rgba(${colorOf(p.employmentType ?? '미지정')}, 0.22)`,
+                        boxShadow: `inset 0 0 0 1px rgba(${colorOf(p.employmentType ?? '미지정')}, 0.55)`,
+                      }}
                     >
-                      {v}
-                    </td>
-                  ))}
-                </tr>
-              );
-            })}
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={chart.days.length + 4} className="py-10 text-center text-[13px] text-text-faint">
-                  이 달에 잡힌 계획도, 쌓인 공수도 없습니다. 오른쪽 위 구간 추가로 계획을 세웁니다.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                      <div
+                        className="absolute top-0 bottom-0 left-0"
+                        style={{
+                          width: `${Math.min(100, p.rate * 100)}%`,
+                          backgroundColor: `rgba(${colorOf(p.employmentType ?? '미지정')}, 0.85)`,
+                        }}
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white drop-shadow">
+                        {p.rate > 0 ? `${Math.round(p.rate * 100)}%` : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div
+                    className="tabular shrink-0 text-right text-[12px] text-text-sub"
+                    style={{ width: SUM_W * 2 }}
+                  >
+                    {formatNumber(p.planTotal)} · <b className="text-text-strong">{formatNumber(p.actualTotal)}</b> ·{' '}
+                    <span className={p.rate >= 1 ? 'font-bold text-success' : 'font-bold text-danger'}>
+                      {p.planTotal ? `${Math.round(p.rate * 100)}%` : '-'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 하루 합계 — 하루 단위는 여기 한 줄에서만 본다. */}
+            <div className="mt-3 flex items-end gap-3 border-t border-border pt-3">
+              <div className="shrink-0 text-[12px] font-semibold text-text-mid" style={{ width: LABEL_W }}>
+                하루 합계
+                <span className="block text-[11px] font-normal text-text-faint">계획 옅음 · 실행 진함</span>
+              </div>
+              <div className="flex h-[46px] flex-1 items-end gap-[1px]">
+                {chart.days.map((d) => {
+                  const plan = dayTotals.plan[d] ?? 0;
+                  const actual = dayTotals.actual[d] ?? 0;
+                  const short = actual < plan;
+                  return (
+                    <div key={d} className="relative flex-1" title={`${d} · 계획 ${plan} · 실행 ${actual}공수`}>
+                      <div className="flex h-[46px] items-end">
+                        <div
+                          className="w-full rounded-t-[2px] bg-primary/25"
+                          style={{ height: `${(plan / dayMax) * 100}%` }}
+                        />
+                      </div>
+                      <div className="absolute inset-x-0 bottom-0 flex h-[46px] items-end">
+                        <div
+                          className={`w-full rounded-t-[2px] ${short ? 'bg-danger' : 'bg-primary'}`}
+                          style={{ height: `${(actual / dayMax) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="shrink-0 text-right text-[12px] text-text-sub" style={{ width: SUM_W * 2 }}>
+                <span className="tabular">{formatNumber(totals.plan)}</span> ·{' '}
+                <b className="tabular text-text-strong">{formatNumber(totals.actual)}</b>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* 잡아 둔 구간 목록 — 계획을 보고 지우는 자리다. */}
