@@ -70,9 +70,9 @@ const colorOf = (type: string) => TYPE_COLOR[type] ?? TYPE_COLOR.미지정;
 
 // 하루 실적을 계획과 견준 판정 — 막대 색이 곧 답이다.
 const DAY_TONE: Record<'short' | 'ok' | 'over', string> = {
-  short: 'rgb(248, 113, 113)', // 미달
+  short: 'rgb(96, 165, 250)', // 미달 — 덜 썼다
   ok: 'rgb(253, 186, 116)', // 적정
-  over: 'rgb(96, 165, 250)', // 초과
+  over: 'rgb(248, 113, 113)', // 초과 — 계획보다 더 들어가 원가를 민다
 };
 
 
@@ -194,7 +194,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
             }
           }}
           title="화살표 단추나 키보드 ← → 로 달을 옮깁니다"
-          className={`${inputCls} flex w-[168px] shrink-0 items-center justify-between gap-0.5 px-1 focus:border-primary`}
+          className="flex h-[38px] w-[168px] shrink-0 items-center justify-between gap-0.5 rounded-[8px] border border-border bg-input px-1 outline-none focus:border-primary"
         >
           <button
             type="button"
