@@ -9,7 +9,7 @@ import { NumberInput } from '../components/ui/NumberInput';
 import { DateField } from '../components/ui/DateField';
 import { Badge } from '../components/ui/Badge';
 import { formatNumber } from '../lib/number';
-import { employmentRank } from './EmployeeManagementPage';
+import { employmentRank, EMPLOYMENT_TYPES } from './EmployeeManagementPage';
 import { kstToday } from '../lib/datetime';
 import {
   pageTitleCls,
@@ -28,7 +28,6 @@ import {
 import type { Project } from '../types';
 import { LaborMonthGrid } from '../components/LaborMonthGrid';
 
-export const WORKER_TYPES = ['정규직', '계약직', '일용직', '프리랜서', '현장직', '타사직원'];
 
 interface Labor {
   id: string;
@@ -297,7 +296,7 @@ function LaborForm({
   const set = (patch: Partial<typeof f>) => setF({ ...f, ...patch });
 
   // 인건비 = 공수 × 단가, 합계 = 인건비 + 식대 + 공구 + 유류 + 소모품
-  const laborCost = Number(f.totalManDays || 0) * Number(f.unitCost || 0);
+  const laborCost = f.workerType === '정규직' ? 0 : Number(f.totalManDays || 0) * Number(f.unitCost || 0);
   const total =
     laborCost + Number(f.mealCost || 0) + Number(f.toolCost || 0) + Number(f.fuelCost || 0) + Number(f.suppliesCost || 0);
 
@@ -390,7 +389,7 @@ function LaborForm({
         <div>
           <label className={labelCls}>구분</label>
           <select value={f.workerType} onChange={(e) => set({ workerType: e.target.value })} className={inputCls}>
-            {WORKER_TYPES.map((t) => (
+            {EMPLOYMENT_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>
@@ -404,9 +403,14 @@ function LaborForm({
           <p className="mt-1 text-[12px] text-text-faint">하루 1, 반나절 0.5</p>
         </div>
 
+        {/* 정규직은 급여로 나가므로 프로젝트 인건비에 넣지 않는다. 공수만 센다. */}
         <div>
           <label className={labelCls}>1공수 단가(원)</label>
-          <NumberInput value={f.unitCost} onChange={(v) => set({ unitCost: v })} />
+          {f.workerType === '정규직' ? (
+            <div className={`${inputCls} flex items-center text-text-faint`}>인건비 제외 · 공수만 집계</div>
+          ) : (
+            <NumberInput value={f.unitCost} onChange={(v) => set({ unitCost: v })} />
+          )}
         </div>
 
         <div>
