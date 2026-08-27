@@ -182,12 +182,17 @@ function previewOf(doc: Doc): PreviewDoc {
     fileName: v?.fileName ?? (isReport(doc) ? `${doc.title}.xlsx` : null),
     byteSize: v?.byteSize ?? null,
     contentUrl: contentUrl(doc),
+    // 인쇄 표지와 요약 페이지에 함께 나가는 항목이다. 종이만 보고 무엇을 뽑았는지 알 수 있어야 한다.
     facts: [
       { label: '분류', value: doc.type?.name ?? '-' },
       { label: '프로젝트', value: doc.projects.map((x) => x.name).filter(Boolean).join(', ') || '-' },
       { label: '문서일자', value: doc.meta?.docDate ?? '-' },
       { label: '등록일', value: day(doc.createdAt) },
+      { label: '버전', value: isReport(doc) ? '-' : `v${v?.versionNo ?? 1}` },
       { label: '실물 문서', value: doc.meta?.physicalStatus ?? '미확인' },
+      { label: '보관 위치', value: doc.meta?.physicalLocation ?? '-' },
+      { label: '보존 만료', value: doc.retentionUntil ? day(doc.retentionUntil) : '미지정' },
+      { label: '비고', value: doc.description ?? '-' },
     ],
   };
 }

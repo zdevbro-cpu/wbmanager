@@ -98,8 +98,30 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc; onClose: ()
     URL.revokeObjectURL(blobUrl);
   };
 
+  // 인쇄 첫 장에 붙일 문서 정보 표지. 종이만 보고 무엇을 출력한 것인지 알 수 있게 한다.
+  const coverHtml = () => {
+    const rows: [string, string][] = [
+      ['문서번호', doc.docNo ?? '-'],
+      ['제목', doc.title],
+      ['파일', fileName],
+      ['크기', size(doc.byteSize)],
+      ...((doc.facts ?? []).map((f) => [f.label, f.value] as [string, string])),
+    ];
+    const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return (
+      '<section class="cover">' +
+      `<h1>${esc(doc.title)}</h1>` +
+      `<p class="sub">${esc(doc.docNo ?? '')}</p>` +
+      '<table>' +
+      rows.map(([k, v]) => `<tr><th>${k}</th><td>${esc(String(v))}</td></tr>`).join('') +
+      '</table>' +
+      `<p class="foot">출력 ${new Date().toLocaleString('ko-KR')}</p>` +
+      '</section>'
+    );
+  };
+
   const print = () => {
-    if (!url) return;
+    if (state !== 'ready') return;
     const frame = document.createElement('iframe');
     frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
     document.body.appendChild(frame);
@@ -111,8 +133,37 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc; onClose: ()
       frame.contentWindow?.print();
       window.setTimeout(() => frame.remove(), 60_000);
     };
-    frame.src = url;
-    frame.onload = open;
+
+    // PDF는 브라우저가 원본을 그대로 인쇄한다. 표지를 앞에 끼우려면 PDF를 합쳐야 해서 원본만 낸다.
+    if (kind === 'pdf') {
+      frame.src = url;
+      frame.onload = open;
+      return;
+    }
+
+    // 이미지·텍스트는 인쇄용 문서로 감싸고 표지를 앞에 붙인다.
+    const body =
+      kind === 'image'
+        ? `<img src="${url}" alt="${fileName}">`
+        : `<pre>${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+    const d = frame.contentWindow?.document;
+    if (!d) return;
+    d.open();
+    d.write(
+      `<!doctype html><html><head><meta charset="utf-8"><title>${fileName}</title>` +
+        '<style>@page{margin:12mm}body{margin:0;font-family:"맑은 고딕",sans-serif;color:#000}' +
+        'img{max-width:100%}pre{white-space:pre-wrap;word-break:break-all;font-size:12px;line-height:1.6}' +
+        '.cover{page-break-after:always}.cover h1{font-size:20px;margin:0 0 4px}' +
+        '.cover .sub{margin:0 0 16px;color:#555;font-size:12px}' +
+        '.cover table{width:100%;border-collapse:collapse;font-size:12px}' +
+        '.cover th{width:110px;text-align:left;padding:6px 8px;background:#f2f2f2;border:1px solid #ddd;font-weight:600}' +
+        '.cover td{padding:6px 8px;border:1px solid #ddd}' +
+        '.cover .foot{margin-top:14px;color:#777;font-size:11px}' +
+        `</style></head><body>${coverHtml()}${body}</body></html>`,
+    );
+    d.close();
+    // document.write로 채운 iframe은 onload가 오지 않는 경우가 있어 타이머로 연다.
+    window.setTimeout(open, 300);
   };
 
   // 화면에서 열 수 없는 형식 — 무엇인지 알 수 있게 요약을 보여 주고 내려받기로 안내한다.
@@ -157,7 +208,7 @@ export function DocumentPreview({ doc, onClose }: { doc: PreviewDoc; onClose: ()
             </p>
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
-            {state === 'ready' && (kind === 'pdf' || kind === 'image') && (
+            {state === 'ready' && kind !== 'other' && (
               <button type="button" title="인쇄 · PDF 저장" onClick={print} className={`${outlineBtnCls} h-8 px-2.5`}>
                 <Printer size={15} />
               </button>
