@@ -39,7 +39,7 @@ interface ChartRow {
 }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
-const DAY_W = 28;
+const DAY_W = 34; // '2.5/3' 처럼 다섯 자가 들어가야 한다
 const NAME_W = 116;
 const SUM_W = 72;
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
@@ -47,42 +47,60 @@ const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
 const weekdayOf = (date: string) => new Date(`${date}T00:00:00`).getDay();
 const dayNo = (date: string) => Number(date.slice(8, 10));
 
-// 색은 고용 구분, 짙기는 공수다.
-// 어느 구분이 어느 날 몰렸는지는 색으로 보고, 얼마나 몰렸는지는 짙기로 본다.
-// 계획은 윤곽만, 실행은 채워서 둘을 한눈에 가른다.
+// 봐야 할 것은 계획과 실행 두 값이 아니라 그 차이다 —
+// 모자란 날, 맞은 날, 넘친 날. 그래서 칸 색은 달성 상태를 뜻한다.
+// 고용 구분은 줄 이름 옆 점으로 남긴다 — 색을 둘 다에 쓰면 아무 뜻도 남지 않는다.
 const TYPE_COLOR: Record<string, string> = {
-  정규직: '37, 99, 235', // 파랑
-  현장직: '22, 163, 74', // 초록
-  계약직: '245, 158, 11', // 주황
-  일용직: '147, 51, 234', // 보라
-  프리랜서: '219, 39, 119', // 자주
-  타사직원: '100, 116, 139', // 회청
-  아르바이트: '13, 148, 136', // 청록
+  정규직: '37, 99, 235',
+  현장직: '22, 163, 74',
+  계약직: '245, 158, 11',
+  일용직: '147, 51, 234',
+  프리랜서: '219, 39, 119',
+  타사직원: '100, 116, 139',
+  아르바이트: '13, 148, 136',
   미지정: '100, 116, 139',
 };
 const colorOf = (type: string) => TYPE_COLOR[type] ?? TYPE_COLOR.미지정;
 
-// 공수 다섯 단계 — 값이 클수록 짙다.
-const ALPHA = [0.25, 0.45, 0.65, 0.85, 1];
-const levelOf = (v: number) => (v <= 0.5 ? 0 : v <= 1 ? 1 : v <= 2 ? 2 : v <= 3 ? 3 : 4);
+// 모자람(빨강) · 맞음(초록) · 넘침(파랑) · 계획만 있고 아직 안 온 날(회색 윤곽)
+const GAP = {
+  short: '239, 68, 68',
+  ok: '22, 163, 74',
+  over: '37, 99, 235',
+  idle: '100, 116, 139',
+};
 
-function Cell({ value, type, tone }: { value: number; type: string; tone: 'plan' | 'actual' }) {
-  if (!value) return <div className="h-[16px]" />;
-  const rgb = colorOf(type);
-  const a = ALPHA[levelOf(value)];
-  const solid = tone === 'actual';
+function gapTone(plan: number, actual: number) {
+  if (!plan && !actual) return null;
+  if (!plan) return GAP.over; // 계획에 없던 투입
+  if (!actual) return GAP.short;
+  if (actual < plan) return GAP.short;
+  if (actual > plan) return GAP.over;
+  return GAP.ok;
+}
+
+// 한 칸에 실행/계획을 함께 적는다. 짙기는 차이의 크기다 — 많이 모자랄수록 짙다.
+function Cell({ plan, actual }: { plan: number; actual: number }) {
+  const rgb = gapTone(plan, actual);
+  if (!rgb) return <div className="h-[22px]" />;
+
+  const base = plan || actual;
+  const diff = Math.abs(actual - plan);
+  const weight = Math.min(1, 0.35 + (base ? diff / base : 1) * 0.65);
+  const strong = weight >= 0.7;
+
   return (
-    <div className="px-[2px] py-[1px]">
+    <div className="px-[2px] py-[2px]">
       <div
-        title={`${type} ${tone === 'plan' ? '계획' : '실행'} ${formatNumber(value)}공수`}
-        className="flex h-[16px] items-center justify-center rounded-[3px] text-[9.5px] font-bold"
+        title={`계획 ${formatNumber(plan)} · 실행 ${formatNumber(actual)}공수`}
+        className="flex h-[22px] items-center justify-center rounded-[3px] text-[10px] font-bold leading-none"
         style={{
-          backgroundColor: `rgba(${rgb}, ${solid ? a : a * 0.35})`,
-          boxShadow: solid ? undefined : `inset 0 0 0 1px rgba(${rgb}, 0.75)`,
-          color: solid && a >= 0.65 ? '#fff' : `rgb(${rgb})`,
+          backgroundColor: `rgba(${rgb}, ${weight})`,
+          color: strong ? '#fff' : `rgb(${rgb})`,
+          boxShadow: strong ? undefined : `inset 0 0 0 1px rgba(${rgb}, 0.6)`,
         }}
       >
-        {formatNumber(value)}
+        {formatNumber(actual)}/{formatNumber(plan)}
       </div>
     </div>
   );
@@ -159,28 +177,18 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
             <span className="ml-1 text-text-faint">(달성 {Math.round((totals.actual / totals.plan) * 100)}%)</span>
           )}
         </span>
-        <span className="ml-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-text-faint">
-          {rows.map((r) => (
-            <span key={r.employmentType} className="flex items-center gap-1">
-              <span
-                className="inline-block h-[10px] w-[10px] rounded-[2px]"
-                style={{ backgroundColor: `rgb(${colorOf(r.employmentType)})` }}
-              />
-              {r.employmentType}
+        <span className="ml-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-text-faint">
+          {[
+            ['모자람', GAP.short],
+            ['맞음', GAP.ok],
+            ['넘침', GAP.over],
+          ].map(([label, rgb]) => (
+            <span key={label} className="flex items-center gap-1">
+              <span className="inline-block h-[10px] w-[14px] rounded-[2px]" style={{ backgroundColor: `rgb(${rgb})` }} />
+              {label}
             </span>
           ))}
-          <span className="ml-1 flex items-center gap-0.5">
-            공수
-            {[0.5, 1, 2, 3, 4].map((v) => (
-              <span
-                key={v}
-                className="inline-block h-[10px] w-[12px] rounded-[2px]"
-                style={{ backgroundColor: `rgba(100, 116, 139, ${ALPHA[levelOf(v)]})` }}
-                title={`${v}공수`}
-              />
-            ))}
-            <span className="ml-0.5">적음 → 많음</span>
-          </span>
+          <span>칸 안 숫자는 실행/계획</span>
         </span>
         <button type="button" onClick={() => setAdding(true)} className={`${primaryBtnCls} ml-auto`}>
           <Plus size={15} /> 구간 추가
@@ -245,8 +253,14 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                     className="sticky left-0 z-20 whitespace-nowrap bg-card px-3 py-1.5 text-[13px] font-semibold text-text-strong"
                     style={{ width: NAME_W, minWidth: NAME_W }}
                   >
-                    {r.employmentType}
-                    <span className="block text-[11px] font-normal text-text-faint">계획 / 실행</span>
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className="inline-block h-[9px] w-[9px] shrink-0 rounded-full"
+                        style={{ backgroundColor: `rgb(${colorOf(r.employmentType)})` }}
+                      />
+                      {r.employmentType}
+                    </span>
+                    <span className="block text-[11px] font-normal text-text-faint">실행 / 계획</span>
                   </td>
                   {chart.days.map((d) => {
                     const w = weekdayOf(d);
@@ -256,8 +270,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                         className={`p-0 align-bottom ${w === 0 || w === 6 ? 'bg-hover/40' : ''}`}
                         style={{ width: DAY_W, minWidth: DAY_W }}
                       >
-                        <Cell value={r.plan[d] ?? 0} type={r.employmentType} tone="plan" />
-                        <Cell value={r.actual[d] ?? 0} type={r.employmentType} tone="actual" />
+                        <Cell plan={r.plan[d] ?? 0} actual={r.actual[d] ?? 0} />
                       </td>
                     );
                   })}
