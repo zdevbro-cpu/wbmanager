@@ -73,7 +73,7 @@ const colorOf = (type: string) => TYPE_COLOR[type] ?? TYPE_COLOR.미지정;
 const DAY_TONE: Record<'short' | 'ok' | 'over', string> = {
   short: 'rgb(96, 165, 250)', // 미달 — 덜 썼다
   ok: 'rgb(250, 204, 21)', // 적정 — 계획 막대(주황)와 갈라 보이도록 노랑
-  over: 'rgb(248, 113, 113)', // 초과 — 계획보다 더 들어가 원가를 민다
+  over: 'rgb(220, 38, 38)', // 초과 — 계획보다 더 들어가 원가를 민다
 };
 // 계획 막대 — 밝은 주황 한 가지. 윤곽선 없이 면으로만 둔다.
 const PLAN_FILL = 'rgb(255, 138, 0)';
@@ -343,7 +343,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                   </span>
                 </span>
               </div>
-              <div className="flex h-[132px] flex-1 items-end gap-[1px]">
+              <div className="flex h-[140px] flex-1 items-end gap-[1px]">
                 {chart.days.map((d) => {
                   const plan = dayTotals.plan[d] ?? 0;
                   const actual = dayTotals.actual[d] ?? 0;
@@ -356,7 +356,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                       title={`${d} · 계획 ${formatNumber(plan)} · 실행 ${formatNumber(actual)}공수`}
                     >
                       {/* 막대 높이만으로는 3과 4를 가리기 어렵다 — 위에 실행, 아래에 계획을 적는다. */}
-                      <div className="mb-0.5 h-[14px] text-center text-[10px] font-extrabold leading-none">
+                      <div className="mb-1 h-[16px] text-center text-[12px] font-extrabold leading-none">
                         {actual ? (
                           <span style={{ color: tone ? DAY_TONE[tone] : undefined }}>{formatNumber(actual)}</span>
                         ) : plan ? (
@@ -373,7 +373,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                           }}
                         />
                       </div>
-                      <div className="absolute inset-x-0 bottom-[18px] flex h-[100px] items-end">
+                      <div className="absolute inset-x-0 bottom-[24px] flex h-[100px] items-end">
                         <div
                           className="w-full rounded-t-[2px]"
                           style={{
@@ -382,7 +382,7 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
                           }}
                         />
                       </div>
-                      <div className="mt-0.5 h-[14px] text-center text-[10px] leading-none text-text-faint">
+                      <div className="mt-1 h-[16px] text-center text-[11.5px] font-semibold leading-none text-text-sub">
                         {plan ? formatNumber(plan) : ''}
                       </div>
                     </div>
