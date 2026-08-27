@@ -147,6 +147,7 @@ router.post('/', async (req, res) => {
     const created = await tx.outboundSale.create({
       data: {
         ...req.body,
+        createdById: req.appUser?.id ?? null,
         settledWeight,
         // 재고반영중량은 ecount 필수 항목 — 미입력 시 정산중량과 동기화한다. (S-KZSNZB)
         stockWeight: stockWeight ?? settledWeight,

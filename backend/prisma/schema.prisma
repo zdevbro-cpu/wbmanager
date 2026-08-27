@@ -234,6 +234,8 @@ model Inbound {
   memo           String?     @map("memo") // 비고
   // 모바일에서 올린 건은 임시저장으로 들어온다. 사무실에서 확인하고 정상등록으로 바꾼다.
   isDraft         Boolean   @default(false) @map("is_draft")
+  // 누가 올렸는지. 모바일에서 "오늘 내가 올린 건"을 뽑는 데 쓴다.
+  createdById     String?   @map("created_by_id")
   createdAt      DateTime    @default(now()) @map("created_at")
   deletedAt      DateTime?   @map("deleted_at") // 소프트 삭제
 
@@ -267,6 +269,8 @@ model WasteInbound {
   memo           String?     @map("memo")
   // 모바일에서 올린 건은 임시저장으로 들어온다. 사무실에서 확인하고 정상등록으로 바꾼다.
   isDraft         Boolean   @default(false) @map("is_draft")
+  // 누가 올렸는지. 모바일에서 "오늘 내가 올린 건"을 뽑는 데 쓴다.
+  createdById     String?   @map("created_by_id")
   createdAt      DateTime    @default(now()) @map("created_at")
   deletedAt      DateTime?   @map("deleted_at") // 소프트 삭제
 
@@ -356,6 +360,8 @@ model OutboundSale {
   paidDate         DateTime?  @map("paid_date") // 입금일
   // 모바일에서 올린 건은 임시저장으로 들어온다. 사무실에서 확인하고 정상등록으로 바꾼다.
   isDraft         Boolean   @default(false) @map("is_draft")
+  // 누가 올렸는지. 모바일에서 "오늘 내가 올린 건"을 뽑는 데 쓴다.
+  createdById     String?   @map("created_by_id")
   createdAt        DateTime   @default(now()) @map("created_at")
   deletedAt        DateTime?  @map("deleted_at") // 소프트 삭제
 
@@ -402,6 +408,8 @@ model WasteOutbound {
   olbaroMemo      String?     @map("olbaro_memo") // 기준업체량 등 메모
   // 모바일에서 올린 건은 임시저장으로 들어온다. 사무실에서 확인하고 정상등록으로 바꾼다.
   isDraft         Boolean   @default(false) @map("is_draft")
+  // 누가 올렸는지. 모바일에서 "오늘 내가 올린 건"을 뽑는 데 쓴다.
+  createdById     String?   @map("created_by_id")
   createdAt       DateTime    @default(now()) @map("created_at")
   deletedAt       DateTime?   @map("deleted_at") // 소프트 삭제
 

@@ -137,6 +137,7 @@ router.post('/', async (req, res) => {
     const created = await tx.wasteOutbound.create({
       data: {
         ...req.body,
+        createdById: req.appUser?.id ?? null,
         outboundDate: toISO(outboundDate),
         ...(handoverDate ? { handoverDate: toISO(handoverDate) } : {}),
         ...(transferDate ? { transferDate: toISO(transferDate) } : {}),
