@@ -4,6 +4,8 @@ import { useProjects, useItemMasters, useVehicles, useEmployees } from '../hooks
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import { downloadFile } from '../lib/download';
 import { SearchSelect, type SearchOption } from './SearchSelect';
+import { DocumentPreview, type PreviewDoc } from './DocumentPreview';
+import { API_BASE_URL } from '../api/client';
 import { pageTitleCls, primaryBtnCls, outlineBtnCls, inputCls, cardCls, tableWrapCls, thCls, trCls } from './ui/classes';
 import type { Attachment } from '../types';
 import { DateField } from './ui/DateField';
@@ -120,6 +122,8 @@ export function TransactionListLayout<T>({
   const { employees } = useEmployees();
   const [detail, setDetail] = useState<T | null>(null);
   const [detailEdit, setDetailEdit] = useState(false);
+  // 계량증명서를 보려고 상세까지 들어가지 않게, 목록에서 바로 연다.
+  const [previewFiles, setPreviewFiles] = useState<PreviewDoc[] | null>(null);
 
   // 수정 후 목록이 새로 오면 열려 있는 상세도 새 값으로 갈아 끼운다.
   // 이걸 하지 않으면 저장은 됐는데 상세에는 옛 값이 남아 반영이 안 된 것처럼 보인다.
@@ -142,6 +146,17 @@ export function TransactionListLayout<T>({
   const vehicleNoOptions = merge(vehicles.map((v) => ({ value: v.vehicleNo, label: v.vehicleNo })), 'vehicleNo');
   const driverOptions = merge(employees.map((e) => ({ value: e.name, label: e.name })), 'driverName');
   const nameOptions = (key: FilterKey) => merge([], key);
+
+  // 첨부는 앱이 중계해 받는다 — 드라이브 권한이 없는 사용자도 볼 수 있어야 한다.
+  const filesOf = (row: T): PreviewDoc[] =>
+    attachments(row).map((a) => ({
+      id: a.id,
+      title: a.fileName ?? a.fileType ?? '첨부',
+      fileName: a.fileName,
+      byteSize: null,
+      contentUrl: `${API_BASE_URL}/api/attachments/${a.id}/content`,
+      facts: [{ label: '종류', value: a.fileType ?? '문서' }],
+    }));
 
   const hasSum = columns.some((c) => c.sum);
   const tdBase = 'px-3 py-1.5 text-[13px] text-text';
@@ -362,9 +377,16 @@ export function TransactionListLayout<T>({
                       <Trash2 size={15} />
                     </button>
                     {attachments(row).length > 0 && (
-                      <span className="inline-flex items-center gap-0.5 text-[12px] text-text-faint">
+                      <button
+                        type="button"
+                        title={`증빙 보기 — ${attachments(row)
+                          .map((a) => a.fileName ?? a.fileType ?? '파일')
+                          .join(', ')}`}
+                        onClick={() => setPreviewFiles(filesOf(row))}
+                        className="inline-flex items-center gap-0.5 rounded-[6px] px-1 py-0.5 text-[12px] text-text-faint hover:bg-hover hover:text-primary"
+                      >
                         <Paperclip size={12} /> {attachments(row).length}
-                      </span>
+                      </button>
                     )}
                   </div>
                 </td>
@@ -399,6 +421,8 @@ export function TransactionListLayout<T>({
           )}
         </table>
       </div>
+
+      {previewFiles && <DocumentPreview items={previewFiles} onClose={() => setPreviewFiles(null)} />}
 
       {detail && (
         <EscOverlay
