@@ -3,7 +3,6 @@ import { Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { SearchSelect } from './SearchSelect';
 import { NumberInput } from './ui/NumberInput';
-import { DateField } from './ui/DateField';
 import { formatNumber } from '../lib/number';
 import { kstThisMonth } from '../lib/datetime';
 import { EMPLOYMENT_TYPES, employmentRank } from '../pages/EmployeeManagementPage';
@@ -51,14 +50,24 @@ const dayNo = (date: string) => Number(date.slice(8, 10));
 // 막대 길이는 그 줄에서 가장 큰 값을 꽉 찬 것으로 본다 —
 // 프로젝트마다 인원 규모가 달라 절대 높이로는 견줄 수 없다.
 function Bar({ value, max, tone }: { value: number; max: number; tone: 'plan' | 'actual' }) {
-  if (!value) return <div className="h-[14px]" />;
-  const pct = Math.max(12, Math.round((value / (max || 1)) * 100));
+  if (!value) return <div className="h-[15px]" />;
+  const pct = Math.max(20, Math.round((value / (max || 1)) * 100));
   return (
-    <div className="flex h-[14px] items-end px-[3px]" title={`${formatNumber(value)}공수`}>
-      <div
-        className={`w-full rounded-[2px] ${tone === 'plan' ? 'bg-primary/30' : 'bg-primary'}`}
-        style={{ height: `${pct}%` }}
-      />
+    <div className="relative h-[15px] px-[3px]" title={`${tone === 'plan' ? '계획' : '실행'} ${formatNumber(value)}공수`}>
+      <div className="flex h-full items-end">
+        <div
+          className={`w-full rounded-[2px] ${tone === 'plan' ? 'bg-primary/30' : 'bg-primary'}`}
+          style={{ height: `${pct}%` }}
+        />
+      </div>
+      {/* 몇 공수인지 막대 위에 그대로 적는다 — 길이만으로는 2와 3을 가리기 어렵다. */}
+      <span
+        className={`absolute inset-0 flex items-center justify-center text-[9px] font-bold ${
+          tone === 'plan' ? 'text-text-sub' : 'text-white'
+        }`}
+      >
+        {formatNumber(value)}
+      </span>
     </div>
   );
 }
@@ -141,8 +150,8 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
 
       {adding && (
         <PlanForm
-          projects={projects}
-          defaultProjectId={projectId}
+          projectId={projectId}
+          projectLabel={projectId ? projectName(projectId) : '프로젝트를 고르세요'}
           month={month}
           onClose={() => setAdding(false)}
           onSaved={() => {
@@ -292,24 +301,82 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
   );
 }
 
+
+// 구간은 달력에서 고른다 — 날짜를 두 번 눌러 시작과 끝을 잡는다.
+// 손으로 날짜를 두 번 적는 것보다 눈으로 주말·주차를 보며 고르는 편이 현장에 맞는다.
+function RangeCalendar({
+  month,
+  from,
+  to,
+  onPick,
+}: {
+  month: string;
+  from: string;
+  to: string;
+  onPick: (date: string) => void;
+}) {
+  const [y, m] = month.split('-').map(Number);
+  const last = new Date(y, m, 0).getDate();
+  const lead = new Date(y, m - 1, 1).getDay();
+  const cells: (string | null)[] = [
+    ...Array.from({ length: lead }, () => null),
+    ...Array.from({ length: last }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`),
+  ];
+
+  return (
+    <div>
+      <div className="grid grid-cols-7 gap-px text-center">
+        {WEEK.map((w, i) => (
+          <div
+            key={w}
+            className={`py-1 text-[11px] font-bold ${i === 0 ? 'text-danger' : i === 6 ? 'text-primary' : 'text-text-faint'}`}
+          >
+            {w}
+          </div>
+        ))}
+        {cells.map((d, i) => {
+          if (!d) return <div key={`e${i}`} />;
+          const inRange = !!from && !!to && d >= from && d <= to;
+          const edge = d === from || d === to;
+          return (
+            <button
+              key={d}
+              type="button"
+              onClick={() => onPick(d)}
+              className={`h-[30px] rounded-[6px] text-[12px] font-semibold ${
+                edge
+                  ? 'bg-primary text-white'
+                  : inRange
+                    ? 'bg-primary/20 text-text-strong'
+                    : 'text-text-sub hover:bg-hover'
+              }`}
+            >
+              {Number(d.slice(8, 10))}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function PlanForm({
-  projects,
-  defaultProjectId,
+  projectId,
+  projectLabel,
   month,
   onClose,
   onSaved,
 }: {
-  projects: Project[];
-  defaultProjectId: string;
+  projectId: string;
+  projectLabel: string;
   month: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [f, setF] = useState({
-    projectId: defaultProjectId,
     employmentType: EMPLOYMENT_TYPES[0],
-    startDate: `${month}-01`,
-    endDate: `${month}-01`,
     manDays: '1',
     unitCost: '',
     memo: '',
@@ -318,18 +385,44 @@ function PlanForm({
   const [error, setError] = useState('');
   const set = (patch: Partial<typeof f>) => setF((prev) => ({ ...prev, ...patch }));
 
+  // 처음 누르면 시작일, 두 번째로 누르면 종료일. 이미 둘 다 잡혀 있으면 다시 시작한다.
+  const pick = (d: string) => {
+    if (!from || (from && to)) {
+      setFrom(d);
+      setTo('');
+      return;
+    }
+    if (d < from) {
+      setFrom(d);
+      return;
+    }
+    setTo(d);
+  };
+
+  const days = from && to ? Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1 : from ? 1 : 0;
+  const endDate = to || from;
+  const total = days * Number(f.manDays || 0);
+
   const save = async () => {
-    if (!f.projectId) {
-      setError('프로젝트를 고르세요.');
+    if (!projectId) {
+      setError('위에서 프로젝트를 먼저 고르세요.');
+      return;
+    }
+    if (!from) {
+      setError('달력에서 구간을 고르세요.');
       return;
     }
     setError('');
     setBusy(true);
     try {
       await api.post('/api/labor-plans', {
-        ...f,
+        projectId,
+        employmentType: f.employmentType,
+        startDate: from,
+        endDate,
         manDays: Number(f.manDays || 0),
         unitCost: f.unitCost ? Number(f.unitCost) : undefined,
+        memo: f.memo || undefined,
       });
       onSaved();
     } catch (e) {
@@ -341,62 +434,71 @@ function PlanForm({
 
   return (
     <div className={`${cardCls} mb-3 p-3`}>
-      <div className="grid grid-cols-4 gap-x-3 gap-y-3.5">
-        <div className="col-span-2">
-          <label className={labelCls}>프로젝트</label>
-          <SearchSelect
-            ariaLabel="계획 프로젝트"
-            options={projects.map((p) => ({ value: p.id, label: p.roundName }))}
-            value={f.projectId}
-            onChange={(v) => set({ projectId: v })}
-          />
-        </div>
+      <div className="grid gap-4 [grid-template-columns:minmax(0,300px)_minmax(0,1fr)]">
         <div>
-          <label className={labelCls}>고용 구분</label>
-          <select
-            value={f.employmentType}
-            onChange={(e) => set({ employmentType: e.target.value })}
-            className={inputCls}
-          >
-            {EMPLOYMENT_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={labelCls}>하루 공수</label>
-          <NumberInput value={f.manDays} onChange={(v) => set({ manDays: v })} decimals={2} />
+          <span className={labelCls}>구간 — 날짜를 두 번 눌러 시작과 끝을 고릅니다</span>
+          <RangeCalendar month={month} from={from} to={endDate} onPick={pick} />
         </div>
 
         <div>
-          <label className={labelCls}>시작일</label>
-          <DateField value={f.startDate} onChange={(e) => set({ startDate: e.target.value })} className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>종료일</label>
-          <DateField value={f.endDate} onChange={(e) => set({ endDate: e.target.value })} className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>계획 단가(원)</label>
-          <NumberInput value={f.unitCost} onChange={(v) => set({ unitCost: v })} />
-        </div>
-        <div>
-          <label className={labelCls}>비고</label>
-          <input value={f.memo} onChange={(e) => set({ memo: e.target.value })} className={inputCls} />
-        </div>
-      </div>
+          <p className="mb-2 text-[13px] text-text-sub">
+            <b className="text-text-strong">{projectLabel}</b>
+            {from ? (
+              <span className="ml-2">
+                {from} ~ {endDate} · {days}일
+                {total > 0 && <span className="ml-1 text-text-faint">= 계획 {formatNumber(total)}공수</span>}
+              </span>
+            ) : (
+              <span className="ml-2 text-text-faint">구간을 고르지 않았습니다.</span>
+            )}
+          </p>
 
-      {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
+          {/* 한 줄로 세운다 — 구간은 달력이 맡았으니 남은 것은 네 칸뿐이다. */}
+          <div className="grid items-end gap-2 [grid-template-columns:minmax(0,1fr)_minmax(0,90px)_minmax(0,110px)_minmax(0,1.4fr)]">
+            <div>
+              <label className={labelCls}>고용 구분</label>
+              <select
+                value={f.employmentType}
+                onChange={(e) => set({ employmentType: e.target.value })}
+                className={inputCls}
+              >
+                {EMPLOYMENT_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>하루 공수</label>
+              <NumberInput value={f.manDays} onChange={(v) => set({ manDays: v })} decimals={2} />
+            </div>
+            <div>
+              <label className={labelCls}>계획 단가(원)</label>
+              <NumberInput value={f.unitCost} onChange={(v) => set({ unitCost: v })} />
+            </div>
+            <div>
+              <label className={labelCls}>비고</label>
+              <input value={f.memo} onChange={(e) => set({ memo: e.target.value })} className={inputCls} />
+            </div>
+          </div>
 
-      <div className="mt-3 flex justify-end gap-2 border-t border-border pt-3">
-        <button type="button" onClick={onClose} className={outlineBtnCls}>
-          취소
-        </button>
-        <button type="button" disabled={busy} onClick={save} className={primaryBtnCls}>
-          {busy ? '저장 중...' : '계획 저장'}
-        </button>
+          <p className="mt-2 text-[12px] text-text-faint">
+            1명이 하루 나오면 1공수입니다 — 정규직 2명이면 2, 반나절이 섞이면 2.5로 적습니다. 구분을 나눠 잡으려면
+            저장한 뒤 구간을 다시 골라 한 줄 더 넣습니다.
+          </p>
+
+          {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
+
+          <div className="mt-3 flex justify-end gap-2 border-t border-border pt-3">
+            <button type="button" onClick={onClose} className={outlineBtnCls}>
+              취소
+            </button>
+            <button type="button" disabled={busy} onClick={save} className={primaryBtnCls}>
+              {busy ? '저장 중...' : '계획 저장'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
