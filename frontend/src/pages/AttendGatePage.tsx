@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import jsQR from 'jsqr';
-import { Check, Download, LogIn, LogOut, Volume2, VolumeX } from 'lucide-react';
+import { Check, Download, LogIn, LogOut, Maximize, Minimize, Volume2, VolumeX } from 'lucide-react';
 import { api } from '../api/client';
 import { useProjects } from '../hooks/useMasters';
 import { kstStamp } from '../lib/datetime';
@@ -55,6 +55,7 @@ export function AttendGatePage() {
   const [camera, setCamera] = useState<'idle' | 'on' | 'off'>('idle');
   // 앞 카메라가 기본이다. 벽에 붙여 쓰는 단말이면 뒤 카메라로 바꿀 수 있다.
   const [facing, setFacing] = useState<'user' | 'environment'>('user');
+  const [full, setFull] = useState(false);
   // 홈 화면 저장 — 크롬은 설치 단추를 우리에게 넘겨준다. 그 밖의 브라우저는 안내만 띄운다.
   const [installer, setInstaller] = useState<{ prompt: () => Promise<void> } | null>(null);
   const [guide, setGuide] = useState(false);
@@ -149,6 +150,19 @@ export function AttendGatePage() {
     },
     [voice, lang],
   );
+
+  // 주소창을 숨긴다. 브라우저는 사람이 누른 뒤에만 전체화면을 열어 준다.
+  const toggleFull = useCallback(() => {
+    const el = document.documentElement;
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void el.requestFullscreen?.().catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    const onChange = () => setFull(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
 
   // 목소리 목록은 늦게 채워진다. 한 번 받아 두지 않으면 첫 안내가 기본 목소리로 나간다.
   useEffect(() => {
@@ -381,6 +395,16 @@ export function AttendGatePage() {
             {voice ? <Volume2 size={16} /> : <VolumeX size={16} />}
           </button>
           <Clock lang={lang} />
+          <button
+            type="button"
+            onClick={toggleFull}
+            title={full ? t.exitFull : t.enterFull}
+            aria-label={full ? t.exitFull : t.enterFull}
+            className="rounded-[8px] border border-border px-2.5 py-1.5 text-text-sub hover:text-text-strong"
+          >
+            {full ? <Minimize size={16} /> : <Maximize size={16} />}
+          </button>
+
           {installed ? (
             <span
               title={t.installed}
@@ -442,7 +466,10 @@ export function AttendGatePage() {
               <p className="text-[13px] text-text-sub">{t.cameraHint}</p>
               <button
                 type="button"
-                onClick={() => setCamera('on')}
+                onClick={() => {
+                  setCamera('on');
+                  if (!document.fullscreenElement) toggleFull();
+                }}
                 className="rounded-[10px] bg-primary px-4 py-2 text-[14px] font-bold text-white"
               >
                 {t.cameraOn}
