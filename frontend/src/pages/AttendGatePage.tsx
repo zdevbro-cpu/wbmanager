@@ -196,14 +196,31 @@ export function AttendGatePage() {
   return (
     // 세로(폰)에서는 위에서 아래로, 가로(태블릿)에서는 왼쪽 카메라·오른쪽 결과로 선다.
     <div className="flex min-h-[100dvh] flex-col bg-bg p-2 sm:p-3">
-      {/* 머리줄 — 어디서 무엇으로 찍는지가 늘 보여야 한다. */}
-      <div className="mb-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
+      {/* 1단 — 이름과 말 고르기. 말은 오른쪽 끝에 둔다. */}
+      <div className="mb-2 flex items-center gap-2">
         <h1 className="text-[15px] font-extrabold text-text-strong sm:text-[17px]">{t.title}</h1>
+        <div className="ml-auto flex overflow-hidden rounded-[8px] border border-border">
+          {LANGS.map((l) => (
+            <button
+              key={l.id}
+              type="button"
+              onClick={() => setLang(l.id)}
+              className={`px-2.5 py-1.5 text-[12.5px] font-bold ${
+                lang === l.id ? 'bg-primary text-white' : 'text-text-sub hover:text-text-strong'
+              }`}
+            >
+              {l.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
+      {/* 2단 — 어디서 찍는지. */}
+      <div className="mb-2">
         <select
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
-          className={`${inputCls} h-[34px] w-[130px] text-[13px] sm:w-[170px]`}
+          className={`${inputCls} h-[36px] w-full text-[13px] sm:w-[220px]`}
           aria-label={t.site}
         >
           <option value="HQ">{t.hq}</option>
@@ -213,7 +230,10 @@ export function AttendGatePage() {
             </option>
           ))}
         </select>
+      </div>
 
+      {/* 3단 — 출근·퇴근은 왼쪽, 스피커와 시계는 오른쪽. */}
+      <div className="mb-2 flex items-center gap-2">
         <div className="flex overflow-hidden rounded-[10px] border border-border">
           {(
             [
@@ -238,22 +258,6 @@ export function AttendGatePage() {
         </div>
 
         <div className="ml-auto flex items-center gap-1.5">
-          {/* 말 고르기 — 고른 값은 이 기기에 남는다. */}
-          <div className="flex overflow-hidden rounded-[8px] border border-border">
-            {LANGS.map((l) => (
-              <button
-                key={l.id}
-                type="button"
-                onClick={() => setLang(l.id)}
-                className={`px-2.5 py-1.5 text-[12.5px] font-bold ${
-                  lang === l.id ? 'bg-primary text-white' : 'text-text-sub hover:text-text-strong'
-                }`}
-              >
-                {l.label}
-              </button>
-            ))}
-          </div>
-
           <button
             type="button"
             onClick={() => setVoice((v) => !v)}
@@ -266,22 +270,20 @@ export function AttendGatePage() {
         </div>
       </div>
 
-      {/* 2단 — 그날의 구분. 출근·퇴근 어느 쪽이든 함께 남는다. */}
-      <div className="mb-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
-        <div className="flex flex-wrap gap-1.5">
-          {attendCodes().map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setCode(c)}
-              className={`rounded-[8px] border px-2.5 py-1.5 text-[12.5px] font-bold sm:text-[13px] ${
-                code === c ? 'border-primary bg-primary/20 text-primary' : 'border-border text-text-sub'
-              }`}
-            >
-              {t.codes[c] ?? c}
-            </button>
-          ))}
-        </div>
+      {/* 4단 — 그날의 구분. 출근·퇴근 어느 쪽이든 함께 남는다. */}
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        {attendCodes().map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setCode(c)}
+            className={`rounded-[8px] border px-2.5 py-1.5 text-[12.5px] font-bold sm:text-[13px] ${
+              code === c ? 'border-primary bg-primary/20 text-primary' : 'border-border text-text-sub'
+            }`}
+          >
+            {t.codes[c] ?? c}
+          </button>
+        ))}
       </div>
 
       <div className="grid min-h-0 flex-1 gap-2 sm:gap-3 lg:[grid-template-columns:minmax(0,320px)_minmax(0,1fr)]">
