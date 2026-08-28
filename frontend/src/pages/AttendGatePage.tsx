@@ -510,7 +510,7 @@ export function AttendGatePage() {
               </p>
             </div>
           ) : (
-            <p className="m-auto py-8 text-[20px] font-bold text-text-faint sm:text-[22px]">{t.waiting}</p>
+            <p className="m-auto truncate py-4 text-[15px] font-bold text-text-faint sm:text-[16px]">{t.waiting}</p>
           )}
 
           {/* 스캐너·손입력 — 세로에서도 화면 맨 아래에 붙는다. */}
