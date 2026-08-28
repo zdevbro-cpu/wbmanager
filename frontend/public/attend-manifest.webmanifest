@@ -5,7 +5,7 @@
   "description": "사번 QR로 출퇴근을 찍는 단말",
   "start_url": "/attend-gate",
   "scope": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "any",
   "background_color": "#0b1220",
   "theme_color": "#0b1220",
@@ -28,5 +28,9 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "display_override": [
+    "fullscreen",
+    "standalone"
   ]
 }
