@@ -290,15 +290,6 @@ export function AttendGatePage() {
         <div className="ml-auto flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => (installer ? void installer.prompt() : setGuide((v) => !v))}
-            title={t.install}
-            aria-label={t.install}
-            className="rounded-[8px] border border-primary px-2.5 py-1.5 text-primary hover:bg-nav-hover"
-          >
-            <Download size={16} />
-          </button>
-          <button
-            type="button"
             onClick={() => setVoice((v) => !v)}
             title={voice ? t.voiceOn : t.voiceOff}
             className="rounded-[8px] border border-border px-2.5 py-1.5 text-text-sub hover:text-text-strong"
@@ -306,6 +297,15 @@ export function AttendGatePage() {
             {voice ? <Volume2 size={16} /> : <VolumeX size={16} />}
           </button>
           <Clock lang={lang} />
+          <button
+            type="button"
+            onClick={() => (installer ? void installer.prompt() : setGuide((v) => !v))}
+            title={t.install}
+            aria-label={t.install}
+            className="rounded-[8px] border border-primary px-2.5 py-1.5 text-primary hover:bg-nav-hover"
+          >
+            <Download size={16} />
+          </button>
         </div>
       </div>
 
