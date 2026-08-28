@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import jsQR from 'jsqr';
-import { LogIn, LogOut, Volume2, VolumeX } from 'lucide-react';
+import { Download, LogIn, LogOut, Volume2, VolumeX } from 'lucide-react';
 import { api } from '../api/client';
 import { useProjects } from '../hooks/useMasters';
 import { kstStamp } from '../lib/datetime';
@@ -44,6 +44,9 @@ export function AttendGatePage() {
   const [error, setError] = useState('');
   const [afternoon, setAfternoon] = useState(new Date().getHours() >= OUT_FROM_HOUR);
   const [camera, setCamera] = useState<'idle' | 'on' | 'off'>('idle');
+  // 홈 화면 저장 — 크롬은 설치 단추를 우리에게 넘겨준다. 그 밖의 브라우저는 안내만 띄운다.
+  const [installer, setInstaller] = useState<{ prompt: () => Promise<void> } | null>(null);
+  const [guide, setGuide] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -60,6 +63,20 @@ export function AttendGatePage() {
       // 저장이 막힌 기기에서도 그 자리에서는 골라 쓸 수 있어야 한다.
     }
   }, [lang]);
+
+  // 크롬이 설치 단추를 내주려면 fetch를 다루는 서비스워커가 있어야 한다.
+  // 아무것도 캐시하지 않는 최소 서비스워커라 배포한 화면이 옛것으로 덮이지 않는다.
+  useEffect(() => {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+
+    const onPrompt = (e: Event) => {
+      e.preventDefault();
+      const ev = e as Event & { prompt: () => Promise<void> };
+      setInstaller({ prompt: () => ev.prompt() });
+    };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+  }, []);
 
   // 홈 화면에 저장하면 이 화면이 바로 열리게 한다.
   // 앱 전체 매니페스트는 /mobile 로 열리므로, 이 화면에 있는 동안만 단말용으로 바꿔 둔다.
@@ -199,7 +216,15 @@ export function AttendGatePage() {
       {/* 1단 — 이름과 말 고르기. 말은 오른쪽 끝에 둔다. */}
       <div className="mb-2 flex items-center gap-2">
         <h1 className="text-[15px] font-extrabold text-text-strong sm:text-[17px]">{t.title}</h1>
-        <div className="ml-auto flex overflow-hidden rounded-[8px] border border-border">
+        <button
+          type="button"
+          onClick={() => (installer ? void installer.prompt() : setGuide((v) => !v))}
+          className="ml-auto flex items-center gap-1 rounded-[8px] border border-primary px-2.5 py-1.5 text-[12.5px] font-bold text-primary hover:bg-nav-hover"
+        >
+          <Download size={14} /> {t.install}
+        </button>
+
+        <div className="flex overflow-hidden rounded-[8px] border border-border">
           {LANGS.map((l) => (
             <button
               key={l.id}
@@ -214,6 +239,19 @@ export function AttendGatePage() {
           ))}
         </div>
       </div>
+
+      {guide && (
+        <div className="mb-2 rounded-[10px] border border-primary/50 bg-input p-3 text-[12.5px] leading-relaxed text-text-sub">
+          {t.installGuide}
+          <button
+            type="button"
+            onClick={() => setGuide(false)}
+            className="ml-2 font-bold text-primary underline"
+          >
+            {t.close}
+          </button>
+        </div>
+      )}
 
       {/* 2단 — 어디서 찍는지. */}
       <div className="mb-2">
