@@ -214,23 +214,15 @@ export function AttendGatePage() {
     // 세로(폰)에서는 위에서 아래로, 가로(태블릿)에서는 왼쪽 카메라·오른쪽 결과로 선다.
     <div className="flex min-h-[100dvh] flex-col bg-bg p-2 sm:p-3">
       {/* 1단 — 이름과 말 고르기. 말은 오른쪽 끝에 둔다. */}
-      <div className="mb-2 flex items-center gap-2">
-        <h1 className="text-[15px] font-extrabold text-text-strong sm:text-[17px]">{t.title}</h1>
-        <button
-          type="button"
-          onClick={() => (installer ? void installer.prompt() : setGuide((v) => !v))}
-          className="ml-auto flex items-center gap-1 rounded-[8px] border border-primary px-2.5 py-1.5 text-[12.5px] font-bold text-primary hover:bg-nav-hover"
-        >
-          <Download size={14} /> {t.install}
-        </button>
-
-        <div className="flex overflow-hidden rounded-[8px] border border-border">
+      <div className="mb-2 flex items-center gap-2 whitespace-nowrap">
+        <h1 className="shrink-0 text-[15px] font-extrabold text-text-strong sm:text-[17px]">{t.title}</h1>
+        <div className="ml-auto flex shrink-0 overflow-hidden rounded-[8px] border border-border">
           {LANGS.map((l) => (
             <button
               key={l.id}
               type="button"
               onClick={() => setLang(l.id)}
-              className={`px-2.5 py-1.5 text-[12.5px] font-bold ${
+              className={`px-2 py-1.5 text-[12px] font-bold sm:px-2.5 sm:text-[12.5px] ${
                 lang === l.id ? 'bg-primary text-white' : 'text-text-sub hover:text-text-strong'
               }`}
             >
@@ -296,6 +288,15 @@ export function AttendGatePage() {
         </div>
 
         <div className="ml-auto flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => (installer ? void installer.prompt() : setGuide((v) => !v))}
+            title={t.install}
+            aria-label={t.install}
+            className="rounded-[8px] border border-primary px-2.5 py-1.5 text-primary hover:bg-nav-hover"
+          >
+            <Download size={16} />
+          </button>
           <button
             type="button"
             onClick={() => setVoice((v) => !v)}
