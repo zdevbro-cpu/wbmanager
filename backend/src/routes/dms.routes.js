@@ -613,6 +613,149 @@ router.get('/entities/:type/:id/documents', async (req, res) => {
 });
 
 
+// 문서가 어느 업무 건에서 나왔는지 읽어 온다.
+//
+// 계근표 같은 문서는 파일보다 그 건의 값(상차일·차량번호·품목·중량)이 곧 내용이다.
+// 그 값을 문서에 복사해 두지 않는다 — 거래를 고치면 문서에 남은 값이 옛것이 되어
+// 두 곳이 어긋난다. 늘 원본을 읽어 보여 준다.
+const SOURCE_LABEL = {
+  inbound: '입고(반입) 현황',
+  outbound: '출고 현황',
+  waste_inbound: '폐기물 수집·운반 현황',
+  waste_outbound: '폐기물 반출 현황',
+  project: '프로젝트 관리',
+  asset: '자산 관리',
+  employee: '임직원 관리',
+};
+
+const SOURCE_PATH = {
+  inbound: '/inbound',
+  outbound: '/outbound',
+  waste_inbound: '/waste-inbound',
+  waste_outbound: '/waste-outbound',
+  project: '/projects',
+  asset: '/assets',
+  employee: '/employees',
+};
+
+const day = (v) => (v ? new Date(v).toISOString().slice(0, 10) : null);
+const dec = (v) => (v == null ? null : Number(v));
+
+// 화면에 그대로 줄 세울 항목들. 문서 종류마다 볼 것이 다르다.
+async function readSource(entityType, entityId) {
+  const common = { entityType, entityId, label: SOURCE_LABEL[entityType] ?? entityType, path: SOURCE_PATH[entityType] };
+
+  if (entityType === 'inbound') {
+    const r = await prisma.inbound.findUnique({
+      where: { id: entityId },
+      include: { project: { select: { roundName: true } }, item: { select: { itemName: true } } },
+    });
+    if (!r) return null;
+    return {
+      ...common,
+      fields: [
+        ['상차일', day(r.inboundDate)],
+        ['프로젝트', r.project?.roundName ?? null],
+        ['하차지', r.unloadingPoint],
+        ['차종 · 차량번호', [r.vehicleType, r.vehicleNo].filter(Boolean).join(' · ') || null],
+        ['운전자', r.driverName],
+        ['품목', r.item?.itemName ?? r.itemCode],
+        ['총중량 · 공차중량', [dec(r.grossWeight), dec(r.tareWeight)].some((v) => v != null) ? `${dec(r.grossWeight) ?? '-'} / ${dec(r.tareWeight) ?? '-'} kg` : null],
+        ['입고량', dec(r.netWeight) != null ? `${dec(r.netWeight)} kg` : null],
+        ['비고', r.memo],
+      ],
+    };
+  }
+
+  if (entityType === 'outbound') {
+    const r = await prisma.outboundSale.findUnique({
+      where: { id: entityId },
+      include: { project: { select: { roundName: true } }, item: { select: { itemName: true } }, buyer: { select: { name: true } } },
+    });
+    if (!r) return null;
+    return {
+      ...common,
+      fields: [
+        ['계량일', day(r.outboundDate)],
+        ['프로젝트', r.project?.roundName ?? null],
+        ['거래처', r.buyer?.name ?? null],
+        ['상차지', r.loadingPoint],
+        ['차종 · 차량번호', [r.vehicleType, r.vehicleNo].filter(Boolean).join(' · ') || null],
+        ['운전자', r.driverName],
+        ['품목', r.item?.itemName ?? r.itemCode],
+        ['정산중량', dec(r.settledWeight) != null ? `${dec(r.settledWeight)} kg` : null],
+        ['단가 · 금액', [dec(r.unitPrice), dec(r.amount)].some((v) => v != null) ? `${dec(r.unitPrice) ?? '-'} 원 / ${dec(r.amount) ?? '-'} 원` : null],
+        ['비고', r.memo],
+      ],
+    };
+  }
+
+  if (entityType === 'waste_inbound') {
+    const r = await prisma.wasteInbound.findUnique({
+      where: { id: entityId },
+      include: { project: { select: { roundName: true } }, item: { select: { itemName: true } } },
+    });
+    if (!r) return null;
+    return {
+      ...common,
+      fields: [
+        ['상차일', day(r.receiveDate)],
+        ['프로젝트', r.project?.roundName ?? null],
+        ['배출자', r.dischargerName],
+        ['운반자 · 처리자', [r.transporterName, r.processorName].filter(Boolean).join(' · ') || null],
+        ['하차지', r.unloadingPoint],
+        ['차종 · 차량번호', [r.vehicleType, r.vehicleNo].filter(Boolean).join(' · ') || null],
+        ['품목', r.item?.itemName ?? r.itemCode],
+        ['입고량', dec(r.netWeight) != null ? `${dec(r.netWeight)} kg` : null],
+        ['비고', r.memo],
+      ],
+    };
+  }
+
+  if (entityType === 'waste_outbound') {
+    const r = await prisma.wasteOutbound.findUnique({
+      where: { id: entityId },
+      include: { project: { select: { roundName: true } }, item: { select: { itemName: true } }, buyer: { select: { name: true } } },
+    });
+    if (!r) return null;
+    return {
+      ...common,
+      fields: [
+        ['상차일', day(r.outboundDate)],
+        ['인계일', day(r.handoverDate)],
+        ['프로젝트', r.project?.roundName ?? null],
+        ['배출자 · 운반자', [r.dischargerName, r.transporterName].filter(Boolean).join(' · ') || null],
+        ['처리자', r.buyer?.name ?? null],
+        ['상차지', r.loadingPoint],
+        ['차종 · 차량번호', [r.vehicleType, r.vehicleNo].filter(Boolean).join(' · ') || null],
+        ['품목', r.item?.itemName ?? r.itemCode],
+        ['정산중량', dec(r.weight) != null ? `${dec(r.weight)} kg` : null],
+        ['지출금액 · 운반비', [dec(r.amount), dec(r.transportCost)].some((v) => v != null) ? `${dec(r.amount) ?? '-'} 원 / ${dec(r.transportCost) ?? '-'} 원` : null],
+        ['올바로 신고', r.olbaroReported ? '완료' : '미신고'],
+        ['비고', r.memo],
+      ],
+    };
+  }
+
+  if (entityType === 'project') {
+    const r = await prisma.project.findUnique({ where: { id: entityId } });
+    if (!r) return null;
+    return {
+      ...common,
+      fields: [
+        ['프로젝트', r.roundName],
+        ['현장번호', r.siteNo != null ? String(r.siteNo) : null],
+        ['계약기간', [day(r.startDate), day(r.endDate)].filter(Boolean).join(' ~ ') || null],
+        ['계약금액', dec(r.contractAmount) != null ? `${dec(r.contractAmount)} 원` : null],
+        ['매입가', dec(r.purchasePrice) != null ? `${dec(r.purchasePrice)} 원` : null],
+        ['상태', r.status],
+      ],
+    };
+  }
+
+  return null;
+}
+
 // 상세 — 버전 이력과 연결된 업무까지 함께 준다.
 router.get('/documents/:id', async (req, res) => {
   const doc = await prisma.document.findUnique({
@@ -626,12 +769,20 @@ router.get('/documents/:id', async (req, res) => {
     ? await prisma.project.findMany({ where: { id: { in: projectIds } }, select: { id: true, roundName: true } })
     : [];
 
+  // 프로젝트 말고 실제 업무 건이 있으면 그 값을 읽어 함께 준다.
+  const sources = (
+    await Promise.all(
+      doc.links.filter((l) => l.entityType !== 'project').map((l) => readSource(l.entityType, l.entityId)),
+    )
+  ).filter(Boolean);
+
   const { links, ...rest } = doc;
   res.json({
     ...rest,
     versions: doc.versions.map((v) => ({ ...v, byteSize: v.byteSize == null ? null : Number(v.byteSize) })),
     attachments: doc.attachments.map((a) => ({ ...a, byteSize: a.byteSize == null ? null : Number(a.byteSize) })),
     projects: projects.map((p) => ({ id: p.id, name: p.roundName })),
+    sources: sources.map((s) => ({ ...s, fields: s.fields.filter(([, v]) => v != null && v !== '') })),
   });
 });
 
