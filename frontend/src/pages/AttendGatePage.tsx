@@ -215,7 +215,7 @@ export function AttendGatePage() {
     <div className="flex min-h-[100dvh] flex-col bg-bg p-2 sm:p-3">
       {/* 1단 — 이름과 말 고르기. 말은 오른쪽 끝에 둔다. */}
       <div className="mb-2 flex items-center gap-2 whitespace-nowrap">
-        <h1 className="shrink-0 text-[15px] font-extrabold text-text-strong sm:text-[17px]">{t.title}</h1>
+        <h1 className="min-w-0 truncate text-[15px] font-extrabold text-text-strong sm:text-[17px]">{t.title}</h1>
         <div className="ml-auto flex shrink-0 overflow-hidden rounded-[8px] border border-border">
           {LANGS.map((l) => (
             <button
