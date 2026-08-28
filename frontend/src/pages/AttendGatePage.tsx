@@ -115,7 +115,7 @@ export function AttendGatePage() {
           empCode,
           projectId,
           kind,
-          attendCode: kind === 'in' ? code : undefined,
+          attendCode: code,
         });
         setLast(r);
         speak(r.kind === 'in' ? t.greet(r.name, t.codes[code] ?? code) : t.farewell(r.name));
@@ -267,22 +267,20 @@ export function AttendGatePage() {
           ))}
         </div>
 
-        {kind === 'in' && (
-          <div className="flex flex-wrap gap-1.5">
-            {attendCodes().map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCode(c)}
-                className={`rounded-[8px] border px-2.5 py-1.5 text-[12.5px] font-bold sm:text-[13px] ${
-                  code === c ? 'border-primary bg-primary/20 text-primary' : 'border-border text-text-sub'
-                }`}
-              >
-                {t.codes[c] ?? c}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-1.5">
+          {attendCodes().map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCode(c)}
+              className={`rounded-[8px] border px-2.5 py-1.5 text-[12.5px] font-bold sm:text-[13px] ${
+                code === c ? 'border-primary bg-primary/20 text-primary' : 'border-border text-text-sub'
+              }`}
+            >
+              {t.codes[c] ?? c}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid min-h-0 flex-1 gap-2 sm:gap-3 lg:[grid-template-columns:minmax(0,320px)_minmax(0,1fr)]">
