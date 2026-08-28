@@ -1192,7 +1192,7 @@ function DetailForm({
             원본 업무 건
             <span className="text-[12px] font-normal text-text-faint">{src.label}</span>
             {src.path && (
-              <Link to={src.path} className="ml-auto text-[12px] font-bold text-primary no-underline hover:underline">
+              <Link to={`${src.path}?focus=${src.entityId}`} className="ml-auto text-[12px] font-bold text-primary no-underline hover:underline">
                 해당 화면으로 이동 →
               </Link>
             )}
