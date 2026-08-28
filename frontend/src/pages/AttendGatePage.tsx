@@ -132,14 +132,30 @@ export function AttendGatePage() {
   const speak = useCallback(
     (text: string) => {
       if (!voice || !('speechSynthesis' in window)) return;
+      const want = voiceOf(lang);
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = voiceOf(lang);
+      u.lang = want;
+      // 목소리를 손으로 지정한다. lang만 주면 글자가 한글일 때 기기가
+      // 한국어 목소리로 되돌아가, 영어를 골라도 한국말로 읽힌다.
+      const picked =
+        window.speechSynthesis.getVoices().find((v) => v.lang === want) ??
+        window.speechSynthesis.getVoices().find((v) => v.lang.startsWith(want.slice(0, 2)));
+      if (picked) u.voice = picked;
       u.rate = 1.05;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     },
     [voice, lang],
   );
+
+  // 목소리 목록은 늦게 채워진다. 한 번 받아 두지 않으면 첫 안내가 기본 목소리로 나간다.
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return;
+    const warm = () => window.speechSynthesis.getVoices();
+    warm();
+    window.speechSynthesis.addEventListener('voiceschanged', warm);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', warm);
+  }, []);
 
   const stamp = useCallback(
     async (empCode: string) => {
@@ -248,7 +264,10 @@ export function AttendGatePage() {
     const site = projects.find((p) => p.id === id);
     const name = site ? labelOf(site) : t.hq;
     setSiteNotice(name);
-    speak(`${t.site} ${name}`);
+    // 한국어가 아니면 번호만 읽는다 — 한글 현장명을 영어·러시아어 목소리로 읽으면
+    // 알아들을 수 없고, 기기가 한국어 목소리로 되돌아가 버린다.
+    const spoken = lang === 'ko' ? name : site?.siteNo != null ? String(site.siteNo) : t.hq;
+    speak(`${t.site} ${spoken}`);
   };
 
   const ready = Boolean(projectId);
