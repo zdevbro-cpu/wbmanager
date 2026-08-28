@@ -198,6 +198,9 @@ model Project {
   status          String    @default("진행") @map("status") // 진행/완료/보류
   // 출퇴근 위치를 견줄 현장 기준점. 입력칸은 없다 —
   // 그 현장에서 처음 찍힌 출근 위치를 기준으로 삼고, 그 뒤로는 반경 안인지만 본다.
+  // 현장번호 — 출퇴근 단말에서 말과 상관없이 현장을 가리킨다.
+  // 한 번 준 번호는 다시 쓰지 않는다(목록 순서로 매기면 현장이 늘 때 번호가 밀린다).
+  siteNo          Int?      @unique @map("site_no")
   siteLat         Float?    @map("site_lat")
   siteLng         Float?    @map("site_lng")
   geoRadius       Int       @default(100) @map("geo_radius") // m

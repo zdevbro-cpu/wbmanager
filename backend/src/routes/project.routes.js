@@ -35,6 +35,17 @@ router.get('/', async (req, res) => {
 // 존재하지 않는 id를 가리키게 되어 저장이 통째로 거부된다. 비운 칸은 비운 채로 저장한다.
 const orNull = (v) => (v === '' || v === undefined ? null : v);
 
+// 다음 현장번호 — 지금까지 쓴 것 중 가장 큰 번호 다음이다.
+// 지워진 현장의 번호를 물려주지 않는다. 그 번호를 외우고 있는 사람이 있기 때문이다.
+async function nextSiteNo(tx) {
+  const last = await tx.project.findFirst({
+    where: { siteNo: { not: null } },
+    orderBy: { siteNo: 'desc' },
+    select: { siteNo: true },
+  });
+  return (last?.siteNo ?? 0) + 1;
+}
+
 router.post('/', async (req, res) => {
   const b = req.body;
   if (!b.roundName) return res.status(400).json({ error: 'roundName은 필수입니다.' });
@@ -55,6 +66,7 @@ router.post('/', async (req, res) => {
         status: b.status || '진행',
         vatIncluded: Boolean(b.vatIncluded),
         projectCode: b.projectCode || (await nextProjectCode(tx, b.startDate)),
+        siteNo: num(b.siteNo) ?? (await nextSiteNo(tx)),
         contractAmount: num(b.contractAmount),
         purchasePrice: num(b.purchasePrice),
         contractWeight: num(b.contractWeight),
@@ -73,10 +85,16 @@ router.patch('/:id', async (req, res) => {
   const b = req.body;
   const set = (key, value) => (b[key] !== undefined ? { [key]: value } : {});
 
+  if (b.siteNo !== undefined && num(b.siteNo) != null) {
+    const taken = await prisma.project.findFirst({ where: { siteNo: num(b.siteNo), id: { not: req.params.id } } });
+    if (taken) return res.status(409).json({ error: `${num(b.siteNo)}번은 이미 ${taken.roundName}이 쓰고 있습니다.` });
+  }
+
   const updated = await prisma.project.update({
     where: { id: req.params.id },
     data: {
       ...set('roundName', b.roundName),
+      ...set('siteNo', num(b.siteNo) ?? null),
       ...set('ordererId', b.ordererId || null),
       ...set('contractorId', b.contractorId || null),
       ...set('siteName', b.siteName || null),

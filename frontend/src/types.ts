@@ -62,6 +62,8 @@ export interface ItemMaster {
 export interface Project {
   id: string;
   projectCode?: string | null;
+  /** 현장번호 — 출퇴근 단말에서 말과 상관없이 현장을 가리킨다. */
+  siteNo?: number | null;
   roundName: string;
   ordererId?: string | null;
   orderer?: Vendor;

@@ -193,7 +193,15 @@ async function stamp(req, res, kind) {
 async function ensureHqProject() {
   const found = await prisma.project.findFirst({ where: { roundName: '본사' } });
   if (found) return found.id;
-  const created = await prisma.project.create({ data: { roundName: '본사', status: '진행' } });
+  // 본사도 현장번호를 받는다 — 단말에서는 번호로 고르기 때문이다.
+  const last = await prisma.project.findFirst({
+    where: { siteNo: { not: null } },
+    orderBy: { siteNo: 'desc' },
+    select: { siteNo: true },
+  });
+  const created = await prisma.project.create({
+    data: { roundName: '본사', status: '진행', siteNo: (last?.siteNo ?? 0) + 1 },
+  });
   return created.id;
 }
 

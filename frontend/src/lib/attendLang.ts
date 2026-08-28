@@ -35,6 +35,7 @@ interface Dict {
   install: string;
   installed: string;
   installHow: string;
+  noSite: string;
   installGuide: string;
   close: string;
   /** 근태 코드 — 키는 서버에 보내는 한국어 값이다. */
@@ -68,6 +69,7 @@ const KO: Dict = {
   install: '홈 화면에 저장',
   installed: '이미 홈 화면 앱으로 열려 있습니다',
   installHow: '저장하는 방법 보기',
+  noSite: '번 현장이 없습니다.',
   installGuide:
     '이 단추가 동작하지 않는 브라우저에서는 이렇게 합니다 — 크롬: 화면을 아래로 쓸어 주소창을 부른 뒤 ⋮ → 홈 화면에 추가 · 삼성 인터넷: 아래 ≡ → 현재 페이지 추가 → 홈 화면 · 아이폰·아이패드 사파리: 공유 ⬆︎ → 홈 화면에 추가',
   close: '닫기',
@@ -99,6 +101,7 @@ const EN: Dict = {
   install: 'Add to home screen',
   installed: 'Already running as an installed app',
   installHow: 'How to add it',
+  noSite: ' — no site with that number.',
   installGuide:
     'If this button does nothing — Chrome: swipe down to show the address bar, then ⋮ → Add to Home screen · Samsung Internet: ≡ at the bottom → Add page to → Home screen · iPhone/iPad Safari: Share ⬆︎ → Add to Home Screen',
   close: 'Close',
@@ -130,6 +133,7 @@ const RU: Dict = {
   install: 'На главный экран',
   installed: 'Уже открыто как установленное приложение',
   installHow: 'Как добавить',
+  noSite: ' — объекта с таким номером нет.',
   installGuide:
     'Если кнопка не работает — Chrome: потяните вниз, чтобы показать адресную строку, затем ⋮ → Добавить на главный экран · Samsung Internet: ≡ внизу → Добавить страницу → Главный экран · iPhone/iPad Safari: Поделиться ⬆︎ → На экран «Домой»',
   close: 'Закрыть',
