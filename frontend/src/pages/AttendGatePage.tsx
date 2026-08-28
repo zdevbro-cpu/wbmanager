@@ -238,6 +238,22 @@ export function AttendGatePage() {
         </div>
 
         <div className="ml-auto flex items-center gap-1.5">
+          {/* 말 고르기 — 고른 값은 이 기기에 남는다. */}
+          <div className="flex overflow-hidden rounded-[8px] border border-border">
+            {LANGS.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                onClick={() => setLang(l.id)}
+                className={`px-2.5 py-1.5 text-[12.5px] font-bold ${
+                  lang === l.id ? 'bg-primary text-white' : 'text-text-sub hover:text-text-strong'
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+
           <button
             type="button"
             onClick={() => setVoice((v) => !v)}
@@ -250,23 +266,8 @@ export function AttendGatePage() {
         </div>
       </div>
 
-      {/* 2단 — 말 고르기와 근태. 고른 말은 이 기기에 남는다. */}
+      {/* 2단 — 그날의 구분. 출근·퇴근 어느 쪽이든 함께 남는다. */}
       <div className="mb-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
-        <div className="flex overflow-hidden rounded-[8px] border border-border">
-          {LANGS.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              onClick={() => setLang(l.id)}
-              className={`px-2.5 py-1.5 text-[12.5px] font-bold ${
-                lang === l.id ? 'bg-primary text-white' : 'text-text-sub hover:text-text-strong'
-              }`}
-            >
-              {l.label}
-            </button>
-          ))}
-        </div>
-
         <div className="flex flex-wrap gap-1.5">
           {attendCodes().map((c) => (
             <button
