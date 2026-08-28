@@ -20,6 +20,7 @@ import {
   Lock,
   FileSearch,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { api, API_BASE_URL } from '../api/client';
 import { auth } from '../lib/firebase';
 import { useProjects } from '../hooks/useMasters';
@@ -82,6 +83,15 @@ interface Doc {
   versions: DocVersion[];
   attachments?: DocAttachment[];
   projects: { id: string; name: string | null }[];
+}
+
+interface DocSource {
+  entityType: string;
+  entityId: string;
+  label: string;
+  path?: string | null;
+  /** [항목 이름, 값] — 서버가 비어 있는 항목은 걸러서 준다. */
+  fields: [string, string][];
 }
 
 interface DocAudit {
@@ -1035,12 +1045,22 @@ function DetailForm({
   const [physicalStatus, setPhysicalStatus] = useState(doc.meta?.physicalStatus ?? '미확인');
   const [physicalLocation, setPhysicalLocation] = useState(doc.meta?.physicalLocation ?? '');
   const [audit, setAudit] = useState<DocAudit[]>([]);
+  const [sources, setSources] = useState<DocSource[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   // 누가 언제 열고 바꿨는지 — 설계 2.6 감사 추적.
   useEffect(() => {
     api.get<DocAudit[]>(`/api/dms/documents/${doc.id}/audit`).then(setAudit).catch(() => setAudit([]));
+  }, [doc.id]);
+
+  // 이 문서가 어느 업무 건에서 나왔는지. 값은 늘 원본에서 읽어 오므로
+  // 거래를 고치면 여기 보이는 값도 함께 바뀐다.
+  useEffect(() => {
+    api
+      .get<{ sources?: DocSource[] }>(`/api/dms/documents/${doc.id}`)
+      .then((d) => setSources(d.sources ?? []))
+      .catch(() => setSources([]));
   }, [doc.id]);
 
   // 분류 선택은 소분류만 고르게 한다 — 문서는 소분류에 매단다.
@@ -1165,6 +1185,28 @@ function DetailForm({
           <p className="mt-2 text-[12px] text-text-faint">마지막 확인 {doc.meta.physicalCheckedAt}</p>
         )}
       </div>
+
+      {sources.map((src) => (
+        <div key={`${src.entityType}:${src.entityId}`}>
+          <p className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-text-mid">
+            원본 업무 건
+            <span className="text-[12px] font-normal text-text-faint">{src.label}</span>
+            {src.path && (
+              <Link to={src.path} className="ml-auto text-[12px] font-bold text-primary no-underline hover:underline">
+                해당 화면으로 이동 →
+              </Link>
+            )}
+          </p>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-[8px] border border-border px-3 py-2">
+            {src.fields.map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-3 border-b border-border py-1 last:border-0">
+                <dt className="shrink-0 text-[12px] text-text-sub">{label}</dt>
+                <dd className="truncate text-[12.5px] font-semibold text-text-strong">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
 
       {!!doc.attachments?.length && (
         <div>
