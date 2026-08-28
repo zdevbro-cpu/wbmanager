@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Paperclip, Eye, Trash2, X, RotateCcw, Download, Check, type LucideIcon } from 'lucide-react';
 import { useProjects, useItemMasters, useVehicles, useEmployees } from '../hooks/useMasters';
 import { useEscapeClose } from '../hooks/useEscapeClose';
@@ -139,6 +140,29 @@ export function TransactionListLayout<T>({
   const [previewFiles, setPreviewFiles] = useState<PreviewDoc[] | null>(null);
   // 지운 첨부는 창을 닫지 않고 목록에서만 빼 준다. 수정 중에 창이 닫히면 입력하던 값이 사라진다.
   const [removedFiles, setRemovedFiles] = useState<string[]>([]);
+
+  // 문서관리에서 '해당 화면으로 이동'으로 넘어온 경우 — 그 건을 찾아 바로 연다.
+  // 목록만 띄우면 사용자가 같은 건을 다시 찾아야 한다.
+  const [params, setParams] = useSearchParams();
+  const focusId = params.get('focus');
+  const [focusMissed, setFocusMissed] = useState(false);
+  useEffect(() => {
+    if (!focusId || !rows.length) return;
+    const hit = rows.find((r) => rowKey(r) === focusId);
+    if (!hit) {
+      // 조건(기간·프로젝트)에 걸려 목록에 없을 수 있다. 조용히 넘어가면 왜 안 열리는지 알 수 없다.
+      setFocusMissed(true);
+      return;
+    }
+    setFocusMissed(false);
+    setDetail(hit);
+    setDetailEdit(false);
+    // 한 번 열고 나면 주소에서 지운다. 새로고침 때마다 다시 열리지 않게.
+    const next = new URLSearchParams(params);
+    next.delete('focus');
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId, rows]);
 
   // 수정 후 목록이 새로 오면 열려 있는 상세도 새 값으로 갈아 끼운다.
   // 이걸 하지 않으면 저장은 됐는데 상세에는 옛 값이 남아 반영이 안 된 것처럼 보인다.
@@ -376,6 +400,11 @@ export function TransactionListLayout<T>({
 
       <div className={`${tableWrapCls} overflow-x-auto`}>
         <table className="w-full border-collapse">
+          {focusMissed && (
+            <caption className="caption-top px-3 py-2 text-left text-[12.5px] text-warning">
+              문서에서 찾아온 건이 지금 조건에 없습니다. 기간이나 프로젝트 조건을 넓혀 주세요.
+            </caption>
+          )}
           <thead>
             <tr className="border-y border-border">
               {columns.map((c) => (
@@ -389,7 +418,10 @@ export function TransactionListLayout<T>({
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={rowKey(row)} className={trCls}>
+              <tr
+                key={rowKey(row)}
+                className={`${trCls} ${rowKey(row) === focusId ? 'bg-primary/15' : ''}`}
+              >
                 {columns.map((c) => (
                   <td
                     key={c.header}
