@@ -444,7 +444,7 @@ export function AttendGatePage() {
 
       <div className="grid min-h-0 flex-1 gap-2 sm:gap-3 lg:[grid-template-columns:minmax(0,320px)_minmax(0,1fr)]">
         {/* 카메라 — 사번 QR을 여기에 비춘다. 세로에서는 위쪽 절반. */}
-        <div className="relative h-[210px] overflow-hidden rounded-[12px] border border-border bg-black lg:h-auto">
+        <div className="relative h-[46vh] min-h-[280px] overflow-hidden rounded-[12px] border border-border bg-black lg:h-auto lg:min-h-0">
           {camera === 'on' ? (
             <>
               <video
