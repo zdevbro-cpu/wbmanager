@@ -177,6 +177,10 @@ export function AttendGatePage() {
   // 스캐너는 키보드처럼 동작한다 — 입력칸이 초점을 물고 있어야 그냥 쏘면 찍힌다.
   // 다만 사람이 무언가 만지고 있으면 뺏지 않는다. 열린 목록이 닫혀 버린다.
   useEffect(() => {
+    // 손가락으로 쓰는 기기에서는 잡지 않는다 — 키보드가 저절로 열려 화면이 출렁인다.
+    const hasScanner = window.matchMedia('(pointer: fine)').matches;
+    if (!hasScanner) return;
+
     const focus = () => {
       const active = document.activeElement;
       if (active && active !== document.body && active !== inputRef.current) return;
@@ -191,7 +195,7 @@ export function AttendGatePage() {
 
   return (
     // 세로(폰)에서는 위에서 아래로, 가로(태블릿)에서는 왼쪽 카메라·오른쪽 결과로 선다.
-    <div className="flex min-h-screen flex-col bg-bg p-2 sm:p-3 landscape:h-screen landscape:overflow-hidden">
+    <div className="flex min-h-[100dvh] flex-col bg-bg p-2 sm:p-3">
       {/* 머리줄 — 어디서 무엇으로 찍는지가 늘 보여야 한다. */}
       <div className="mb-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
         <h1 className="text-[15px] font-extrabold text-text-strong sm:text-[17px]">{t.title}</h1>
@@ -233,6 +237,36 @@ export function AttendGatePage() {
           ))}
         </div>
 
+        <div className="ml-auto flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setVoice((v) => !v)}
+            title={voice ? t.voiceOn : t.voiceOff}
+            className="rounded-[8px] border border-border px-2.5 py-1.5 text-text-sub hover:text-text-strong"
+          >
+            {voice ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          </button>
+          <Clock lang={lang} />
+        </div>
+      </div>
+
+      {/* 2단 — 말 고르기와 근태. 고른 말은 이 기기에 남는다. */}
+      <div className="mb-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <div className="flex overflow-hidden rounded-[8px] border border-border">
+          {LANGS.map((l) => (
+            <button
+              key={l.id}
+              type="button"
+              onClick={() => setLang(l.id)}
+              className={`px-2.5 py-1.5 text-[12.5px] font-bold ${
+                lang === l.id ? 'bg-primary text-white' : 'text-text-sub hover:text-text-strong'
+              }`}
+            >
+              {l.label}
+            </button>
+          ))}
+        </div>
+
         {kind === 'in' && (
           <div className="flex flex-wrap gap-1.5">
             {attendCodes().map((c) => (
@@ -249,43 +283,15 @@ export function AttendGatePage() {
             ))}
           </div>
         )}
-
-        <div className="ml-auto flex items-center gap-1.5">
-          {/* 말 고르기 — 고른 값은 이 기기에 남는다. */}
-          <div className="flex overflow-hidden rounded-[8px] border border-border">
-            {LANGS.map((l) => (
-              <button
-                key={l.id}
-                type="button"
-                onClick={() => setLang(l.id)}
-                className={`px-2 py-1.5 text-[12px] font-bold ${
-                  lang === l.id ? 'bg-primary text-white' : 'text-text-sub hover:text-text-strong'
-                }`}
-              >
-                {l.label}
-              </button>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setVoice((v) => !v)}
-            title={voice ? t.voiceOn : t.voiceOff}
-            className="rounded-[8px] border border-border px-2.5 py-1.5 text-text-sub hover:text-text-strong"
-          >
-            {voice ? <Volume2 size={16} /> : <VolumeX size={16} />}
-          </button>
-          <Clock />
-        </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-2 sm:gap-3 landscape:[grid-template-columns:minmax(0,300px)_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 gap-2 sm:gap-3 lg:[grid-template-columns:minmax(0,320px)_minmax(0,1fr)]">
         {/* 카메라 — 사번 QR을 여기에 비춘다. 세로에서는 위쪽 절반. */}
-        <div className="min-h-[220px] overflow-hidden rounded-[12px] border border-border bg-black landscape:min-h-0">
+        <div className="h-[210px] overflow-hidden rounded-[12px] border border-border bg-black lg:h-auto">
           {camera === 'on' ? (
             <video ref={videoRef} playsInline muted className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-2 p-4 text-center landscape:min-h-0">
+            <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
               <p className="text-[13px] text-text-sub">{t.cameraHint}</p>
               <button
                 type="button"
@@ -357,7 +363,8 @@ export function AttendGatePage() {
 }
 
 // 시계만 따로 그린다 — 이 조각만 1초마다 바뀌면 나머지 화면은 건드리지 않는다.
-function Clock() {
+// 24시로 적는다 — '오전/오후'는 말마다 달라 섞이고, 단말에서는 24시가 더 분명하다.
+function Clock({ lang }: { lang: Lang }) {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
@@ -365,7 +372,12 @@ function Clock() {
   }, []);
   return (
     <span className="tabular text-[16px] font-extrabold text-text-strong sm:text-[19px]">
-      {now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+      {now.toLocaleTimeString(voiceOf(lang), {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      })}
     </span>
   );
 }
