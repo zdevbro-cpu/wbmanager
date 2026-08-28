@@ -53,6 +53,8 @@ export function AttendGatePage() {
   const [error, setError] = useState('');
   const [afternoon, setAfternoon] = useState(new Date().getHours() >= OUT_FROM_HOUR);
   const [camera, setCamera] = useState<'idle' | 'on' | 'off'>('idle');
+  // 앞 카메라가 기본이다. 벽에 붙여 쓰는 단말이면 뒤 카메라로 바꿀 수 있다.
+  const [facing, setFacing] = useState<'user' | 'environment'>('user');
   // 홈 화면 저장 — 크롬은 설치 단추를 우리에게 넘겨준다. 그 밖의 브라우저는 안내만 띄운다.
   const [installer, setInstaller] = useState<{ prompt: () => Promise<void> } | null>(null);
   const [guide, setGuide] = useState(false);
@@ -208,8 +210,14 @@ export function AttendGatePage() {
       if (alive) raf = requestAnimationFrame(tick);
     };
 
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } })
+    // 단말은 사람을 마주 본다 — 사번 QR도 앞 카메라에 대는 것이 자연스럽다.
+    // ideal 만 주면 기기에 따라 뒤 카메라가 열려, exact 로 먼저 조르고 안 되면 되돌린다.
+    const open = () =>
+      navigator.mediaDevices
+        .getUserMedia({ video: { facingMode: { exact: facing }, width: { ideal: 1280 } } })
+        .catch(() => navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 } } }));
+
+    open()
       .then((s) => {
         stream = s;
         if (videoRef.current) {
@@ -228,7 +236,7 @@ export function AttendGatePage() {
       cancelAnimationFrame(raf);
       stream?.getTracks().forEach((tr) => tr.stop());
     };
-  }, [camera, stamp, t]);
+  }, [camera, facing, stamp, t]);
 
   // 스캐너는 키보드처럼 동작한다 — 입력칸이 초점을 물고 있어야 그냥 쏘면 찍힌다.
   // 다만 사람이 무언가 만지고 있으면 뺏지 않는다. 열린 목록이 닫혀 버린다.
@@ -412,9 +420,23 @@ export function AttendGatePage() {
 
       <div className="grid min-h-0 flex-1 gap-2 sm:gap-3 lg:[grid-template-columns:minmax(0,320px)_minmax(0,1fr)]">
         {/* 카메라 — 사번 QR을 여기에 비춘다. 세로에서는 위쪽 절반. */}
-        <div className="h-[210px] overflow-hidden rounded-[12px] border border-border bg-black lg:h-auto">
+        <div className="relative h-[210px] overflow-hidden rounded-[12px] border border-border bg-black lg:h-auto">
           {camera === 'on' ? (
-            <video ref={videoRef} playsInline muted className="h-full w-full object-cover" />
+            <>
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+                className={`h-full w-full object-cover ${facing === 'user' ? 'scale-x-[-1]' : ''}`}
+              />
+              <button
+                type="button"
+                onClick={() => setFacing((f) => (f === 'user' ? 'environment' : 'user'))}
+                className="absolute right-2 bottom-2 rounded-[8px] border border-white/40 bg-black/50 px-2.5 py-1.5 text-[12px] font-bold text-white"
+              >
+                {facing === 'user' ? t.frontCam : t.backCam}
+              </button>
+            </>
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
               <p className="text-[13px] text-text-sub">{t.cameraHint}</p>
