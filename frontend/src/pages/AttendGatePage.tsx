@@ -24,11 +24,20 @@ const OUT_FROM_HOUR = 16;
 const COOLDOWN_MS = 6000;
 
 const LANG_KEY = 'attend-gate-lang';
+const SITE_KEY = 'attend-gate-site';
 
 export function AttendGatePage() {
   const { projects } = useProjects();
   // 사무실 단말이므로 본사를 기본으로 둔다. 현장 단말로 쓸 때만 바꾼다.
-  const [projectId, setProjectId] = useState('HQ');
+  const [projectId, setProjectId] = useState(() => {
+    try {
+      return localStorage.getItem(SITE_KEY) || 'HQ';
+    } catch {
+      return 'HQ';
+    }
+  });
+  // 현장을 바꾸면 크게 알리고 소리로 되읽어 준다 — 번호는 잘못 눌러도 티가 안 난다.
+  const [siteNotice, setSiteNotice] = useState('');
   const [kind, setKind] = useState<'in' | 'out'>('in');
   const [code, setCode] = useState('출근');
   const [voice, setVoice] = useState(true);
@@ -222,6 +231,26 @@ export function AttendGatePage() {
     return () => window.clearInterval(timer);
   }, []);
 
+  // 번호순으로 세운다. 번호가 없는 현장은 뒤로 보낸다.
+  const sites = [...projects].sort((a, b) => (a.siteNo ?? 9999) - (b.siteNo ?? 9999));
+  const labelOf = (p: { siteNo?: number | null; roundName: string }) =>
+    `${p.siteNo != null ? `${p.siteNo} · ` : ''}${p.roundName}`;
+  const hqExists = projects.some((p) => p.roundName === '본사');
+
+  // 현장을 바꿀 때마다 기기에 남기고, 무엇을 골랐는지 되읽어 준다.
+  const pickSite = (id: string) => {
+    setProjectId(id);
+    try {
+      localStorage.setItem(SITE_KEY, id);
+    } catch {
+      // 저장이 막힌 기기에서도 그 자리에서는 쓸 수 있어야 한다.
+    }
+    const site = projects.find((p) => p.id === id);
+    const name = site ? labelOf(site) : t.hq;
+    setSiteNotice(name);
+    speak(`${t.site} ${name}`);
+  };
+
   const ready = Boolean(projectId);
 
   return (
@@ -246,6 +275,20 @@ export function AttendGatePage() {
         </div>
       </div>
 
+      {siteNotice && (
+        <div className="mb-2 flex items-center gap-2 rounded-[10px] border border-primary/60 bg-primary/10 px-3 py-2">
+          <span className="text-[12px] font-bold text-text-sub">{t.site}</span>
+          <span className="truncate text-[16px] font-extrabold text-text-strong">{siteNotice}</span>
+          <button
+            type="button"
+            onClick={() => setSiteNotice('')}
+            className="ml-auto shrink-0 text-[12px] font-bold text-primary underline"
+          >
+            {t.close}
+          </button>
+        </div>
+      )}
+
       {guide && (
         <div className="mb-2 rounded-[10px] border border-primary/50 bg-input p-3 text-[12.5px] leading-relaxed text-text-sub">
           {t.installGuide}
@@ -263,14 +306,14 @@ export function AttendGatePage() {
       <div className="mb-2">
         <select
           value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
+          onChange={(e) => pickSite(e.target.value)}
           className={`${inputCls} h-[36px] w-full text-[13px] sm:w-[220px]`}
           aria-label={t.site}
         >
-          <option value="HQ">{t.hq}</option>
-          {projects.map((p) => (
+          {!hqExists && <option value="HQ">{t.hq}</option>}
+          {sites.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.roundName}
+              {labelOf(p)}
             </option>
           ))}
         </select>
@@ -407,7 +450,14 @@ export function AttendGatePage() {
             onSubmit={(e) => {
               e.preventDefault();
               const v = inputRef.current?.value.trim();
-              if (v) void stamp(v);
+              if (v?.startsWith('*')) {
+                const no = Number(v.slice(1));
+                const site = projects.find((p) => p.siteNo === no);
+                if (site) pickSite(site.id);
+                else setError(`${no}${t.noSite}`);
+              } else if (v) {
+                void stamp(v);
+              }
               if (inputRef.current) inputRef.current.value = '';
             }}
             className="mt-auto border-t border-border pt-3"

@@ -147,6 +147,7 @@ export function ProjectManagementPage() {
             <tr className="border-y border-border">
               <th className={thCls}>코드</th>
               <th className={thCls}>프로젝트(사업)명</th>
+              <th className={`${thCls} w-[70px]`}>현장번호</th>
               <th className={thCls}>발주처</th>
               <th className={thCls}>시공사</th>
               <th className={thCls}>현장</th>
@@ -163,6 +164,7 @@ export function ProjectManagementPage() {
               <tr key={p.id} className={trCls}>
                 <td className={`${tdCls} tabular whitespace-nowrap`}>{show(p.projectCode)}</td>
                 <td className={`${tdCls} font-semibold text-text-strong`}>{p.roundName}</td>
+                <td className={`${tdCls} tabular font-bold text-text-strong`}>{p.siteNo ?? '-'}</td>
                 <td className={tdCls}>{show(p.orderer?.name)}</td>
                 <td className={tdCls}>{show(p.contractor?.name)}</td>
                 <td className={tdCls}>{show(p.siteName ?? p.region)}</td>
@@ -287,6 +289,7 @@ function ProjectDetail({
 
   const fields: { label: string; value: string }[] = [
     { label: '프로젝트 코드', value: show(p.projectCode) },
+    { label: '현장번호', value: p.siteNo != null ? String(p.siteNo) : '-' },
     { label: '사업명', value: p.roundName },
     { label: '발주처', value: show(p.orderer?.name) },
     { label: '시공사', value: show(p.contractor?.name) },
@@ -359,6 +362,7 @@ function ProjectForm({
 
   const [f, setF] = useState({
     roundName: project?.roundName ?? '',
+    siteNo: project?.siteNo != null ? String(project.siteNo) : '',
     ordererId: project?.ordererId ?? '',
     contractorId: project?.contractorId ?? '',
     buyerId: project?.buyerId ?? '',
@@ -451,6 +455,19 @@ function ProjectForm({
             required
             placeholder="포스코_KM_안산"
             className={inputCls}
+          />
+        </div>
+
+        <div>
+          {/* 출퇴근 단말은 이 번호로 현장을 고른다. 비우면 다음 번호가 자동으로 붙는다.
+              한 번 준 번호는 다시 쓰지 않는다 — 번호를 외우고 찍는 사람이 있기 때문이다. */}
+          <label className={labelCls}>현장번호</label>
+          <input
+            value={f.siteNo}
+            onChange={(e) => set({ siteNo: e.target.value.replace(/[^0-9]/g, '') })}
+            placeholder="비우면 자동"
+            inputMode="numeric"
+            className={`${inputCls} tabular`}
           />
         </div>
 
