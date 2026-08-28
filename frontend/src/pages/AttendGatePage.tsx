@@ -61,6 +61,22 @@ export function AttendGatePage() {
     }
   }, [lang]);
 
+  // 홈 화면에 저장하면 이 화면이 바로 열리게 한다.
+  // 앱 전체 매니페스트는 /mobile 로 열리므로, 이 화면에 있는 동안만 단말용으로 바꿔 둔다.
+  useEffect(() => {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    if (!link) return;
+    const before = link.href;
+    link.href = '/attend-manifest.webmanifest';
+    const title = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-title"]');
+    const titleBefore = title?.content;
+    if (title) title.content = '출퇴근';
+    return () => {
+      link.href = before;
+      if (title && titleBefore != null) title.content = titleBefore;
+    };
+  }, []);
+
   // 오후 4시가 지나면 퇴근으로 넘긴다. 손으로 바꾼 뒤에는 건드리지 않는다.
   // 1분에 한 번만 본다 — 더 자주 다시 그리면 열려 있던 목록이 닫힌다.
   const touched = useRef(false);
