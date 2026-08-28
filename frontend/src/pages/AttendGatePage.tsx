@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import jsQR from 'jsqr';
-import { Download, LogIn, LogOut, Volume2, VolumeX } from 'lucide-react';
+import { Check, Download, LogIn, LogOut, Volume2, VolumeX } from 'lucide-react';
 import { api } from '../api/client';
 import { useProjects } from '../hooks/useMasters';
 import { kstStamp } from '../lib/datetime';
@@ -47,6 +47,12 @@ export function AttendGatePage() {
   // 홈 화면 저장 — 크롬은 설치 단추를 우리에게 넘겨준다. 그 밖의 브라우저는 안내만 띄운다.
   const [installer, setInstaller] = useState<{ prompt: () => Promise<void> } | null>(null);
   const [guide, setGuide] = useState(false);
+  // 이미 홈 화면 앱으로 열려 있으면 저장할 것이 없다 — 그 사실을 화면이 말해 준다.
+  const [installed, setInstalled] = useState(
+    () =>
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true,
+  );
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -74,8 +80,16 @@ export function AttendGatePage() {
       const ev = e as Event & { prompt: () => Promise<void> };
       setInstaller({ prompt: () => ev.prompt() });
     };
+    const onInstalled = () => {
+      setInstalled(true);
+      setInstaller(null);
+    };
     window.addEventListener('beforeinstallprompt', onPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
   }, []);
 
   // 홈 화면에 저장하면 이 화면이 바로 열리게 한다.
@@ -297,15 +311,24 @@ export function AttendGatePage() {
             {voice ? <Volume2 size={16} /> : <VolumeX size={16} />}
           </button>
           <Clock lang={lang} />
-          <button
-            type="button"
-            onClick={() => (installer ? void installer.prompt() : setGuide((v) => !v))}
-            title={t.install}
-            aria-label={t.install}
-            className="rounded-[8px] border border-primary px-2.5 py-1.5 text-primary hover:bg-nav-hover"
-          >
-            <Download size={16} />
-          </button>
+          {installed ? (
+            <span
+              title={t.installed}
+              className="flex items-center gap-1 rounded-[8px] border border-success/60 px-2.5 py-1.5 text-[12px] font-bold text-success"
+            >
+              <Check size={15} />
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => (installer ? void installer.prompt() : setGuide((v) => !v))}
+              title={installer ? t.install : t.installHow}
+              aria-label={t.install}
+              className="rounded-[8px] border border-primary px-2.5 py-1.5 text-primary hover:bg-nav-hover"
+            >
+              <Download size={16} />
+            </button>
+          )}
         </div>
       </div>
 
