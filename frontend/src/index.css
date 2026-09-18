@@ -16,6 +16,10 @@
   --color-nav-active: #16305a;
   --color-nav-hover: #132a4d;
   --color-accent: #38bdf8;
+  /* 사이드바 글자 — 모드마다 바탕이 달라 따로 이름을 둔다. */
+  --color-nav-text: #9fb3d1;
+  --color-nav-label: #3f5983;
+  --color-brand-sub: #5f7ba6;
 
   --color-text: #e2e8f0;
   --color-text-strong: #eaf1fb;
@@ -34,6 +38,33 @@
   --color-purple: #8b5cf6;
   --color-sky: #0284c7;
   --color-teal: #14b8a6;
+}
+
+/* 밝은 모드 — 위 색 이름은 그대로 두고 값만 바꾼다. 화면 코드는 색 이름만 쓰므로 함께 따라온다.
+   파랑·초록·빨강·주황 같은 강조색은 흰 바탕에서도 선명해 양쪽에 그대로 쓴다. */
+:root[data-theme='light'] {
+  --color-bg: #f3f6fb;
+  --color-sidebar: #ffffff;
+  --color-card: #ffffff;
+  --color-border: #d9e1ee;
+  --color-border-top: #e3e9f3;
+  --color-input: #f7f9fc;
+  --color-track: #e6ecf5;
+  --color-hover: #eef4ff;
+
+  --color-nav-active: #dbe8ff;
+  --color-nav-hover: #edf3ff;
+  --color-accent: #0ea5e9;
+  --color-nav-text: #3d4f6b;
+  --color-nav-label: #8a9bb8;
+  --color-brand-sub: #5b7bb0;
+
+  --color-text: #1e293b;
+  --color-text-strong: #0b1220;
+  --color-text-mid: #334155;
+  --color-text-sub: #52627a;
+  --color-text-faint: #8391a7;
+  --color-input-text: #1e293b;
 }
 
 body {

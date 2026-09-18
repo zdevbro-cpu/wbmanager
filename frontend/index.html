@@ -10,6 +10,20 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#0b1220" />
+    <!-- 화면 모드 — 그리기 전에 이 기기에서 마지막으로 쓴 모드를 먼저 입혀 번쩍임을 막는다.
+         로그인 후에는 계정에 저장된 모드로 맞춘다. 출퇴근 단말은 늘 어둡게 둔다. -->
+    <script>
+      (function () {
+        try {
+          var m = localStorage.getItem('wb.theme') || 'dark';
+          if (location.pathname.indexOf('/attend-gate') === 0) m = 'dark';
+          if (m === 'system') m = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          if (m !== 'light') m = 'dark';
+          document.documentElement.setAttribute('data-theme', m);
+          if (m === 'light') document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff');
+        } catch (e) {}
+      })();
+    </script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="WB manager" />

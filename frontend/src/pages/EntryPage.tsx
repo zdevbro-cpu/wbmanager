@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, LogOut, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AREAS, type Area } from '../lib/areas';
+import { ThemeToggle } from '../components/Layout';
 
 // 시작 화면 — 로그인 후 들어갈 영역을 카드로 고른다.
 export function EntryPage() {
@@ -25,10 +26,11 @@ export function EntryPage() {
           />
           <div>
             <div className="text-[15px] font-extrabold text-text-strong">WB manager</div>
-            <div className="text-[11px] text-[#5f7ba6]">원방 스크랩 업무지원</div>
+            <div className="text-[11px] text-brand-sub">원방 스크랩 업무지원</div>
           </div>
         </div>
         <div className="flex items-center gap-4">
+          <ThemeToggle />
           <span className="text-[12.5px] text-text-sub">
             {appUser?.email} {isAdmin && <span className="text-primary">(관리자)</span>}
           </span>
