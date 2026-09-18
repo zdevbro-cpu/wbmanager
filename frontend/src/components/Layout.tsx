@@ -95,7 +95,7 @@ export function Layout() {
                     [
                       'mb-0.5 flex items-center gap-2.5 rounded-[9px] border-l-[3px] px-2.5 py-2 text-[13.5px] font-semibold no-underline',
                       isActive
-                        ? 'border-accent bg-nav-active text-text-strong'
+                        ? 'border-accent bg-nav-active text-nav-active-text'
                         : 'border-transparent text-nav-text hover:bg-nav-hover',
                     ].join(' ')
                   }
@@ -119,7 +119,7 @@ export function Layout() {
                   [
                     'flex items-center gap-2.5 rounded-[9px] border-l-[3px] px-2.5 py-2 text-[13.5px] font-semibold no-underline',
                     isActive
-                      ? 'border-accent bg-nav-active text-text-strong'
+                      ? 'border-accent bg-nav-active text-nav-active-text'
                       : 'border-transparent text-nav-text hover:bg-nav-hover',
                   ].join(' ')
                 }
