@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Calculator, Save } from 'lucide-react';
+import { Calculator, CircleArrowRight, Save } from 'lucide-react';
 import { api } from '../../api/client';
+import { SearchSelect } from '../SearchSelect';
 import { DateField } from '../ui/DateField';
 import { NumberInput } from '../ui/NumberInput';
 import { cardCls, inputCls, tableWrapCls, tdCls, tdNumCls, thCls, thNumCls, trCls } from '../ui/classes';
@@ -8,6 +9,12 @@ import type { MarketRateRow, PriceSettings } from '../../types';
 
 // PRC-05 LME 계산기 — 동 시세와 팔 때 환율로 A동·상동·중동 참고단가를 낸다(다문산업 전용, 검토의견 ⑥).
 // 19,000원 기준은 A동 금액으로 견준다(검토의견 ⑫). 기준값은 모두 설정으로 두어 배포 없이 바꾼다.
+
+interface Target {
+  vendorId: string;
+  vendorName: string;
+  items: { id: string; vendorItemName: string }[];
+}
 
 interface Calc {
   base: number;
@@ -28,6 +35,8 @@ export function LmeTab() {
   const [calc, setCalc] = useState<Calc | null>(null);
   const [rows, setRows] = useState<MarketRateRow[]>([]);
   const [settings, setSettings] = useState<PriceSettings | null>(null);
+  const [targets, setTargets] = useState<Target[]>([]);
+  const [targetVendorId, setTargetVendorId] = useState('');
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -39,6 +48,14 @@ export function LmeTab() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // 계산값을 받을 품목(A동·상동·중동)을 가진 업체를 찾아 둔다. 보통 한 곳(다문산업)뿐이다.
+  useEffect(() => {
+    api.get<Target[]>('/api/market-rates/targets').then((r) => {
+      setTargets(r);
+      setTargetVendorId((cur) => cur || r[0]?.vendorId || '');
+    });
+  }, []);
 
   const run = async () => {
     if (!value || !fxRate) return;
@@ -54,6 +71,27 @@ export function LmeTab() {
       load();
     } catch (e) {
       alert(e instanceof Error ? e.message : '저장하지 못했습니다.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // 엑셀에서 손으로 복사해 단가이력에 붙이던 단계 — 단추 하나로 참고단가에 쌓는다.
+  const applyToPrices = async () => {
+    if (!calc || !targetVendorId) return;
+    const t = targets.find((x) => x.vendorId === targetVendorId);
+    if (!confirm(`${t?.vendorName} A동 ${calc.aDong.toLocaleString()}원 · 상동 ${calc.sangDong.toLocaleString()}원 · 중동 ${calc.jungDong.toLocaleString()}원을 ${rateDate}자 참고단가로 반영합니다. 진행할까요?`)) return;
+    setBusy(true);
+    try {
+      const r = await api.post<{ applied: { vendorItemName: string; price: number }[] }>('/api/market-rates/apply', {
+        rateDate,
+        value: Number(value),
+        fxRate: Number(fxRate),
+        vendorId: targetVendorId,
+      });
+      alert(`${r.applied.map((a) => `${a.vendorItemName} ${a.price.toLocaleString()}원`).join(' · ')}을 반영했습니다.`);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '반영하지 못했습니다.');
     } finally {
       setBusy(false);
     }
@@ -109,6 +147,34 @@ export function LmeTab() {
           </div>
         </div>
       </div>
+
+      {calc && (
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="w-[220px]">
+            <span className="mb-1 block text-[12px] font-semibold text-text-sub">계산값을 받을 업체</span>
+            <SearchSelect
+              options={targets.map((t) => ({ value: t.vendorId, label: `${t.vendorName} (${t.items.length}품목)` }))}
+              value={targetVendorId}
+              onChange={setTargetVendorId}
+              placeholder="A동·상동·중동 품목이 있는 업체"
+              ariaLabel="계산값을 받을 업체"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={applyToPrices}
+            disabled={busy || !targetVendorId}
+            className="inline-flex h-[38px] items-center gap-1.5 rounded-[8px] border border-primary px-4 text-[13px] font-bold text-primary hover:bg-nav-hover disabled:opacity-40"
+          >
+            <CircleArrowRight size={14} /> A동 · 상동 · 중동 참고단가로 반영
+          </button>
+          {!targets.length && (
+            <span className="text-[12px] text-warning">
+              A동 · 상동 · 중동 품목이 등록된 업체가 없습니다. 업체품목에 먼저 등록해 주세요.
+            </span>
+          )}
+        </div>
+      )}
 
       {calc && (
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">

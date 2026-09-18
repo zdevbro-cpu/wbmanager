@@ -141,6 +141,14 @@ export function SearchSelect({
           setQuery('');
           setActive(0);
         }}
+        // 고르고 나면 목록만 닫히고 포커스는 칸에 남는다. 포커스가 이미 있으면 onFocus가 다시 오지 않아
+        // 칸을 눌러도 열리지 않는다 — 그래서 누를 때도 연다. 이미 열려 있으면 그대로 둔다.
+        onClick={() => {
+          if (open) return;
+          setOpen(true);
+          setQuery('');
+          setActive(0);
+        }}
         onKeyDown={onKeyDown}
         // 탭으로 다음 칸에 가도 적은 값이 확정되어야 한다. 목록 클릭은 mousedown에서 먼저 처리된다.
         onBlur={() => {
