@@ -1,9 +1,40 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, Moon, Sun, Monitor, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { AREAS, areaOfPath, findArea } from '../lib/areas';
+import { readCachedTheme, type ThemeMode } from '../lib/theme';
 
+const THEME_OPTIONS: { mode: ThemeMode; icon: LucideIcon; label: string }[] = [
+  { mode: 'dark', icon: Moon, label: '어둡게' },
+  { mode: 'light', icon: Sun, label: '밝게' },
+  { mode: 'system', icon: Monitor, label: '기기 설정 따르기' },
+];
+
+// 화면 모드 단추 — 셋 중 하나를 누르면 바로 바뀌고 계정에 저장된다.
+export function ThemeToggle() {
+  const { appUser, setThemeMode } = useAuth();
+  const mode = appUser?.themeMode ?? readCachedTheme();
+  return (
+    <div className="flex items-center gap-0.5 rounded-[8px] border border-border bg-input p-0.5" role="group" aria-label="화면 모드">
+      {THEME_OPTIONS.map(({ mode: m, icon: Icon, label }) => (
+        <button
+          key={m}
+          type="button"
+          title={label}
+          aria-label={label}
+          aria-pressed={mode === m}
+          onClick={() => setThemeMode(m)}
+          className={`flex h-6 w-6 items-center justify-center rounded-[6px] ${
+            mode === m ? 'bg-primary text-white' : 'text-text-sub hover:text-text-strong'
+          }`}
+        >
+          <Icon size={13} />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function Layout() {
   const location = useLocation();
@@ -46,14 +77,14 @@ export function Layout() {
           />
           <div>
             <div className="text-[15px] font-extrabold text-text-strong">WB manager</div>
-            <div className="text-[11px] text-[#5f7ba6]">{area.title}</div>
+            <div className="text-[11px] text-brand-sub">{area.title}</div>
           </div>
         </NavLink>
 
         <nav className="flex-1 overflow-y-auto px-3 pb-4">
           {navGroups.map((group) => (
             <div key={group.label} className="mb-4">
-              <div className="mb-1.5 px-2 text-[10.5px] font-bold uppercase tracking-[1px] text-[#3f5983]">
+              <div className="mb-1.5 px-2 text-[10.5px] font-bold uppercase tracking-[1px] text-nav-label">
                 {group.label}
               </div>
               {group.items.map((item) => (
@@ -65,7 +96,7 @@ export function Layout() {
                       'mb-0.5 flex items-center gap-2.5 rounded-[9px] border-l-[3px] px-2.5 py-2 text-[13.5px] font-semibold no-underline',
                       isActive
                         ? 'border-accent bg-nav-active text-text-strong'
-                        : 'border-transparent text-[#9fb3d1] hover:bg-nav-hover',
+                        : 'border-transparent text-nav-text hover:bg-nav-hover',
                     ].join(' ')
                   }
                 >
@@ -89,7 +120,7 @@ export function Layout() {
                     'flex items-center gap-2.5 rounded-[9px] border-l-[3px] px-2.5 py-2 text-[13.5px] font-semibold no-underline',
                     isActive
                       ? 'border-accent bg-nav-active text-text-strong'
-                      : 'border-transparent text-[#9fb3d1] hover:bg-nav-hover',
+                      : 'border-transparent text-nav-text hover:bg-nav-hover',
                   ].join(' ')
                 }
               >
@@ -102,7 +133,7 @@ export function Layout() {
 
         {/* 어느 계정으로 들어와 있는지 화면을 옮겨도 계속 보이도록 사이드바 하단에 둔다. */}
         <div className="flex items-center gap-2 border-t border-border-top px-4 py-3">
-          <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-[#9fb3d1]" title={appUser?.email ?? ''}>
+          <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-nav-text" title={appUser?.email ?? ''}>
             {appUser?.email ?? '-'}
           </span>
           <button
@@ -110,7 +141,7 @@ export function Layout() {
             onClick={() => logout()}
             title="로그아웃"
             aria-label="로그아웃"
-            className="shrink-0 text-[#9fb3d1] hover:text-text-strong"
+            className="shrink-0 text-nav-text hover:text-text-strong"
           >
             <LogOut size={15} />
           </button>
@@ -128,6 +159,7 @@ export function Layout() {
               {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
             </div>
             <div className="h-4 w-px bg-border-top" />
+            <ThemeToggle />
             <div className="text-[12.5px] text-text-sub">
               {appUser?.name ?? appUser?.email} {isAdmin && <span className="text-primary">(관리자)</span>}
             </div>

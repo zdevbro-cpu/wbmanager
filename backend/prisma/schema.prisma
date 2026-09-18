@@ -29,6 +29,8 @@ model AppUser {
   // 출퇴근을 찍을 때 "나"가 누구인지. 비어 있으면 화면에서 직접 고른다.
   employeeId  String?   @map("employee_id")
   employee    Employee? @relation(fields: [employeeId], references: [id])
+  // 화면 모드 — dark(어두운 청색) | light(밝게) | system(기기 설정 따름). 고른 모드를 계정에 남겨 다음에도 그대로 연다.
+  themeMode   String    @default("dark") @map("theme_mode")
 
   auditLogs AuditLog[]
 

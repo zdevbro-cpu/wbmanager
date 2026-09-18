@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { api } from '../api/client';
+import { applyTheme, type ThemeMode } from '../lib/theme';
 
 export interface AppUser {
   id: string;
@@ -23,6 +24,8 @@ export interface AppUser {
   loginCount?: number;
   /** 모바일 출퇴근에서 이 계정이 누구로 찍히는지 */
   employeeId?: string | null;
+  /** 화면 모드 — 계정에 저장된 것. 어느 기기에서 들어와도 이 모드로 연다. */
+  themeMode?: ThemeMode;
 }
 
 interface AuthContextValue {
@@ -34,6 +37,7 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   refreshAppUser: () => Promise<void>;
+  setThemeMode: (mode: ThemeMode) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -47,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const me = await api.get<AppUser>('/api/auth/me');
       setAppUser(me);
+      if (me.themeMode) applyTheme(me.themeMode);
     } catch {
       setAppUser(null);
     }
@@ -81,6 +86,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await sendPasswordResetEmail(auth, email);
   };
 
+  // 화면 모드 — 누르는 즉시 바꾸고 계정에 저장한다. 저장이 실패해도 이 기기에서는 바뀐 채로 둔다.
+  const setThemeMode = async (mode: ThemeMode) => {
+    applyTheme(mode);
+    setAppUser((u) => (u ? { ...u, themeMode: mode } : u));
+    try {
+      await api.patch('/api/auth/me/theme', { themeMode: mode });
+    } catch {
+      alert('화면 모드를 계정에 저장하지 못했습니다. 이 기기에서만 바뀐 채로 둡니다.');
+    }
+  };
+
   const logout = async () => {
     await signOut(auth);
     setAppUser(null);
@@ -88,7 +104,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ firebaseUser, appUser, loading, login, register, logout, resetPassword, refreshAppUser: loadAppUser }}
+      value={{
+        firebaseUser,
+        appUser,
+        loading,
+        login,
+        register,
+        logout,
+        resetPassword,
+        refreshAppUser: loadAppUser,
+        setThemeMode,
+      }}
     >
       {children}
     </AuthContext.Provider>

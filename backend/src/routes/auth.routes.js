@@ -63,6 +63,22 @@ router.get('/me', async (req, res) => {
   res.json(appUser);
 });
 
+// 화면 모드 — 사람마다 쓰는 환경이 달라 계정에 저장한다. 어느 기기에서 들어와도 같은 모드로 열린다.
+// 본인 것만 바꾼다.
+const THEME_MODES = ['dark', 'light', 'system'];
+router.patch('/me/theme', requireAuth, async (req, res) => {
+  const { themeMode } = req.body ?? {};
+  if (!THEME_MODES.includes(themeMode)) {
+    return res.status(400).json({ error: '화면 모드는 dark, light, system 중 하나여야 합니다.' });
+  }
+  const user = await prisma.appUser.update({
+    where: { id: req.appUser.id },
+    data: { themeMode },
+    select: { themeMode: true },
+  });
+  res.json(user);
+});
+
 // 관리자: 전체 사용자 목록 (대기중 포함)
 router.get('/users', requireAuth, requireAdmin, async (req, res) => {
   const users = await prisma.appUser.findMany({
