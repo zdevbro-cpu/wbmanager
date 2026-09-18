@@ -67,6 +67,8 @@ model Vendor {
   outboundSales      OutboundSale[]
   wasteOutbounds     WasteOutbound[]
   assetMaintenances  AssetMaintenance[]
+  vendorItems        VendorItem[]
+  priceNotices       PriceNotice[]
 
   @@map("vendor")
 }
@@ -986,4 +988,103 @@ model DocumentAttachment {
 
   @@index([documentId])
   @@map("document_attachment")
+}
+
+// ─────────────────────────────────────────────────────────────
+// 단가관리 — 매각처별 판매단가. 엑셀 「단가관리」를 대신한다.
+// 화면설계서(2026-09-17 개정, 검토의견 회신 반영)의 표 5개다.
+// 기존 표는 건드리지 않는다. 원방 품목(ItemMaster)과는 itemCode로 느슨하게 잇는다.
+// ─────────────────────────────────────────────────────────────
+
+// 업체가 부르는 품목 — 같은 물건도 업체마다 이름이 달라 업체별로 따로 둔다.
+model VendorItem {
+  id             String   @id @default(uuid())
+  vendorId       String   @map("vendor_id")
+  vendor         Vendor   @relation(fields: [vendorId], references: [id])
+  vendorItemName String   @map("vendor_item_name") // 업체 기준 품목명 "고철(경A)"
+  series         String?  @map("series") // 계열 — 고철/알루미늄/STS/비철/전선 등
+  repItemName    String?  @map("rep_item_name") // 대표품목 — 캔디·상동·중동 → 신주
+  itemCode       String?  @map("item_code") // 원방 ItemMaster 매핑(2단계). 비면 미매핑
+  definition     String?  @map("definition") // 용어 설명 — AL·장척·BL 등 업체 말뜻
+  isActive       Boolean  @default(true) @map("is_active")
+  createdById    String?  @map("created_by_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  prices  VendorPrice[]
+  notices PriceNotice[] @relation("NoticeTarget")
+
+  @@unique([vendorId, vendorItemName])
+  @@index([itemCode])
+  @@map("vendor_item")
+}
+
+// 단가이력 — 이 모듈의 원장. 실제(정산)와 참고(공지·시세)를 함께 쌓는다.
+// 같은 날·같은 품목·같은 구분은 한 건만 산다. 지우지 않은 기록끼리만 보는
+// 부분 유일 인덱스라 Prisma 스키마에는 적지 못하고 마이그레이션 SQL에 둔다.
+model VendorPrice {
+  id             String     @id @default(uuid())
+  vendorItemId   String     @map("vendor_item_id")
+  vendorItem     VendorItem @relation(fields: [vendorItemId], references: [id])
+  effectiveDate  DateTime   @map("effective_date") // 적용일
+  price          Decimal    @map("price") @db.Decimal(14, 2)
+  priceType      String     @map("price_type") // 실제 | 참고
+  isFree         Boolean    @default(false) @map("is_free") // 무상 — 0원으로 두고 평균·변동에서 뺀다
+  source         String     @default("수기") @map("source") // 수기 | 공지 | 출고 | 이관
+  noticeId       String?    @map("notice_id") // 공지로 만들어진 참고단가면 그 공지
+  outboundSaleId String?    @map("outbound_sale_id") // 출고 저장으로 남은 실제단가면 그 출고(2단계)
+  memo           String?    @map("memo")
+  createdById    String?    @map("created_by_id")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  deletedAt      DateTime?  @map("deleted_at")
+
+  @@index([vendorItemId, effectiveDate])
+  @@index([noticeId])
+  @@map("vendor_price")
+}
+
+// 업체 단가 공지 — 문자·메일로 오는 "9/10부 전등급 10원 인하".
+// 저장만으로 단가를 바꾸지 않는다. 바뀔 단가를 보여 준 뒤 일괄 반영한다(검토의견 ③).
+model PriceNotice {
+  id                 String      @id @default(uuid())
+  vendorId           String      @map("vendor_id")
+  vendor             Vendor      @relation(fields: [vendorId], references: [id])
+  noticeDate         DateTime    @map("notice_date")
+  series             String?     @map("series")
+  scope              String      @default("전품목") @map("scope") // 전품목 | 지정
+  targetVendorItemId String?     @map("target_vendor_item_id")
+  targetVendorItem   VendorItem? @relation("NoticeTarget", fields: [targetVendorItemId], references: [id])
+  adjustAmount       Decimal     @map("adjust_amount") @db.Decimal(14, 2) // 조정금액 −10 등
+  content            String?     @map("content")
+  appliedAt          DateTime?   @map("applied_at") // 일괄 반영한 시각. 비면 아직 반영 전
+  createdById        String?     @map("created_by_id")
+  createdAt          DateTime    @default(now()) @map("created_at")
+
+  @@index([vendorId, noticeDate])
+  @@map("price_notice")
+}
+
+// LME 시세 — 동(Cu) 시세와 팔 때 환율. A동·상동·중동은 저장하지 않고 조회할 때 계산한다.
+model MarketRate {
+  id          String   @id @default(uuid())
+  rateDate    DateTime @map("rate_date")
+  code        String   @default("LME_CU") @map("code")
+  value       Decimal  @map("value") @db.Decimal(14, 2) // USD/t
+  fxRate      Decimal  @map("fx_rate") @db.Decimal(12, 4) // 원/USD
+  memo        String?  @map("memo")
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([rateDate, code])
+  @@map("market_rate")
+}
+
+// 계산 상수 — 97%·19,000원·45/90일. 코드에 박지 않아 배포 없이 고칠 수 있다.
+model PriceSetting {
+  key       String   @id @map("key")
+  value     String   @map("value")
+  memo      String?  @map("memo")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("price_setting")
 }

@@ -18,6 +18,7 @@ import {
   FolderOpen,
   Scale,
   ClipboardList,
+  Coins,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -66,6 +67,10 @@ export const AREAS: Area[] = [
           { to: '/outbound', label: '출고 현황', icon: PackageMinus },
           { to: '/waste-outbound', label: '폐기물 반출 현황', icon: Trash2 },
         ],
+      },
+      {
+        label: '단가',
+        items: [{ to: '/prices', label: '단가관리', icon: Coins }],
       },
       {
         label: '보고 / 평가 / 집계',

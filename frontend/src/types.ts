@@ -611,3 +611,144 @@ export interface ProjectPnl {
   salesByItem: PnlSalesItem[];
   inventoryDetail: InventoryValuationRow[];
 }
+
+// ── 단가관리 — 매각처별 판매단가. 엑셀 「단가관리」를 대신한다. ──
+export interface VendorItemRow {
+  id: string;
+  vendorId: string;
+  vendorName: string;
+  vendorItemName: string;
+  series: string | null;
+  repItemName: string | null;
+  itemCode: string | null;
+  definition: string | null;
+  isActive: boolean;
+}
+
+export interface PriceWarn {
+  days: number | null;
+  level: 'ok' | 'check' | 'stale' | 'none';
+  label: string;
+}
+
+export interface LatestPriceRow {
+  vendorItemId: string;
+  vendorId: string;
+  vendorName: string;
+  vendorItemName: string;
+  series: string | null;
+  repItemName: string | null;
+  itemCode: string | null;
+  price: number | null;
+  isFree: boolean;
+  priceType: '실제' | '참고' | null;
+  effectiveDate: string | null;
+  prevPrice: number | null;
+  delta: number | null;
+  deltaRate: number | null;
+  lastRealDate: string | null;
+  warn: PriceWarn;
+}
+
+export interface LatestPriceSummary {
+  vendorCount: number;
+  itemCount: number;
+  priceCount: number;
+  realCount: number;
+  refCount: number;
+  checkCount: number;
+  staleCount: number;
+  noPriceCount: number;
+  asOf: string;
+  lastNotice: {
+    noticeDate: string;
+    vendorName: string;
+    series: string | null;
+    scope: string;
+    adjustAmount: number;
+    content: string | null;
+  } | null;
+}
+
+export interface PricePoint {
+  date: string;
+  price: number;
+  priceType: '실제' | '참고';
+  isFree: boolean;
+  memo?: string | null;
+}
+
+export interface PriceSummary {
+  latest: PricePoint;
+  prev: PricePoint | null;
+  delta: number | null;
+  deltaRate: number | null;
+  trend: string;
+  stats: { count: number; avg: number | null; min: number | null; max: number | null };
+  suggest: { price: number; unit: number; explain: string } | null;
+  dataState: string;
+  lastRealDate: string | null;
+  warn: PriceWarn;
+  series: PricePoint[];
+}
+
+export interface PriceHistoryRow {
+  id: string;
+  effectiveDate: string;
+  price: number;
+  priceType: '실제' | '참고';
+  isFree: boolean;
+  source: string;
+  memo: string | null;
+}
+
+export interface PriceEntryRow {
+  vendorItemId: string;
+  vendorItemName: string;
+  series: string | null;
+  price: number | null;
+  isFree: boolean;
+  priceType: '실제' | '참고' | null;
+  effectiveDate: string | null;
+}
+
+export interface PriceNoticeRow {
+  id: string;
+  noticeDate: string;
+  vendorId: string;
+  vendorName: string;
+  series: string | null;
+  scope: string;
+  targetVendorItemName: string | null;
+  adjustAmount: number;
+  content: string | null;
+  appliedAt: string | null;
+}
+
+export interface NoticePreviewRow {
+  vendorItemId: string;
+  vendorItemName: string;
+  series: string | null;
+  basePrice: number | null;
+  baseDate: string | null;
+  basePriceType: string | null;
+  adjustAmount: number;
+  nextPrice: number | null;
+}
+
+export interface MarketRateRow {
+  id: string;
+  rateDate: string;
+  code: string;
+  value: number;
+  fxRate: number;
+  memo: string | null;
+  base: number;
+  aDong: number;
+  sangDong: number;
+  jungDong: number;
+  threshold: number;
+  aRate: number;
+}
+
+export type PriceSettings = Record<string, number>;

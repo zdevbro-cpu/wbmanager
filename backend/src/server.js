@@ -32,6 +32,10 @@ import authRoutes from './routes/auth.routes.js';
 import { requireAuth } from './middleware/auth.js';
 import { auditMutations } from './middleware/audit.js';
 import auditRoutes from './routes/audit.routes.js';
+import priceRoutes from './routes/price.routes.js';
+import vendorItemRoutes from './routes/vendorItem.routes.js';
+import priceNoticeRoutes from './routes/priceNotice.routes.js';
+import marketRateRoutes from './routes/marketRate.routes.js';
 
 const app = express();
 // Cloud Run 프록시 뒤라 실제 접속 IP는 X-Forwarded-For에서 읽는다.
@@ -74,6 +78,11 @@ app.use('/api/assets', assetRoutes);
 app.use('/api/asset-maintenances', assetMaintenanceRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/audit-logs', auditRoutes);
+// 단가관리 — 메뉴별 권한이 확정되면 이 네 줄에 권한 미들웨어를 더한다.
+app.use('/api/prices', priceRoutes);
+app.use('/api/vendor-items', vendorItemRoutes);
+app.use('/api/price-notices', priceNoticeRoutes);
+app.use('/api/market-rates', marketRateRoutes);
 app.use('/api/list-exports', listExportRoutes);
 app.use('/api/ocr', ocrRoutes);
 
