@@ -220,6 +220,12 @@ router.post('/gate', async (req, res) => {
 
     const employee = await prisma.employee.findUnique({ where: { empCode } });
     if (!employee) return res.status(404).json({ error: `등록되지 않은 사번입니다 (${empCode})` });
+    // 단말은 정규직만 찍는다. 현장 인력(일용직·계약직 등)은 휴대폰 셀카 + 위치로만 받는다 — 대리 출근 방지.
+    if ((employee.employmentType ?? '정규직') !== '정규직') {
+      return res
+        .status(403)
+        .json({ error: `${employee.name}님은 현장 인력입니다. 휴대폰 셀카로 출퇴근해 주세요.` });
+    }
 
     const date = kstDayString();
     const month = date.slice(0, 7);

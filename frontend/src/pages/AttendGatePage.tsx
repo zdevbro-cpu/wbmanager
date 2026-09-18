@@ -26,6 +26,9 @@ const COOLDOWN_MS = 6000;
 const LANG_KEY = 'attend-gate-lang';
 const SITE_KEY = 'attend-gate-site';
 
+// USB 스캐너는 글자 사이 간격이 수 ms다. 이보다 느리게 들어온 글자는 사람이 친 것으로 본다.
+const SCAN_GAP_MS = 50;
+
 export function AttendGatePage() {
   const { projects } = useProjects();
   // 사무실 단말이므로 본사를 기본으로 둔다. 현장 단말로 쓸 때만 바꾼다.
@@ -68,7 +71,7 @@ export function AttendGatePage() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const scan = useRef({ buf: '', last: 0 });
   const recent = useRef<Map<string, number>>(new Map());
   const busy = useRef(false);
 
@@ -252,22 +255,27 @@ export function AttendGatePage() {
     };
   }, [camera, facing, stamp, t]);
 
-  // 스캐너는 키보드처럼 동작한다 — 입력칸이 초점을 물고 있어야 그냥 쏘면 찍힌다.
-  // 다만 사람이 무언가 만지고 있으면 뺏지 않는다. 열린 목록이 닫혀 버린다.
+  // USB 스캐너는 키보드처럼 글자를 쏜다. 입력칸 없이 화면 어디서든 받는다.
+  // 사람이 손으로 친 사번은 받지 않는다 — 남의 사번을 쳐서 대신 찍는 것을 막기 위해서다.
+  // 글자 사이가 SCAN_GAP_MS 안쪽으로 끊김 없이 이어지고 곧바로 Enter가 온 것만 QR로 본다.
   useEffect(() => {
-    // 손가락으로 쓰는 기기에서는 잡지 않는다 — 키보드가 저절로 열려 화면이 출렁인다.
-    const hasScanner = window.matchMedia('(pointer: fine)').matches;
-    if (!hasScanner) return;
-
-    const focus = () => {
-      const active = document.activeElement;
-      if (active && active !== document.body && active !== inputRef.current) return;
-      inputRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      const s = scan.current;
+      const now = performance.now();
+      const fast = now - s.last <= SCAN_GAP_MS;
+      s.last = now;
+      if (e.key === 'Enter') {
+        const v = fast ? s.buf.trim() : '';
+        s.buf = '';
+        if (v.length >= 3) void stamp(v);
+        return;
+      }
+      if (e.key.length !== 1) return;
+      s.buf = fast ? s.buf + e.key : e.key;
     };
-    focus();
-    const timer = window.setInterval(focus, 1500);
-    return () => window.clearInterval(timer);
-  }, []);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [stamp]);
 
   // 번호순으로 세운다. 번호가 없는 현장은 뒤로 보낸다.
   const sites = [...projects].sort((a, b) => (a.siteNo ?? 9999) - (b.siteNo ?? 9999));
@@ -512,31 +520,6 @@ export function AttendGatePage() {
           ) : (
             <p className="m-auto truncate py-4 text-[15px] font-bold text-text-faint sm:text-[16px]">{t.waiting}</p>
           )}
-
-          {/* 스캐너·손입력 — 세로에서도 화면 맨 아래에 붙는다. */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const v = inputRef.current?.value.trim();
-              if (v?.startsWith('*')) {
-                const no = Number(v.slice(1));
-                const site = projects.find((p) => p.siteNo === no);
-                if (site) pickSite(site.id);
-                else setError(`${no}${t.noSite}`);
-              } else if (v) {
-                void stamp(v);
-              }
-              if (inputRef.current) inputRef.current.value = '';
-            }}
-            className="mt-auto border-t border-border pt-3"
-          >
-            <input
-              ref={inputRef}
-              placeholder={t.scanHint}
-              className={`${inputCls} h-[42px] text-center text-[15px]`}
-              autoComplete="off"
-            />
-          </form>
         </div>
       </div>
     </div>
