@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { CommonCodePage } from './CommonCodePage';
 import { ExternalVehicleSection } from '../components/ExternalVehicleSection';
 import { ExternalDriverSection } from '../components/ExternalDriverSection';
+import { VendorItemSection } from '../components/VendorItemSection';
 import { useVendors, useItemMasters } from '../hooks/useMasters';
 import { Badge } from '../components/ui/Badge';
 import { FormModal } from '../components/FormModal';
@@ -39,7 +40,7 @@ const iconBtnCls = 'rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-te
 // 공통코드와 한 화면에 있으면 목록이 길어질수록 아래로 밀려서 별도 탭으로 분리했다.
 // 마스터 관리 — 거래처·품목·공통코드를 기능별 탭으로 나눈다.
 // 한 화면에 모아 두면 목록이 길어질수록 아래 것이 밀려 내려가 찾기 어려워진다.
-type MasterTab = 'vendors' | 'items' | 'codes' | 'vehicles' | 'drivers';
+type MasterTab = 'vendors' | 'items' | 'codes' | 'vehicles' | 'drivers' | 'vendorItems';
 
 export function MasterManagementPage({ embedded = false }: { embedded?: boolean }) {
   const { vendors, reload: reloadVendors } = useVendors();
@@ -88,9 +89,15 @@ export function MasterManagementPage({ embedded = false }: { embedded?: boolean 
         <MasterTabButton active={tab === 'drivers'} onClick={() => setTab('drivers')}>
           운전자 <span className="ml-1 font-semibold text-text-faint">{counts.drivers}</span>
         </MasterTabButton>
+        {/* 업체품목 — 매각처가 부르는 품목명. 단가관리가 이 목록 위에서 돈다. */}
+        <MasterTabButton active={tab === 'vendorItems'} onClick={() => setTab('vendorItems')}>
+          업체품목
+        </MasterTabButton>
       </div>
 
-      {tab === 'drivers' ? (
+      {tab === 'vendorItems' ? (
+        <VendorItemSection />
+      ) : tab === 'drivers' ? (
         <ExternalDriverSection />
       ) : tab === 'vehicles' ? (
         <ExternalVehicleSection />

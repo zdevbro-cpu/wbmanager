@@ -1,6 +1,7 @@
 // 목록 화면(입고/폐기물입고/출고/폐기물반출) 엑셀 내보내기.
 // 컬럼 구성은 화면 표와 같게 맞춰, 받은 파일이 화면과 다르게 보이지 않도록 한다.
 import { prisma } from './prisma.js';
+import { dayOf, getSettings, summarize } from './pricing.js';
 import { buildWorkbook } from './ecountExport.js';
 
 const day = (v) => (v ? new Date(v).toISOString().slice(0, 10) : '');
@@ -291,6 +292,76 @@ const BUILDERS = {
         transferDate: day(r.transferDate),
         memo: r.memo ?? '',
       }));
+    },
+  },
+
+  // 최신단가(PRC-01) — 화면에 걸린 필터를 그대로 받아 같은 줄을 내려받는다.
+  prices: {
+    sheetName: '최신단가',
+    fileName: '최신단가',
+    columns: [
+      { header: '업체', key: 'vendorName', width: 18 },
+      { header: '품목', key: 'vendorItemName', width: 20 },
+      { header: '계열', key: 'series', width: 12 },
+      { header: '최신단가(원)', key: 'price', width: 14 },
+      { header: '구분', key: 'priceType', width: 8 },
+      { header: '적용일', key: 'effectiveDate', width: 12 },
+      { header: '이전단가(원)', key: 'prevPrice', width: 14 },
+      { header: '변동(원)', key: 'delta', width: 12 },
+      { header: '변동률(%)', key: 'deltaRate', width: 12 },
+      { header: '최근 실거래일', key: 'lastRealDate', width: 14 },
+      { header: '경과일', key: 'days', width: 10 },
+      { header: '상태', key: 'warn', width: 12 },
+    ],
+    async load(query) {
+      const settings = await getSettings();
+      const asOf = query.asOf ? dayOf(query.asOf) : dayOf(new Date());
+      const items = await prisma.vendorItem.findMany({
+        where: {
+          ...(query.series ? { series: query.series } : {}),
+          ...(query.vendorId ? { vendorId: query.vendorId } : {}),
+          ...(query.q
+            ? {
+                OR: [
+                  { vendorItemName: { contains: query.q, mode: 'insensitive' } },
+                  { vendor: { name: { contains: query.q, mode: 'insensitive' } } },
+                ],
+              }
+            : {}),
+        },
+        include: { vendor: { select: { name: true } } },
+      });
+      const prices = await prisma.vendorPrice.findMany({
+        where: { deletedAt: null, effectiveDate: { lte: new Date(`${asOf}T23:59:59.999Z`) } },
+        orderBy: { effectiveDate: 'asc' },
+      });
+      const rows = items.map((item) => {
+        const sum = summarize(
+          prices.filter((p) => p.vendorItemId === item.id),
+          asOf,
+          settings,
+        );
+        return {
+          vendorName: item.vendor.name,
+          vendorItemName: item.vendorItemName,
+          series: item.series ?? '',
+          price: sum ? (sum.latest.isFree ? '무상' : sum.latest.price) : '',
+          priceType: sum?.latest.priceType ?? '',
+          effectiveDate: sum?.latest.date ?? '',
+          prevPrice: sum?.prev?.price ?? '',
+          delta: sum?.delta ?? '',
+          deltaRate: sum?.deltaRate ?? '',
+          lastRealDate: sum?.lastRealDate ?? '',
+          days: sum?.warn.days ?? '',
+          warn: sum?.warn.label ?? '거래 없음',
+        };
+      });
+      const wanted = query.priceType;
+      return (wanted ? rows.filter((r) => r.priceType === wanted) : rows).sort((a, b) =>
+        a.vendorName === b.vendorName
+          ? a.vendorItemName.localeCompare(b.vendorItemName, 'ko')
+          : a.vendorName.localeCompare(b.vendorName, 'ko'),
+      );
     },
   },
 };
