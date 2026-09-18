@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Check, Pencil, Search, Trash2, X } from 'lucide-react';
 import { api } from '../../api/client';
 import { useVendors } from '../../hooks/useMasters';
 import { SearchSelect } from '../SearchSelect';
 import { Badge } from '../ui/Badge';
 import { DateField } from '../ui/DateField';
-import { cardCls, tableWrapCls, tdCls, tdNumCls, thCls, thNumCls, trCls } from '../ui/classes';
+import { NumberInput } from '../ui/NumberInput';
+import { cardCls, inputCls, tableWrapCls, tdCls, tdNumCls, thCls, thNumCls, trCls } from '../ui/classes';
 import type { PriceHistoryRow, PriceSummary, VendorItemRow } from '../../types';
 
 // PRC-02 단가조회 · 추이 — 계열 → 업체 → 품목을 고르면 최근 단가와 흐름, 참고단가, 추이를 본다.
@@ -32,6 +33,9 @@ export function PriceLookupTab({ initialItemId }: { initialItemId: string | null
   const [showAll, setShowAll] = useState(false);
   const [period, setPeriod] = useState<(typeof PERIODS)[number]['key']>('all');
   const [title, setTitle] = useState('');
+  // 이력 한 줄 고치기 — 잘못 적은 단가·구분·비고를 그 자리에서 고치고 지운다.
+  const [editId, setEditId] = useState('');
+  const [edit, setEdit] = useState({ price: '', priceType: '실제' as '실제' | '참고', memo: '' });
 
   useEffect(() => {
     api.get<VendorItemRow[]>('/api/vendor-items').then(setItems);
@@ -47,13 +51,25 @@ export function PriceLookupTab({ initialItemId }: { initialItemId: string | null
     setItemId(hit.id);
   }, [initialItemId, items]);
 
-  const options = useMemo(
-    () =>
-      items
-        .filter((i) => (!series || i.series === series) && (!vendorId || i.vendorId === vendorId))
-        .map((i) => ({ value: i.id, label: `${i.vendorItemName}${vendorId ? '' : ` · ${i.vendorName}`}` })),
+  const matches = useMemo(
+    () => items.filter((i) => (!series || i.series === series) && (!vendorId || i.vendorId === vendorId)),
     [items, series, vendorId],
   );
+  const options = useMemo(
+    () => matches.map((i) => ({ value: i.id, label: `${i.vendorItemName}${vendorId ? '' : ` · ${i.vendorName}`}` })),
+    [matches, vendorId],
+  );
+
+  // 계열·업체를 바꿔 고른 품목이 조건에서 빠지면 고른 상태도 놓는다.
+  // 그대로 두면 이름을 찾지 못해 칸에 내부 번호가 보이고, 오른쪽 결과는 이전 품목이 남는다.
+  useEffect(() => {
+    if (!itemId || !items.length) return;
+    if (matches.some((i) => i.id === itemId)) return;
+    setItemId('');
+    setSummary(null);
+    setHistory([]);
+    setTitle('');
+  }, [matches, itemId, items.length]);
   const seriesOptions = useMemo(
     () => [...new Set(items.map((i) => i.series).filter(Boolean))].map((s) => ({ value: s as string, label: s as string })),
     [items],
@@ -78,6 +94,35 @@ export function PriceLookupTab({ initialItemId }: { initialItemId: string | null
   useEffect(() => {
     load();
   }, [load]);
+
+  const startEdit = (h: PriceHistoryRow) => {
+    setEditId(h.id);
+    setEdit({ price: String(h.price), priceType: h.priceType, memo: h.memo ?? '' });
+  };
+
+  const saveEdit = async () => {
+    try {
+      await api.patch(`/api/prices/${editId}`, {
+        price: Number(edit.price),
+        priceType: edit.priceType,
+        memo: edit.memo || null,
+      });
+      setEditId('');
+      load();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '고치지 못했습니다.');
+    }
+  };
+
+  const removeRow = async (h: PriceHistoryRow) => {
+    if (!confirm(`${h.effectiveDate} ${h.priceType} ${h.price.toLocaleString()}원을 지웁니다. 진행할까요?`)) return;
+    try {
+      await api.del(`/api/prices/${h.id}`);
+      load();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '지우지 못했습니다.');
+    }
+  };
 
   const points = useMemo(() => {
     if (!summary) return [];
@@ -108,8 +153,13 @@ export function PriceLookupTab({ initialItemId }: { initialItemId: string | null
               />
             </label>
             <label>
-              <span className="mb-1 block text-[12px] font-semibold text-text-sub">품목</span>
+              <span className="mb-1 block text-[12px] font-semibold text-text-sub">품목 ({options.length})</span>
               <SearchSelect options={options} value={itemId} onChange={setItemId} placeholder="고르세요" ariaLabel="품목" />
+              {!options.length && (
+                <span className="mt-1 block text-[11.5px] text-warning">
+                  이 조건에 맞는 품목이 없습니다. 계열이나 업체를 비워 보세요.
+                </span>
+              )}
             </label>
             <label>
               <span className="mb-1 block text-[12px] font-semibold text-text-sub">기준일</span>
@@ -212,22 +262,98 @@ export function PriceLookupTab({ initialItemId }: { initialItemId: string | null
                       <th className={thCls}>구분</th>
                       <th className={thCls}>출처</th>
                       <th className={thCls}>비고</th>
+                      <th className={thCls}>&nbsp;</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {history.map((h) => (
-                      <tr key={h.id} className={trCls}>
-                        <td className={tdCls}>{h.effectiveDate}</td>
-                        <td className={`${tdNumCls} font-bold text-text-strong`}>
-                          {h.isFree ? '무상' : `${h.price.toLocaleString()}원`}
-                        </td>
-                        <td className={tdCls}>
-                          <Badge tone={h.priceType === '실제' ? 'green' : 'slate'}>{h.priceType}</Badge>
-                        </td>
-                        <td className={tdCls}>{h.source}</td>
-                        <td className={tdCls}>{h.memo ?? '-'}</td>
-                      </tr>
-                    ))}
+                    {history.map((h) =>
+                      editId === h.id ? (
+                        <tr key={h.id} className={trCls}>
+                          <td className={tdCls}>{h.effectiveDate}</td>
+                          <td className="px-3 py-1.5">
+                            <div className="ml-auto w-[110px]">
+                              <NumberInput
+                                value={edit.price}
+                                onChange={(v) => setEdit((p) => ({ ...p, price: v }))}
+                                aria-label="단가 고치기"
+                              />
+                            </div>
+                          </td>
+                          <td className={tdCls}>
+                            <select
+                              value={edit.priceType}
+                              onChange={(e) => setEdit((p) => ({ ...p, priceType: e.target.value as '실제' | '참고' }))}
+                              className={`${inputCls} h-[32px] w-[80px] text-[12.5px]`}
+                              aria-label="구분 고치기"
+                            >
+                              <option value="실제">실제</option>
+                              <option value="참고">참고</option>
+                            </select>
+                          </td>
+                          <td className={tdCls}>{h.source}</td>
+                          <td className={tdCls}>
+                            <input
+                              value={edit.memo}
+                              onChange={(e) => setEdit((p) => ({ ...p, memo: e.target.value }))}
+                              className={`${inputCls} h-[32px] text-[12.5px]`}
+                              aria-label="비고 고치기"
+                            />
+                          </td>
+                          <td className={tdCls}>
+                            <span className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={saveEdit}
+                                title="저장"
+                                className="rounded-[6px] border border-primary px-2 py-1 text-primary"
+                              >
+                                <Check size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditId('')}
+                                title="취소"
+                                className="rounded-[6px] border border-border px-2 py-1 text-text-sub"
+                              >
+                                <X size={13} />
+                              </button>
+                            </span>
+                          </td>
+                        </tr>
+                      ) : (
+                        <tr key={h.id} className={trCls}>
+                          <td className={tdCls}>{h.effectiveDate}</td>
+                          <td className={`${tdNumCls} font-bold text-text-strong`}>
+                            {h.isFree ? '무상' : `${h.price.toLocaleString()}원`}
+                          </td>
+                          <td className={tdCls}>
+                            <Badge tone={h.priceType === '실제' ? 'green' : 'slate'}>{h.priceType}</Badge>
+                          </td>
+                          <td className={tdCls}>{h.source}</td>
+                          <td className={tdCls}>{h.memo ?? '-'}</td>
+                          <td className={tdCls}>
+                            <span className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => startEdit(h)}
+                                title="고치기"
+                                className="rounded-[6px] border border-border px-2 py-1 text-text-sub hover:text-text-strong"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeRow(h)}
+                                title="지우기"
+                                className="rounded-[6px] border border-border px-2 py-1 text-text-sub hover:text-danger"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </span>
+                          </td>
+                        </tr>
+                      ),
+                    )}
                   </tbody>
                 </table>
               </div>

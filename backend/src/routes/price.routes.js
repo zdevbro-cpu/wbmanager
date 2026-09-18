@@ -9,6 +9,10 @@ import { applyImport, parseWorkbook, planImport } from '../lib/priceImport.js';
 const router = Router();
 
 function fail(res, e) {
+  // 같은 날 · 같은 품목 · 같은 구분은 한 건만 산다. 그 제약에 걸린 것이면 까닭을 그대로 알려 준다.
+  if (e.code === 'P2002') {
+    return res.status(400).json({ error: '그 날짜에 같은 구분의 단가가 이미 있습니다. 그 줄을 고쳐 주세요.' });
+  }
   const status = e.status ?? 500;
   if (status === 500) console.error('[price]', e.message);
   res.status(status).json({ error: status === 500 ? '처리하지 못했습니다.' : e.message });
