@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, LogOut, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -63,8 +64,10 @@ export function EntryPage() {
                   type="button"
                   disabled={locked}
                   onClick={() => open(area)}
+                  data-area={area.id}
+                  style={{ '--area': area.accent } as CSSProperties}
                   className={[
-                    'group relative flex aspect-square w-full max-w-[220px] flex-col items-center justify-center rounded-[16px] border bg-card p-5 text-center transition-colors',
+                    'area-card group relative flex aspect-square w-full max-w-[220px] flex-col items-center justify-center rounded-[16px] border bg-card p-5 text-center transition-colors',
                     locked
                       ? 'cursor-not-allowed border-border opacity-55'
                       : 'border-border hover:border-primary hover:bg-hover',
@@ -80,7 +83,8 @@ export function EntryPage() {
 
                   <div
                     className="flex h-14 w-14 items-center justify-center rounded-[14px]"
-                    style={{ backgroundColor: `${area.accent}1f`, color: area.accent }}
+                    // 영역 색은 카드에 물린 --area를 따른다. 밝은 모드에서 색을 가른 영역도 아이콘이 같이 바뀐다.
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--area) 12%, transparent)', color: 'var(--area)' }}
                   >
                     <Icon size={26} />
                   </div>
