@@ -76,6 +76,15 @@
   --card-shadow: 0 2px 6px rgba(37, 99, 235, 0.08);
 }
 
+/* 달력 — 브라우저 기본 달력은 페이지의 색 설정을 따른다. 어두운 화면에서 달력이 밝게 떠
+   월 이동 화살표가 안 보이던 것을, 어두운 달력으로 그려 흰 화살표가 보이게 한다. 밝은 화면은 그대로다. */
+:root[data-theme='dark'] input[type='date'],
+:root[data-theme='dark'] input[type='month'],
+:root[data-theme='dark'] input[type='datetime-local'],
+:root[data-theme='dark'] input[type='time'] {
+  color-scheme: dark;
+}
+
 /* 목록 — 머리줄은 옅은 파랑, 줄은 한 줄 건너 옅게 깐다.
    :where로 감싸 우선순위를 0으로 둔다. 화면이 직접 준 색(선택 줄·강조 칸·고정 머리칸)이 늘 이긴다. */
 :where(:root[data-theme='light'] thead th) {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { prisma } from '../lib/prisma.js';
+import { nextEmpCode } from '../lib/empCode.js';
 import { toISO } from '../lib/date.js';
 import { uploadToDrive, downloadFromDrive, trashInDrive } from '../lib/drive.js';
 
@@ -8,18 +9,7 @@ const router = Router();
 // 기준 사진 한 장. 폰으로 찍어 올려도 담기게 넉넉히 둔다.
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024 } });
 
-// 사번 자동 채번 — EMP-{연도}-{3자리 일련번호}. 근태 QR이 이 값을 담는다.
-async function nextEmpCode(tx, hireDate) {
-  const year = String(new Date(hireDate ?? Date.now()).getFullYear());
-  const prefix = `EMP-${year}-`;
-  const last = await tx.employee.findFirst({
-    where: { empCode: { startsWith: prefix } },
-    orderBy: { empCode: 'desc' },
-    select: { empCode: true },
-  });
-  const seq = last ? Number(last.empCode.slice(prefix.length)) + 1 : 1;
-  return `${prefix}${String(seq).padStart(3, '0')}`;
-}
+// 사번 자동 채번 — 회사약자-등록연월-일련번호(lib/empCode.js). 근태 QR이 이 값을 담는다.
 
 // 다음 교육 예정일 = 이수일 + 주기(개월). 직접 입력한 예정일이 있으면 그 값을 우선한다.
 function resolveNextDue({ nextDueDate, trainingDate, cycleMonths }) {
@@ -63,7 +53,7 @@ router.post('/', async (req, res) => {
       data: {
         ...rest,
         name,
-        empCode: rest.empCode || (await nextEmpCode(tx, rest.hireDate)),
+        empCode: rest.empCode || (await nextEmpCode(tx, rest.companyName)),
         hireDate: toISO(rest.hireDate),
         ...(certRows.length
           ? {

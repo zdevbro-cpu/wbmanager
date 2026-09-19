@@ -46,7 +46,7 @@ interface Dict {
   codes: Record<string, string>;
 }
 
-const CODE_KEYS = ['출근', '출장', '외근', '반차', '특근'] as const;
+const CODE_KEYS = ['출근', '출장', '외근', '반차', '특근', '조퇴'] as const;
 
 const KO: Dict = {
   title: '출퇴근 단말',
@@ -81,7 +81,7 @@ const KO: Dict = {
   installGuide:
     '이 단추가 동작하지 않는 브라우저에서는 이렇게 합니다 — 크롬: 화면을 아래로 쓸어 주소창을 부른 뒤 ⋮ → 홈 화면에 추가 · 삼성 인터넷: 아래 ≡ → 현재 페이지 추가 → 홈 화면 · 아이폰·아이패드 사파리: 공유 ⬆︎ → 홈 화면에 추가',
   close: '닫기',
-  codes: { 출근: '출근', 출장: '출장', 외근: '외근', 반차: '반차', 특근: '특근' },
+  codes: { 출근: '출근', 출장: '출장', 외근: '외근', 반차: '반차', 특근: '특근', 조퇴: '조퇴' },
 };
 
 const EN: Dict = {
@@ -117,7 +117,14 @@ const EN: Dict = {
   installGuide:
     'If this button does nothing — Chrome: swipe down to show the address bar, then ⋮ → Add to Home screen · Samsung Internet: ≡ at the bottom → Add page to → Home screen · iPhone/iPad Safari: Share ⬆︎ → Add to Home Screen',
   close: 'Close',
-  codes: { 출근: 'Check in', 출장: 'Business trip', 외근: 'Field work', 반차: 'Half day', 특근: 'Overtime' },
+  codes: {
+    출근: 'Check in',
+    출장: 'Business trip',
+    외근: 'Field work',
+    반차: 'Half day',
+    특근: 'Overtime',
+    조퇴: 'Early leave',
+  },
 };
 
 const RU: Dict = {
@@ -159,6 +166,7 @@ const RU: Dict = {
     외근: 'Работа вне офиса',
     반차: 'Полдня',
     특근: 'Сверхурочные',
+    조퇴: 'Ранний уход',
   },
 };
 

@@ -3,7 +3,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Download, Lock, LockOpen, Tras
 import { api } from '../api/client';
 import { downloadFile } from '../lib/download';
 import { useEmployees, useCommonCodes } from '../hooks/useMasters';
-import { attendManDays, attendDays } from '../lib/attend';
+import { attendManDays, attendDays, earlyLeaveManDays } from '../lib/attend';
 import { useAuth } from '../context/AuthContext';
 import { FormModal } from './FormModal';
 import { SearchSelect } from './SearchSelect';
@@ -523,6 +523,32 @@ function DayEditor({
   const [error, setError] = useState('');
   const set = (patch: Partial<typeof f>) => setF({ ...f, ...patch });
 
+  // 출퇴근 시각 — 잘못 누른 것을 바로잡을 때만 보낸다. 손대지 않으면 보내지 않는다.
+  const hm = (iso?: string | null) => (iso ? kstStamp(iso).slice(11, 16) : '');
+  const [times, setTimes] = useState({ in: hm(row?.checkInAt), out: hm(row?.checkOutAt) });
+  const [timesDirty, setTimesDirty] = useState(false);
+  const setTime = (k: 'in' | 'out', v: string) => {
+    setTimes((t) => ({ ...t, [k]: v }));
+    setTimesDirty(true);
+  };
+  const isoOf = (v: string) => (v ? `${info.date}T${v}:00+09:00` : null);
+
+  // 이미 있는 기록을 고칠 때는 사유를 받는다(리뷰회의 2-4 · 2-5). 고친 이력도 여기서 본다.
+  const [reason, setReason] = useState('');
+  const [edits, setEdits] = useState<
+    { id: string; reason: string; before: Record<string, unknown>; after: Record<string, unknown>; editedBy: string; createdAt: string }[]
+  >([]);
+  useEffect(() => {
+    if (!row?.id) return;
+    api.get<typeof edits>(`/api/labors/${row.id}/edits`).then(setEdits).catch(() => setEdits([]));
+  }, [row?.id]);
+
+  // 조퇴 — 출퇴근 시각이 있으면 일한 시간으로 공수를 미리 보여 준다.
+  const earlyPreview = earlyLeaveManDays(
+    timesDirty ? isoOf(times.in) : (row?.checkInAt ?? null),
+    timesDirty ? isoOf(times.out) : (row?.checkOutAt ?? null),
+  );
+
   // 공수 × 단가 = 인건비. 급여를 내는 것이 아니라 그날 든 비용을 적는 것이다.
   const laborCost = Math.round(Number(f.totalManDays || 0) * Number(f.unitCost || 0));
   const codes = attendCodes.length ? attendCodes : ['출근', '반차', '특근', '연차', '병가', '결근', '휴무'];
@@ -530,6 +556,11 @@ function DayEditor({
   const save = async () => {
     if (!f.projectId) {
       setError('프로젝트를 고르세요.');
+      return;
+    }
+    // 공수는 0.25 단위(1 · 0.75 · 0.5 · 0.25). 서버도 같은 규칙으로 막는다.
+    if (f.totalManDays && Math.abs(Number(f.totalManDays) * 4 - Math.round(Number(f.totalManDays) * 4)) > 1e-9) {
+      setError('공수는 0.25 단위로 적어 주세요 (예: 1 · 0.75 · 0.5 · 0.25).');
       return;
     }
     setError('');
@@ -549,6 +580,8 @@ function DayEditor({
         suppliesCost: f.suppliesCost ? Number(f.suppliesCost) : null,
         totalAmount: laborCost + Number(f.mealCost || 0) + Number(f.suppliesCost || 0) || null,
         isDraft: false,
+        ...(timesDirty ? { checkInAt: isoOf(times.in), checkOutAt: isoOf(times.out) } : {}),
+        ...(reason.trim() ? { editReason: reason.trim() } : {}),
       });
       onSaved();
     } catch (e) {
@@ -623,10 +656,17 @@ function DayEditor({
                 ))}
               </div>
               <p className="mt-1.5 text-[12px] text-text-faint">
-                고른 근태만큼 공수가 자동으로 잡힙니다 — 출근 1 · 반차 0.5 · 특근 1.5 · 연차/병가/결근/휴무 0
+                고른 근태만큼 공수가 자동으로 잡힙니다 — 출근 1 · 반차 0.5 · 특근 1.5 · 연차/병가/결근/휴무 0 · 조퇴는
+                8시간 기준 일한 시간(점심 12~13시 제외)을 0.25 단위로 올림
                 {f.attendCode && (
                   <span className="ml-1 font-bold text-text-strong">
-                    (지금: {formatNumber(attendManDays(f.attendCode) ?? 0)}공수)
+                    (지금:{' '}
+                    {f.attendCode === '조퇴'
+                      ? earlyPreview == null
+                        ? '출퇴근 시각이 있어야 계산'
+                        : `${formatNumber(earlyPreview)}공수`
+                      : `${formatNumber(attendManDays(f.attendCode) ?? 0)}공수`}
+                    )
                   </span>
                 )}
               </p>
@@ -634,8 +674,24 @@ function DayEditor({
           ) : (
             <>
               <div>
-                <label className={labelCls}>공수</label>
-                <NumberInput value={f.totalManDays} onChange={(v) => set({ totalManDays: v })} decimals={3} />
+                <label className={labelCls}>공수 (0.25 단위)</label>
+                <NumberInput value={f.totalManDays} onChange={(v) => set({ totalManDays: v })} decimals={2} />
+                <div className="mt-1.5 flex gap-1">
+                  {['1', '0.75', '0.5', '0.25'].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => set({ totalManDays: v })}
+                      className={`rounded-[6px] border px-2 py-0.5 text-[12px] font-bold ${
+                        Number(f.totalManDays) === Number(v)
+                          ? 'border-primary bg-primary/15 text-primary'
+                          : 'border-border text-text-sub hover:bg-hover'
+                      }`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className={labelCls}>단가(원)</label>
@@ -660,6 +716,62 @@ function DayEditor({
           )}
         </div>
 
+        {row && (
+          <div className="mt-4 border-t border-border pt-3">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-3">
+              <div>
+                <label className={labelCls}>출근 시각</label>
+                <input
+                  type="time"
+                  value={times.in}
+                  onChange={(e) => setTime('in', e.target.value)}
+                  className={inputCls}
+                  aria-label="출근 시각"
+                />
+              </div>
+              <div>
+                <label className={labelCls}>퇴근 시각</label>
+                <input
+                  type="time"
+                  value={times.out}
+                  onChange={(e) => setTime('out', e.target.value)}
+                  className={inputCls}
+                  aria-label="퇴근 시각"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls}>수정 사유 (이미 저장된 기록을 고칠 때 필수)</label>
+                <input
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="예: 퇴근을 출근으로 잘못 눌러 바로잡음"
+                  className={inputCls}
+                />
+                <p className="mt-1 text-[11.5px] text-text-faint">
+                  출퇴근 시각을 비우면 그 기록을 지웁니다. 고치기 전 값은 아래 이력에 그대로 남습니다.
+                </p>
+              </div>
+            </div>
+            {edits.length > 0 && (
+              <div className="mt-3">
+                <div className="mb-1 text-[12.5px] font-bold text-text-strong">수정 이력</div>
+                <ul className="max-h-[140px] space-y-1 overflow-y-auto text-[12px] text-text-sub">
+                  {edits.map((ed) => (
+                    <li key={ed.id} className="rounded-[6px] bg-input px-2 py-1">
+                      <span className="tabular">{kstStamp(ed.createdAt).slice(5, 16)}</span> · {ed.editedBy} · {ed.reason}
+                      <div className="text-text-faint">
+                        {Object.keys(ed.after)
+                          .map((k) => `${EDIT_LABEL[k] ?? k} ${showEdit(k, ed.before[k])} → ${showEdit(k, ed.after[k])}`)
+                          .join(' · ')}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
         {error && <p className="mt-3 text-[13px] text-danger">{error}</p>}
 
         <div className="mt-4 flex justify-end gap-2 border-t border-border pt-3">
@@ -678,4 +790,20 @@ function DayEditor({
       </div>
     </FormModal>
   );
+}
+
+// 수정 이력 — 칸 이름과 값을 사람이 읽는 말로 바꾼다.
+const EDIT_LABEL: Record<string, string> = {
+  projectId: '프로젝트',
+  attendCode: '근태',
+  totalManDays: '공수',
+  checkInAt: '출근',
+  checkOutAt: '퇴근',
+};
+
+function showEdit(k: string, v: unknown) {
+  if (v == null || v === '') return '없음';
+  if (k === 'checkInAt' || k === 'checkOutAt') return kstStamp(String(v)).slice(11, 16);
+  if (k === 'projectId') return '(바뀜)';
+  return String(v);
 }

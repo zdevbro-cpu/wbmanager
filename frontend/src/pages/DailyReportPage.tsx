@@ -26,6 +26,13 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const kg = (v: number) => `${Math.round(v).toLocaleString()}kg`;
 const won = (v: number) => `${Math.round(v).toLocaleString()}원`;
 const thisMonth = () => kstThisMonth();
+
+// 'YYYY-MM'을 앞뒤로 한 달씩 옮긴다.
+const shiftMonth = (ym: string, step: number) => {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1 + step, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
 const today = () => kstToday();
 
 // 보고서 보관함 — 발행된 일일보고·손익보고를 달력과 목록 두 가지로 본다.
@@ -136,15 +143,36 @@ export function DailyReportPage() {
           ) : (
             <>
               <div
-                className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:180px_minmax(0,1fr)_minmax(0,1.4fr)]`}
+                className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:250px_minmax(0,1fr)_minmax(0,1.4fr)]`}
               >
                 <FilterField label="기준 월">
-                  <input
-                    type="month"
-                    value={month}
-                    onChange={(e) => setMonth(e.target.value)}
-                    className={`${inputCls} px-2`}
-                  />
+                  {/* 앞뒤 달로 한 번에 넘긴다 — 달 고르기 칸을 열지 않아도 된다. */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setMonth((m) => shiftMonth(m, -1))}
+                      title="이전 달"
+                      aria-label="이전 달"
+                      className="h-[38px] shrink-0 rounded-[8px] border border-border px-2 text-text-sub hover:bg-hover hover:text-text-strong"
+                    >
+                      ◀
+                    </button>
+                    <input
+                      type="month"
+                      value={month}
+                      onChange={(e) => setMonth(e.target.value)}
+                      className={`${inputCls} min-w-0 px-2`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMonth((m) => shiftMonth(m, 1))}
+                      title="다음 달"
+                      aria-label="다음 달"
+                      className="h-[38px] shrink-0 rounded-[8px] border border-border px-2 text-text-sub hover:bg-hover hover:text-text-strong"
+                    >
+                      ▶
+                    </button>
+                  </div>
                 </FilterField>
                 <FilterField label="프로젝트">
                   <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={`${inputCls} px-2`}>
