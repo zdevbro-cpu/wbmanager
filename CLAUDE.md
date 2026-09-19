@@ -13,7 +13,13 @@
 - **Create backup files**: Before modifying any file, always create a backup so the work can be restored if an error occurs.
 - **Follow the `agent.md` rules**: Once this file is created, always follow the rules written in `agent.md`.
 - **Explain progress in Korean**: Always explain the progress and work process in Korean.
-- **Do not use browser testing**: Do not use browser-based testing.
+- **Browser use is allowed, under these limits**: The agent may drive a real browser to verify a change and to
+  capture screenshots for documents. Screenshots are taken from the deployed site or a local dev server.
+  - Never type credentials the user has not given for this purpose, and never write them into the repository.
+    Keep a login session file in the scratchpad directory, not in the project.
+  - On the production site, only read. Do not create, change or delete business records to make a screenshot;
+    use records that already exist, or ask the user to prepare one.
+  - Browser automation replaces neither the build nor the user's own check. Report what was seen, not what was expected.
 - **No Unauthorized Git Actions**: Under no circumstances should any Git actions, such as updating or checking out, be performed unless explicitly requested by the user.
 - **Git Commit & Push on Explicit Request Only**: The Agent must NEVER run `git commit`, `git push`, or any command that writes to the repository history unless the user explicitly requests it (e.g., "commit", "push", "깃에 올려"). Completing a task does NOT imply permission to commit or push. Treat every commit/push as a separate, deliberate action that requires its own explicit instruction.
 
