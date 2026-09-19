@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { uploadToDrive } from '../lib/drive.js';
 import { distanceMeters } from '../lib/attendance.js';
 import { kstDayString } from '../lib/date.js';
-import { attendManDays } from '../lib/attendCode.js';
+import { attendManDays, earlyLeaveManDays } from '../lib/attendCode.js';
 
 const router = Router();
 // 셀카 한 장. 폰 사진이 커도 담기도록 넉넉히 두되, 통짜 동영상은 막는다.
@@ -161,7 +161,16 @@ async function stamp(req, res, kind) {
                 ? { attendCode: '출근' }
                 : { totalManDays: 1 }),
           }
-        : { ...base, checkOutAt: now, checkOutLat: lat, checkOutLng: lng };
+        : {
+            ...base,
+            checkOutAt: now,
+            checkOutLat: lat,
+            checkOutLng: lng,
+            // 조퇴 — 출근 시각부터 지금까지 일한 시간으로 공수를 정한다.
+            ...(req.body.attendCode === '조퇴' || existing?.attendCode === '조퇴'
+              ? { attendCode: '조퇴', totalManDays: earlyLeaveManDays(existing?.checkInAt, now) }
+              : {}),
+          };
 
     const row = existing
       ? await prisma.labor.update({ where: { id: existing.id }, data })
@@ -257,7 +266,15 @@ router.post('/gate', async (req, res) => {
             ...(code ? { attendCode: code, totalManDays: attendManDays(code) } : {}),
             ...(!regular && !existing?.totalManDays ? { totalManDays: 1 } : {}),
           }
-        : { ...base, checkOutAt: now, ...(attendCode ? { attendCode, totalManDays: attendManDays(attendCode) } : {}) };
+        : {
+            ...base,
+            checkOutAt: now,
+            ...(attendCode === '조퇴' || existing?.attendCode === '조퇴'
+              ? { attendCode: '조퇴', totalManDays: earlyLeaveManDays(existing?.checkInAt, now) }
+              : attendCode
+                ? { attendCode, totalManDays: attendManDays(attendCode) }
+                : {}),
+          };
 
     const row = existing
       ? await prisma.labor.update({ where: { id: existing.id }, data })

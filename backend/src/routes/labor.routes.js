@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { toISO } from '../lib/date.js';
 import { rememberCodes } from '../lib/rememberCodes.js';
-import { attendManDays } from '../lib/attendCode.js';
+import { attendManDays, earlyLeaveManDays } from '../lib/attendCode.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { purgeMonthSelfies, purgeLaborSelfies } from '../lib/attendance.js';
 import { buildLaborWorkbook } from '../lib/laborSheet.js';
@@ -10,6 +10,61 @@ import { buildLaborWorkbook } from '../lib/laborSheet.js';
 const router = Router();
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+// 공수 수정 이력 — 이미 있는 기록의 핵심 값이 바뀌면 사유를 받고, 고치기 전 값과 고친 값을 남긴다.
+// 첫 이력의 before가 곧 원래 값이다(리뷰회의 2-4 · 2-5).
+// 현장에서 올라온 임시저장을 확인만 하는 것은 「수정」이 아니라 사유 없이 저장하고, 이력에만 남긴다.
+const TRACKED = ['projectId', 'attendCode', 'totalManDays', 'checkInAt', 'checkOutAt'];
+const TIME_KEYS = new Set(['checkInAt', 'checkOutAt']);
+
+const normOf = (k, v) => {
+  if (v == null || v === '') return null;
+  if (TIME_KEYS.has(k)) return new Date(v).toISOString();
+  if (k === 'totalManDays') return Number(v);
+  return String(v);
+};
+
+function changesOf(existing, data) {
+  const before = {};
+  const after = {};
+  for (const k of TRACKED) {
+    if (data[k] === undefined) continue;
+    const a = normOf(k, existing[k]);
+    const b = normOf(k, data[k]);
+    if (a !== b) {
+      before[k] = a;
+      after[k] = b;
+    }
+  }
+  return Object.keys(after).length ? { before, after } : null;
+}
+
+async function logEdit(req, existing, data) {
+  const diff = changesOf(existing, data);
+  if (!diff) return;
+  const reason = String(req.body.editReason ?? '').trim();
+  if (!reason && !existing.isDraft) {
+    throw Object.assign(new Error('이미 저장된 기록을 고칩니다. 고친 까닭(수정 사유)을 적어 주세요.'), { status: 400 });
+  }
+  await prisma.laborEdit.create({
+    data: {
+      laborId: existing.id,
+      reason: reason || '현장 임시저장 확인',
+      before: diff.before,
+      after: diff.after,
+      editedById: req.appUser?.id ?? null,
+    },
+  });
+}
+
+// 공수는 0.25 단위로만 받는다(리뷰회의 2-9 — 1 · 0.5 · 0.25).
+function assertQuarter(v) {
+  if (v == null || v === '') return;
+  const n = Number(v);
+  if (!Number.isFinite(n) || Math.abs(n * 4 - Math.round(n * 4)) > 1e-9) {
+    throw Object.assign(new Error('공수는 0.25 단위로 적어 주세요 (예: 1 · 0.75 · 0.5 · 0.25).'), { status: 400 });
+  }
+}
 
 // 이 서버에는 공용 오류 처리기가 없다. 여기서 만든 오류는 여기서 답한다.
 function fail(res, e) {
@@ -51,6 +106,24 @@ router.get('/', async (req, res) => {
 });
 
 // 월 공수표 엑셀 — A4 가로 한 장에 그 달 전체가 들어간다.
+// 한 칸의 수정 이력 — 최근 것부터. 누가 고쳤는지 이름을 붙여 준다.
+router.get('/:id/edits', async (req, res) => {
+  try {
+    const rows = await prisma.laborEdit.findMany({
+      where: { laborId: req.params.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    const ids = [...new Set(rows.map((r) => r.editedById).filter(Boolean))];
+    const users = ids.length
+      ? await prisma.appUser.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, email: true } })
+      : [];
+    const who = Object.fromEntries(users.map((u) => [u.id, u.name ?? u.email]));
+    res.json(rows.map((r) => ({ ...r, editedBy: r.editedById ? (who[r.editedById] ?? '알 수 없음') : '시스템' })));
+  } catch (e) {
+    fail(res, e);
+  }
+});
+
 router.get('/export', async (req, res) => {
   const { month, projectId } = req.query;
   if (!MONTH.test(month ?? '')) return res.status(400).json({ error: 'month는 YYYY-MM 형식입니다.' });
@@ -152,6 +225,15 @@ async function saveDay(req, month) {
     : { employeeId: null, workerName: (body.workerName ?? '').trim() || null, workDate: day };
   const existing = await prisma.labor.findFirst({ where });
 
+  // 조퇴를 골랐고 공수를 적지 않았으면 출퇴근 시각으로 정한다.
+  if (data.attendCode === '조퇴' && data.totalManDays == null) {
+    data.totalManDays = earlyLeaveManDays(
+      data.checkInAt ?? existing?.checkInAt,
+      data.checkOutAt ?? existing?.checkOutAt,
+    );
+  }
+  assertQuarter(data.totalManDays);
+
   // 단가·식대·기타비용을 적지 않았으면 그 사람에게 정해 둔 값으로 채운다.
   // 승인 자리에서 한 번 적어 두면 공수표에서는 날짜와 공수만 고르면 되게 하려는 것이다.
   const person = body.employeeId
@@ -181,6 +263,7 @@ async function saveDay(req, month) {
       Number(data.laborCost ?? 0) + Number(data.mealCost ?? 0) + Number(data.suppliesCost ?? 0) || null;
   }
 
+  if (existing) await logEdit(req, existing, data);
   const row = existing
     ? await prisma.labor.update({ where: { id: existing.id }, data })
     : await prisma.labor.create({ data: { ...data, createdById: req.appUser?.id ?? null } });
@@ -208,6 +291,10 @@ function buildCell(body, month, day) {
   ];
   const data = { employeeId: body.employeeId, workDate: day, settleMonth: month };
   for (const k of pick) if (body[k] !== undefined) data[k] = body[k] === '' ? null : body[k];
+  // 출퇴근 시각 — 잘못 누른 것을 관리자가 바로잡을 때만 보낸다(비우면 지운다).
+  for (const k of ['checkInAt', 'checkOutAt']) {
+    if (body[k] !== undefined) data[k] = body[k] ? new Date(body[k]) : null;
+  }
 
   // 근태코드만 고른 경우(정규직) 그 코드 몫의 공수를 대신 넣는다.
   // 반차를 골라도 공수가 비어 있으면 인건비에 아무것도 안 잡히기 때문이다.
@@ -249,6 +336,9 @@ router.patch('/:id', async (req, res) => {
     await assertOpen(existing.settleMonth);
     if (body.workDate) await assertOpen(monthOf(body.workDate));
 
+    delete body.editReason;
+    assertQuarter(body.totalManDays);
+    await logEdit(req, existing, body);
     const row = await prisma.labor.update({
       where: { id: req.params.id },
       data: {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { firebaseAuth } from '../lib/firebaseAdmin.js';
 import { prisma } from '../lib/prisma.js';
+import { nextEmpCode } from '../lib/empCode.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { recordLogin } from '../middleware/audit.js';
 
@@ -160,7 +161,7 @@ async function linkEmployee(user, opts = {}) {
     data: {
       name,
       phone: user.phone ?? null,
-      empCode: await nextEmpCode(),
+      empCode: await nextEmpCode(),  // 가입 승인으로 만드는 임직원 — 소속 회사가 비어 있어 WB로 채번한다
       // 승인하는 사람이 고른 구분. 고르지 않았으면 기본값이 들어간다.
       ...(opts.employmentType ? { employmentType: opts.employmentType } : {}),
       ...costPatch(opts),
@@ -170,17 +171,6 @@ async function linkEmployee(user, opts = {}) {
   return prisma.appUser.update({ where: { id: user.id }, data: { employeeId: employee.id } });
 }
 
-// 사번 채번 — 임직원 관리와 같은 규칙(EMP-{연도}-{3자리})을 쓴다.
-async function nextEmpCode() {
-  const prefix = `EMP-${new Date().getFullYear()}-`;
-  const last = await prisma.employee.findFirst({
-    where: { empCode: { startsWith: prefix } },
-    orderBy: { empCode: 'desc' },
-    select: { empCode: true },
-  });
-  const seq = last ? Number(last.empCode.slice(prefix.length)) + 1 : 1;
-  return `${prefix}${String(seq).padStart(3, '0')}`;
-}
 
 // 관리자: 역할 변경
 // 계정이 누구인지 — 모바일 출퇴근은 이 연결을 보고 찍는 사람을 정한다.

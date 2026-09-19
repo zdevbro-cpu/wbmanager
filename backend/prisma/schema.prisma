@@ -537,10 +537,26 @@ model Labor {
   createdById String? @map("created_by_id")
 
   attachments Attachment[]
+  edits       LaborEdit[]
 
   @@index([settleMonth])
   @@index([employeeId, workDate])
   @@map("labor")
+}
+
+// 공수 수정 이력 — 누가 언제 왜 고쳤는지, 고치기 전 값과 고친 값. 원래 값은 첫 이력의 before에 남는다.
+model LaborEdit {
+  id         String   @id @default(uuid())
+  laborId    String   @map("labor_id")
+  labor      Labor    @relation(fields: [laborId], references: [id], onDelete: Cascade)
+  reason     String   @map("reason")
+  before     Json     @map("before")
+  after      Json     @map("after")
+  editedById String?  @map("edited_by_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([laborId])
+  @@map("labor_edit")
 }
 
 model WorkerAttendance {

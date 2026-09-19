@@ -10,6 +10,8 @@ const TABLE = {
   출근: { manDays: 1, days: 1 },
   반차: { manDays: 0.5, days: 0.5 },
   특근: { manDays: 1.5, days: 1 },
+  // 조퇴는 일한 시간으로 정한다(아래 earlyLeaveManDays). 표에는 비워 두고, 나온 날은 하루로 센다.
+  조퇴: { manDays: null, days: 1 },
   연차: { manDays: 0, days: 0 },
   병가: { manDays: 0, days: 0 },
   결근: { manDays: 0, days: 0 },
@@ -27,6 +29,29 @@ export function attendManDays(code) {
 export function attendDays(code) {
   if (!code) return 0;
   return (TABLE[code] ?? DEFAULT).days;
+}
+
+// 조퇴 공수 — 8시간을 기준으로 일한 시간의 비율을 구해, 네 구간의 윗값으로 올린다.
+//   0.00~0.25 → 0.25 · 0.26~0.50 → 0.5 · 0.51~0.75 → 0.75 · 0.76~1.00 → 1
+// 비율은 소수 둘째 자리로 끊어 구간을 가린다. 일한 시간은 출근~퇴근 시각의 차이에서
+// 점심시간(12:00~13:00, 한국 시각)과 겹친 만큼을 뺀 것이다. 점심 전에 나갔으면 뺄 것이 없다.
+export const STANDARD_HOURS = 8;
+
+const lunchOverlapHours = (inAt, outAt) => {
+  const day = new Date(inAt.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+  const start = new Date(`${day}T12:00:00+09:00`);
+  const end = new Date(`${day}T13:00:00+09:00`);
+  return Math.max(0, Math.min(outAt, end) - Math.max(inAt, start)) / 3600000;
+};
+
+export function earlyLeaveManDays(checkInAt, checkOutAt) {
+  if (!checkInAt || !checkOutAt) return null;
+  const inAt = new Date(checkInAt);
+  const outAt = new Date(checkOutAt);
+  const hours = (outAt - inAt) / 3600000 - lunchOverlapHours(inAt, outAt);
+  if (!(hours > 0)) return 0.25;
+  const ratio = Math.min(Math.round((hours / STANDARD_HOURS) * 100) / 100, 1);
+  return Math.max(0.25, Math.ceil(ratio * 4 - 1e-9) / 4);
 }
 
 export { TABLE as ATTEND_TABLE };

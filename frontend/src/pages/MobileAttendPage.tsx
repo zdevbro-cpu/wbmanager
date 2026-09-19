@@ -48,7 +48,8 @@ export function MobileAttendPage() {
 
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState('');
-  const [kind, setKind] = useState<'in' | 'out'>('in');
+  // 조퇴는 퇴근의 한 갈래다 — 퇴근으로 찍고, 일한 시간으로 공수를 정한다.
+  const [kind, setKind] = useState<'in' | 'out' | 'early'>('in');
   const cameraRef = useRef<HTMLInputElement>(null);
   // 앞 카메라를 화면 안에서 직접 연다. 사진 앱으로 넘기면 기기마다 뒤 카메라가 열린다.
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -62,6 +63,8 @@ export function MobileAttendPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState('');
+  // 현장 반경 밖에서 찍었을 때 — 저장은 되지만 본인이 알아볼 수 있게 따로 알린다.
+  const [outsideNote, setOutsideNote] = useState('');
 
   // 마지막에 고른 현장을 그대로 다시 띄운다.
   useEffect(() => {
@@ -192,6 +195,7 @@ export function MobileAttendPage() {
     setPhoto(f);
     setPreview(f ? URL.createObjectURL(f) : '');
     setDone('');
+    setOutsideNote('');
     setError('');
   };
 
@@ -225,10 +229,11 @@ export function MobileAttendPage() {
         form.append('lat', String(place.lat));
         form.append('lng', String(place.lng));
       }
+      if (kind === 'early') form.append('attendCode', '조퇴');
 
       // FormData는 api 헬퍼가 Content-Type을 붙이지 않도록 그대로 보낸다.
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch(`${API_BASE_URL}/api/attendance/${kind}`, {
+      const res = await fetch(`${API_BASE_URL}/api/attendance/${kind === 'in' ? 'in' : 'out'}`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: form,
@@ -239,10 +244,11 @@ export function MobileAttendPage() {
       }
       const saved = (await res.json()) as { outside?: boolean; radius?: number };
 
-      setDone(
-        kind === 'in'
-          ? `출근으로 올렸습니다.${saved.outside ? ` 현장에서 ${saved.radius}m 밖에서 찍혔습니다.` : ''}`
-          : `퇴근으로 올렸습니다.${saved.outside ? ` 현장에서 ${saved.radius}m 밖에서 찍혔습니다.` : ''}`,
+      setDone(kind === 'in' ? '출근으로 올렸습니다.' : kind === 'early' ? '조퇴로 올렸습니다.' : '퇴근으로 올렸습니다.');
+      setOutsideNote(
+        saved.outside
+          ? `현장에서 ${saved.radius}m 밖에서 찍혔습니다. 사무실에서 확인하므로, 현장 안에서 찍지 못한 사정이 있으면 관리자에게 알려 주세요.`
+          : '',
       );
       pick(null);
       // 출근을 올렸으면 다음은 퇴근이다. 손으로 다시 고르게 두지 않는다.
@@ -317,10 +323,10 @@ export function MobileAttendPage() {
         </select>
       </div>
 
-      {/* 출근인지 퇴근인지 — 큼직하게 둘 중 하나 */}
-      <div className="mb-4 grid grid-cols-2 gap-2">
-        {(['in', 'out'] as const).map((k) => {
-          const at = k === 'in' ? hhmm(me?.today?.checkInAt) : hhmm(me?.today?.checkOutAt);
+      {/* 출근 · 퇴근 · 조퇴 — 큼직하게 셋 중 하나 */}
+      <div className="mb-4 grid grid-cols-3 gap-2">
+        {(['in', 'out', 'early'] as const).map((k) => {
+          const at = k === 'in' ? hhmm(me?.today?.checkInAt) : k === 'out' ? hhmm(me?.today?.checkOutAt) : null;
           return (
             <button
               key={k}
@@ -330,7 +336,7 @@ export function MobileAttendPage() {
                 kind === k ? 'border-primary bg-primary/15 text-primary' : 'border-border text-text-sub'
               }`}
             >
-              {k === 'in' ? '출근' : '퇴근'}
+              {k === 'in' ? '출근' : k === 'out' ? '퇴근' : '조퇴'}
               {at && <span className="ml-1.5 text-[12.5px] font-normal">{at} 완료</span>}
             </button>
           );
@@ -428,6 +434,12 @@ export function MobileAttendPage() {
           <Check size={15} /> {done}
         </p>
       )}
+      {outsideNote && (
+        <div className="mb-3 flex items-start gap-2 rounded-[10px] border border-warning/50 bg-warning/10 px-3 py-2.5 text-[13px] font-semibold text-warning">
+          <MapPin size={15} className="mt-0.5 shrink-0" />
+          <span>{outsideNote}</span>
+        </div>
+      )}
 
       <button
         type="button"
@@ -436,7 +448,7 @@ export function MobileAttendPage() {
         className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-primary px-3 py-4 text-[17px] font-extrabold text-white disabled:opacity-50"
       >
         {sending ? <Loader2 size={18} className="animate-spin" /> : null}
-        {!photo ? '셀카를 먼저 찍어 주세요' : kind === 'in' ? '출근 등록' : '퇴근 등록'}
+        {!photo ? '셀카를 먼저 찍어 주세요' : kind === 'in' ? '출근 등록' : kind === 'early' ? '조퇴 등록' : '퇴근 등록'}
       </button>
 
       <p className="mt-3 text-[12px] leading-relaxed text-text-faint">
