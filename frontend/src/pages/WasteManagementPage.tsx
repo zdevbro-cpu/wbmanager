@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ShieldAlert, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
+import { ExcelDownloadButton, excelSheet, excelNum, conditionText } from '../components/ExcelDownloadButton';
 import { formatNumber } from '../lib/number';
 import { useProjects } from '../hooks/useMasters';
 import { Badge } from '../components/ui/Badge';
@@ -65,6 +66,31 @@ export function WasteManagementPage() {
         <span className="text-[12.5px] text-text-faint">
           {visible.length === rows.length ? `${rows.length}건` : `${visible.length}건 / 전체 ${rows.length}건`}
         </span>
+        <ExcelDownloadButton
+          className="ml-auto"
+          fileName="폐기물반출_올바로"
+          conditions={conditionText([
+            ['프로젝트', projects.find((p) => p.id === projectId)?.roundName],
+            ['기간', from || to ? `${from || '처음'} ~ ${to || '끝'}` : ''],
+            ['올바로', reported === 'true' ? '신고 완료' : reported === 'false' ? '미신고' : ''],
+            ['인계일', handover === 'true' ? '기재됨' : handover === 'false' ? '미기재' : ''],
+            ['검색어', q.trim()],
+            ['처리할 건만', unreportedOnly && '예'],
+          ])}
+          sheets={[
+            excelSheet('폐기물반출', visible, [
+              { header: '반출일', value: (r) => r.outboundDate.slice(0, 10), width: 12 },
+              { header: '프로젝트', value: (r) => r.project?.roundName, width: 24 },
+              { header: '배출자', value: (r) => r.dischargerName, width: 16 },
+              { header: '운반자', value: (r) => r.transporterName, width: 16 },
+              { header: '처리자', value: (r) => r.buyer?.name, width: 16 },
+              { header: '중량(kg)', value: (r) => excelNum(r.weight), width: 12 },
+              { header: '올바로 신고', value: (r) => (r.olbaroReported ? '신고완료' : '미신고'), width: 12 },
+              { header: '인계일', value: (r) => r.handoverDate?.slice(0, 10), width: 12 },
+              { header: '메모', value: (r) => r.olbaroMemo, width: 24 },
+            ]),
+          ]}
+        />
       </div>
 
       <div

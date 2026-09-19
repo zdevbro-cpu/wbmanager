@@ -1,5 +1,6 @@
 // 목록 화면(입고/폐기물입고/출고/폐기물반출) 엑셀 내보내기.
 // 컬럼 구성은 화면 표와 같게 맞춰, 받은 파일이 화면과 다르게 보이지 않도록 한다.
+import ExcelJS from 'exceljs';
 import { prisma } from './prisma.js';
 import { dayOf, getSettings, summarize } from './pricing.js';
 import { buildWorkbook } from './ecountExport.js';
@@ -365,6 +366,67 @@ const BUILDERS = {
     },
   },
 };
+
+// 화면에 보이는 줄 그대로 — 필터가 화면마다 달라 서버에서 다시 조회하면 파일과 화면이 어긋난다.
+// 그래서 화면이 거른 줄을 받아 표로만 옮긴다. 조회 권한은 그 줄을 불러올 때 이미 거쳤다.
+// sheets: [{ name, columns: [{ header, width }], rows: [[값, …], …] }]
+const MAX_SHEETS = 10;
+const MAX_ROWS = 50000;
+const sheetNameOf = (name, i) => String(name || `시트${i + 1}`).replace(/[[\]:*?/\\]/g, ' ').trim().slice(0, 31);
+
+export function buildRowsWorkbook({ conditions, sheets }) {
+  if (!Array.isArray(sheets) || sheets.length === 0) throw new Error('내보낼 표가 없습니다.');
+  if (sheets.length > MAX_SHEETS) throw new Error(`한 번에 ${MAX_SHEETS}개 표까지 내보낼 수 있습니다.`);
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'wbmanager';
+  const used = new Set();
+  sheets.forEach((sheet, i) => {
+    const columns = Array.isArray(sheet.columns) ? sheet.columns : [];
+    const rows = Array.isArray(sheet.rows) ? sheet.rows : [];
+    if (!columns.length) throw new Error('열 정보가 없습니다.');
+    if (rows.length > MAX_ROWS) throw new Error(`한 표에 ${MAX_ROWS.toLocaleString()}줄까지 내보낼 수 있습니다.`);
+
+    let name = sheetNameOf(sheet.name, i);
+    while (used.has(name)) name = `${name.slice(0, 28)}_${i + 1}`;
+    used.add(name);
+    const ws = wb.addWorksheet(name);
+
+    // 받은 파일만 봐도 어떤 조건으로 뽑았는지 알 수 있게 첫 줄에 남긴다.
+    const info = [
+      conditions ? String(conditions) : '조건: 전체',
+      `생성: ${new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 16).replace('T', ' ')}`,
+      `건수: ${rows.length}`,
+    ].join('   |   ');
+    ws.addRow([info]);
+    if (columns.length > 1) ws.mergeCells(1, 1, 1, columns.length);
+    ws.getRow(1).font = { size: 9, color: { argb: 'FF666666' } };
+    ws.addRow([]);
+
+    const headerRow = ws.addRow(columns.map((c) => String(c.header ?? '')));
+    headerRow.font = { bold: true };
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } };
+      cell.border = { bottom: { style: 'thin' } };
+    });
+    columns.forEach((c, ci) => {
+      ws.getColumn(ci + 1).width = Number(c.width) > 0 ? Math.min(Number(c.width), 80) : 14;
+    });
+
+    for (const row of rows) {
+      const values = columns.map((_, ci) => {
+        const v = Array.isArray(row) ? row[ci] : null;
+        return v == null ? '' : typeof v === 'number' || typeof v === 'string' ? v : String(v);
+      });
+      const added = ws.addRow(values);
+      values.forEach((v, ci) => {
+        if (typeof v === 'number') added.getCell(ci + 1).numFmt = Number.isInteger(v) ? '#,##0' : '#,##0.##';
+      });
+    }
+    ws.views = [{ state: 'frozen', ySplit: 3 }];
+  });
+  return wb;
+}
 
 export function isExportType(type) {
   return Object.hasOwn(BUILDERS, type);

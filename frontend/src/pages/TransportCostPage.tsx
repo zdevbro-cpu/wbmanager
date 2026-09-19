@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Truck, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
+import { ExcelDownloadButton, excelSheet, excelNum, conditionText } from '../components/ExcelDownloadButton';
 import { useProjects, useVehicles, useCommonCodes, useItemMasters } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FilterField } from '../components/FilterField';
@@ -82,7 +83,28 @@ export function TransportCostPage() {
         <span className="ml-1 text-[13px] text-text-sub">
           {rows.length}건 · {formatNumber(total)}원
         </span>
-        <button type="button" onClick={() => setOpen(true)} className={`${primaryBtnCls} ml-auto`}>
+        <ExcelDownloadButton
+          className="ml-auto"
+          fileName="운반비"
+          conditions={conditionText([['프로젝트', projectId ? projectName(projectId) : '']])}
+          sheets={[
+            excelSheet('운반비', rows, [
+              { header: '운반일', value: (r) => r.transportDate.slice(0, 10), width: 12 },
+              { header: '프로젝트', value: (r) => projectName(r.projectId), width: 24 },
+              { header: '차량번호', value: (r) => r.vehicleNo, width: 12 },
+              { header: '차종', value: (r) => r.vehicleType, width: 10 },
+              { header: '상차지', value: (r) => r.origin, width: 14 },
+              { header: '하차지', value: (r) => r.destination, width: 14 },
+              { header: '제품', value: (r) => r.itemName, width: 16 },
+              { header: '중량(kg)', value: (r) => excelNum(r.weight), width: 12 },
+              { header: '단가', value: (r) => excelNum(r.unitPrice), width: 12 },
+              { header: '공급가액', value: (r) => excelNum(r.supplyAmount), width: 14 },
+              { header: '세액', value: (r) => excelNum(r.taxAmount), width: 12 },
+              { header: '합계', value: (r) => num(r.supplyAmount) + num(r.taxAmount), width: 14 },
+            ]),
+          ]}
+        />
+        <button type="button" onClick={() => setOpen(true)} className={primaryBtnCls}>
           <Plus size={15} /> 운반비 등록
         </button>
       </div>

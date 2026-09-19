@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Layers, Plus, Eye, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
+import { ExcelDownloadButton, excelSheet, excelNum, conditionText } from '../components/ExcelDownloadButton';
 import { useVendors, useEmployees } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { EntityDocuments } from '../components/EntityDocuments';
@@ -106,13 +107,38 @@ export function ProjectManagementPage() {
         <span className="ml-1 text-[13px] text-text-sub">
           {rows.length}건{rows.length !== projects.length ? ` / ${projects.length}건` : ''}
         </span>
+        <ExcelDownloadButton
+          className="ml-auto"
+          fileName="프로젝트"
+          conditions={conditionText([
+            ['상태', status],
+            ['계약기간', from || to ? `${from || '처음'} ~ ${to || '끝'}` : ''],
+            ['검색어', q.trim()],
+          ])}
+          sheets={[
+            excelSheet('프로젝트', rows, [
+              { header: '코드', value: (p) => p.projectCode, width: 14 },
+              { header: '프로젝트(사업)명', value: (p) => p.roundName, width: 30 },
+              { header: '현장번호', value: (p) => p.siteNo, width: 10 },
+              { header: '발주처', value: (p) => p.orderer?.name, width: 18 },
+              { header: '시공사', value: (p) => p.contractor?.name, width: 18 },
+              { header: '현장', value: (p) => p.siteName ?? p.region, width: 18 },
+              { header: '계약 시작', value: (p) => p.startDate?.slice(0, 10), width: 12 },
+              { header: '계약 종료', value: (p) => p.endDate?.slice(0, 10), width: 12 },
+              { header: '계약금액', value: (p) => excelNum(p.contractAmount), width: 14 },
+              { header: '매입가', value: (p) => excelNum(p.purchasePrice), width: 14 },
+              { header: '담당자', value: (p) => p.manager?.name, width: 10 },
+              { header: '상태', value: (p) => p.status, width: 8 },
+            ]),
+          ]}
+        />
         <button
           type="button"
           onClick={() => {
             setEditing(null);
             setOpen(true);
           }}
-          className={`${primaryBtnCls} ml-auto`}
+          className={primaryBtnCls}
         >
           <Plus size={15} /> 프로젝트 등록
         </button>

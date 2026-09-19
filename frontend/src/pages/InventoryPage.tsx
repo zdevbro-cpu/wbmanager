@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Boxes, X } from 'lucide-react';
 import { api } from '../api/client';
+import { ExcelDownloadButton, excelSheet, conditionText } from '../components/ExcelDownloadButton';
 import { useEscapeClose } from '../hooks/useEscapeClose';
 import { SearchSelect } from '../components/SearchSelect';
 import { useProjects, useItemMasters } from '../hooks/useMasters';
@@ -92,6 +93,27 @@ export function InventoryPage() {
       <div className="mb-5 flex items-center gap-2">
         <Boxes size={20} className="text-primary" />
         <h1 className={pageTitleCls}>재고 스냅샷 / 재고평가</h1>
+        <ExcelDownloadButton
+          className="ml-auto"
+          fileName="재고평가"
+          conditions={conditionText([
+            ['프로젝트', projectId ? rows[0]?.projectName : ''],
+            ['품목', itemCode ? rows[0]?.itemName : ''],
+          ])}
+          sheets={[
+            excelSheet('재고평가', rows, [
+              { header: '프로젝트', value: (r) => r.projectName, width: 24 },
+              { header: '품목코드', value: (r) => r.itemCode, width: 10 },
+              { header: '품목', value: (r) => r.itemName, width: 18 },
+              { header: '입고합계(kg)', value: (r) => r.inWeight, width: 14 },
+              { header: '출고합계(kg)', value: (r) => r.outWeight, width: 14 },
+              { header: '잔량(kg)', value: (r) => r.remaining, width: 12 },
+              { header: '적용단가', value: (r) => r.unitPrice, width: 12 },
+              { header: '단가출처', value: (r) => SOURCE_LABEL[r.priceSource], width: 12 },
+              { header: '평가금액', value: (r) => r.valuationAmount, width: 16 },
+            ]),
+          ]}
+        />
       </div>
 
       {valuation && (

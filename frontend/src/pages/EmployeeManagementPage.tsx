@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Users, Plus, Trash2, CheckCircle2, Eye, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
+import { ExcelDownloadButton, excelSheet, excelNum, conditionText } from '../components/ExcelDownloadButton';
 import { formatNumber } from '../lib/number';
 import { formatPhone } from '../lib/phone';
 import { useCommonCodes } from '../hooks/useMasters';
@@ -182,7 +183,49 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
               ? `${employees.length}명`
               : `${visible.length}명 / 전체 ${employees.length}명`}
         </span>
-        <button type="button" onClick={() => setOpen(true)} className={`${primaryBtnCls} ml-auto`}>
+        <ExcelDownloadButton
+          className="ml-auto"
+          fileName="임직원"
+          conditions={conditionText([
+            ['검색어', q.trim()],
+            ['부서', department],
+            ['직급', position],
+            ['구분', employmentType],
+            ['자격·교육', expiring === 'true' ? '30일 내 만료·예정' : expiring === 'false' ? '해당 없음' : ''],
+          ])}
+          sheets={[
+            excelSheet('임직원', visible, [
+              { header: '사번', value: (e) => e.empCode, width: 16 },
+              { header: '성명', value: (e) => e.name, width: 10 },
+              { header: '연락처', value: (e) => e.phone, width: 14 },
+              { header: '회사명', value: (e) => e.companyName, width: 14 },
+              { header: '구분', value: (e) => e.employmentType, width: 10 },
+              { header: '부서', value: (e) => e.department, width: 12 },
+              { header: '직급', value: (e) => e.position, width: 10 },
+              { header: '단가', value: (e) => (e.employmentType === '정규직' ? null : excelNum(e.unitCost)), width: 12 },
+              { header: '식대', value: (e) => (e.employmentType === '정규직' ? null : excelNum(e.mealCost)), width: 10 },
+              { header: '기타', value: (e) => (e.employmentType === '정규직' ? null : excelNum(e.etcCost)), width: 10 },
+              { header: '입사일', value: (e) => e.hireDate?.slice(0, 10), width: 12 },
+              {
+                header: '자격사항(만료일)',
+                value: (e) =>
+                  sortedCerts(e)
+                    .map((c) => `${c.certName}${c.expiryDate ? ` ~${c.expiryDate.slice(0, 10)}` : ''}`)
+                    .join(', '),
+                width: 36,
+              },
+              {
+                header: '교육(다음 예정)',
+                value: (e) =>
+                  sortedTrainings(e)
+                    .map((t) => `${t.trainingName}${t.nextDueDate ? ` ${t.nextDueDate.slice(0, 10)}` : ''}`)
+                    .join(', '),
+                width: 36,
+              },
+            ]),
+          ]}
+        />
+        <button type="button" onClick={() => setOpen(true)} className={primaryBtnCls}>
           <Plus size={15} /> 임직원 등록
         </button>
       </div>

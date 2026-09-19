@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Settings, Building2, Package, Plus, Eye, Trash2, RotateCcw, Upload, Download } from 'lucide-react';
 import { api } from '../api/client';
 import { downloadFile } from '../lib/download';
+import { ExcelDownloadButton, excelSheet, excelNum } from '../components/ExcelDownloadButton';
 import { CommonCodePage } from './CommonCodePage';
 import { ExternalVehicleSection } from '../components/ExternalVehicleSection';
 import { ExternalDriverSection } from '../components/ExternalDriverSection';
@@ -197,12 +198,14 @@ function BulkUploadBar({
   templateName,
   hint,
   onDone,
+  extra,
 }: {
   uploadPath: string;
   templatePath: string;
   templateName: string;
   hint: string;
   onDone: () => void;
+  extra?: React.ReactNode;
 }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<BulkResult | null>(null);
@@ -245,6 +248,7 @@ function BulkUploadBar({
         <button type="button" onClick={() => downloadFile(templatePath, templateName)} className={outlineBtnCls}>
           <Download size={15} /> 양식 내려받기
         </button>
+        {extra}
         <span className="text-[12.5px] text-text-faint">{hint}</span>
       </div>
 
@@ -331,6 +335,31 @@ function VendorSection({ vendors, reload }: { vendors: Vendor[]; reload: () => v
         templateName="거래처_양식.xlsx"
         hint="같은 거래처명이 있으면 파일 값으로 덮어씁니다. 빈 칸은 기존 값을 그대로 둡니다."
         onDone={reload}
+        extra={
+          <ExcelDownloadButton
+            fileName="거래처"
+            conditions={[vendorType && `구분: ${vendorType}`, q.trim() && `검색어: ${q.trim()}`].filter(Boolean).join(' · ') || '조건: 전체'}
+            sheets={[
+              excelSheet('거래처', rows, [
+                { header: '거래처명', value: (v) => v.name, width: 22 },
+                { header: '구분', value: (v) => v.vendorType, width: 10 },
+                { header: '사업자등록번호', value: (v) => v.bizRegNo, width: 14 },
+                { header: '법인등록번호', value: (v) => v.corpRegNo, width: 16 },
+                { header: '대표자', value: (v) => v.ceoName, width: 10 },
+                { header: '업태', value: (v) => v.bizType, width: 12 },
+                { header: '종목', value: (v) => v.bizItem, width: 12 },
+                { header: '주소', value: (v) => v.address, width: 36 },
+                { header: '전화', value: (v) => v.phone, width: 14 },
+                { header: '팩스', value: (v) => v.fax, width: 14 },
+                { header: '담당자', value: (v) => v.contactName, width: 10 },
+                { header: '담당자 연락처', value: (v) => v.contactPhone, width: 14 },
+                { header: '메일', value: (v) => v.contactEmail, width: 22 },
+                { header: '비고', value: (v) => v.memo, width: 20 },
+                { header: '임시', value: (v) => (v.isTemporary ? '임시' : ''), width: 6 },
+              ]),
+            ]}
+          />
+        }
       />
 
       <div
@@ -726,6 +755,32 @@ function ItemSection({ items, reload }: { items: ItemMaster[]; reload: () => voi
         templateName="품목_양식.xlsx"
         hint="같은 품목코드가 있으면 파일 값으로 덮어씁니다. 코드를 비우면 대분류로 자동 채번합니다."
         onDone={reload}
+        extra={
+          <ExcelDownloadButton
+            fileName="품목"
+            conditions={
+              [category && `대분류: ${category}`, usageType && `용도: ${usageType}`, q.trim() && `검색어: ${q.trim()}`]
+                .filter(Boolean)
+                .join(' · ') || '조건: 전체'
+            }
+            sheets={[
+              excelSheet('품목', rows, [
+                { header: '품목코드', value: (i) => i.itemCode, width: 10 },
+                { header: '품목명', value: (i) => i.itemName, width: 20 },
+                { header: '대분류', value: (i) => i.category, width: 10 },
+                { header: '소분류', value: (i) => i.minorCategory, width: 10 },
+                { header: '재질', value: (i) => i.material, width: 10 },
+                { header: '등급', value: (i) => i.grade, width: 10 },
+                { header: '기본단위', value: (i) => i.baseUnit, width: 8 },
+                { header: '기준단가', value: (i) => excelNum(i.basePrice), width: 12 },
+                { header: '별칭', value: (i) => i.aliasNames, width: 24 },
+                { header: '용도', value: (i) => i.usageType, width: 10 },
+                { header: '비고', value: (i) => i.memo, width: 20 },
+                { header: '임시', value: (i) => (i.isTemporary ? '임시' : ''), width: 6 },
+              ]),
+            ]}
+          />
+        }
       />
 
       <div
