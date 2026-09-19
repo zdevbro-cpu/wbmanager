@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Settings, Building2, Package, Plus, Eye, Trash2, RotateCcw } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Settings, Building2, Package, Plus, Eye, Trash2, RotateCcw, Upload, Download } from 'lucide-react';
 import { api } from '../api/client';
+import { downloadFile } from '../lib/download';
 import { CommonCodePage } from './CommonCodePage';
 import { ExternalVehicleSection } from '../components/ExternalVehicleSection';
 import { ExternalDriverSection } from '../components/ExternalDriverSection';
@@ -181,6 +182,100 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+// ── 엑셀 일괄 등록 ──────────────────────────
+// 거래처·품목이 같은 모양을 쓴다. 결과는 새로 넣은 수·고친 수·건너뛴 줄을 보여 준다.
+interface BulkResult {
+  추가: number;
+  수정: number;
+  오류: { 행: number; 사유: string }[];
+  모르는열: string[];
+}
+
+function BulkUploadBar({
+  uploadPath,
+  templatePath,
+  templateName,
+  hint,
+  onDone,
+}: {
+  uploadPath: string;
+  templatePath: string;
+  templateName: string;
+  hint: string;
+  onDone: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<BulkResult | null>(null);
+  const [error, setError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const upload = async (file: File) => {
+    setBusy(true);
+    setError('');
+    setResult(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      setResult(await api.post<BulkResult>(uploadPath, form));
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '업로드에 실패했습니다.');
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="mb-3 shrink-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".xlsx"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) upload(file);
+          }}
+        />
+        <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className={primaryBtnCls}>
+          <Upload size={15} /> {busy ? '올리는 중…' : '엑셀 업로드'}
+        </button>
+        <button type="button" onClick={() => downloadFile(templatePath, templateName)} className={outlineBtnCls}>
+          <Download size={15} /> 양식 내려받기
+        </button>
+        <span className="text-[12.5px] text-text-faint">{hint}</span>
+      </div>
+
+      {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
+
+      {result && (
+        <div className="mt-2 rounded-[10px] border border-border bg-input p-3 text-[12.5px]">
+          <p className="font-bold text-text-strong">
+            새로 등록 {result.추가}건 · 덮어씀 {result.수정}건
+            {result.오류.length > 0 && <span className="text-danger"> · 건너뜀 {result.오류.length}건</span>}
+          </p>
+          {result.오류.length > 0 && (
+            <ul className="mt-1 max-h-[120px] space-y-0.5 overflow-y-auto text-text-sub">
+              {result.오류.map((e) => (
+                <li key={e.행}>
+                  {e.행}행 — {e.사유}
+                </li>
+              ))}
+            </ul>
+          )}
+          {result.모르는열.length > 0 && (
+            <p className="mt-1 text-warning">
+              알아보지 못한 열(무시함): {result.모르는열.join(', ')} — 양식의 머리글 이름과 같은지 확인하세요.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── 거래처 마스터 ──────────────────────────
 
 function VendorSection({ vendors, reload }: { vendors: Vendor[]; reload: () => void }) {
@@ -230,6 +325,13 @@ function VendorSection({ vendors, reload }: { vendors: Vendor[]; reload: () => v
         onAdd={() => setOpen(true)}
       />
       <p className="mb-3 shrink-0 text-[12.5px] text-text-faint">세금계산서 발행에 필요한 사업자 정보를 함께 등록합니다.</p>
+      <BulkUploadBar
+        uploadPath="/api/vendors/bulk-upload"
+        templatePath="/api/vendors/bulk-template"
+        templateName="거래처_양식.xlsx"
+        hint="같은 거래처명이 있으면 파일 값으로 덮어씁니다. 빈 칸은 기존 값을 그대로 둡니다."
+        onDone={reload}
+      />
 
       <div
         className={`${cardCls} mb-3 shrink-0 grid items-end gap-2 p-3 [grid-template-columns:minmax(0,1fr)_minmax(0,130px)_auto]`}
@@ -618,6 +720,13 @@ function ItemSection({ items, reload }: { items: ItemMaster[]; reload: () => voi
       <p className="mb-3 shrink-0 text-[12.5px] text-text-faint">
         현장 호칭(별칭)이 없으면 계근표·일보 매칭이 되지 않으니 함께 등록해 주세요.
       </p>
+      <BulkUploadBar
+        uploadPath="/api/item-masters/bulk-upload"
+        templatePath="/api/item-masters/bulk-template"
+        templateName="품목_양식.xlsx"
+        hint="같은 품목코드가 있으면 파일 값으로 덮어씁니다. 코드를 비우면 대분류로 자동 채번합니다."
+        onDone={reload}
+      />
 
       <div
         className={`${cardCls} mb-3 shrink-0 grid items-end gap-2 p-3 [grid-template-columns:minmax(0,1fr)_minmax(0,120px)_minmax(0,110px)_auto]`}
