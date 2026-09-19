@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BellRing, Truck, Award, GraduationCap, Boxes, AlertTriangle, Clock, CalendarClock, ArrowUpRight } from 'lucide-react';
 import { api } from '../api/client';
+import { ExcelDownloadButton, excelSheet, conditionText } from '../components/ExcelDownloadButton';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
 import {
   pageTitleCls,
@@ -63,6 +64,23 @@ export function AdminAlertsPage() {
         <span className="ml-1 text-[13px] text-text-sub">
           D-{threshold} 이내 {rows.length}건
         </span>
+        <ExcelDownloadButton
+          className="ml-auto"
+          fileName="알림현황"
+          conditions={conditionText([
+            ['임박 기준', `D-${threshold}`],
+            ['구분', typeFilter ? TYPE_META[typeFilter]?.label : ''],
+          ])}
+          sheets={[
+            excelSheet('알림현황', rows, [
+              { header: '구분', value: (i) => TYPE_META[i.type]?.label ?? i.type, width: 10 },
+              { header: '대상', value: (i) => i.targetName, width: 30 },
+              { header: '기준일', value: (i) => day(i.expiryDate), width: 12 },
+              { header: '남은 일수', value: (i) => i.daysLeft, width: 10 },
+              { header: '상태', value: (i) => (i.daysLeft < 0 ? '기한 초과' : '임박'), width: 10 },
+            ]),
+          ]}
+        />
       </div>
 
       <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">

@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarRange, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
+import { ExcelDownloadButton, excelSheet, conditionText } from './ExcelDownloadButton';
 import { FormModal } from './FormModal';
 import { SearchSelect } from './SearchSelect';
 import { NumberInput } from './ui/NumberInput';
@@ -204,6 +205,40 @@ export function LaborPlanBoard({ projects, defaultProjectId }: { projects: Proje
         <span className="ml-2 min-w-0 flex-1 truncate text-[11px] text-text-faint">
           막대 길이는 기간, 채움은 달성률 · 막대를 누르면 상세
         </span>
+        <ExcelDownloadButton
+          className="shrink-0"
+          fileName="현장인력계획"
+          conditions={conditionText([
+            ['월', month],
+            ['프로젝트', projectId ? projectName(projectId) : ''],
+          ])}
+          sheets={[
+            excelSheet(`계획대비실행_${month}`, rows, [
+              { header: '프로젝트', value: (r) => projectName(r.projectId), width: 24 },
+              { header: '구분', value: (r) => r.employmentType, width: 10 },
+              { header: '계획 공수', value: (r) => r.planTotal, width: 12 },
+              { header: '실행 공수', value: (r) => r.actualTotal, width: 12 },
+              {
+                header: '달성률(%)',
+                value: (r) => (r.planTotal > 0 ? Math.round((r.actualTotal / r.planTotal) * 100) : null),
+                width: 10,
+              },
+            ]),
+            excelSheet('계획목록', plans, [
+              { header: '프로젝트', value: (p) => projectName(p.projectId), width: 24 },
+              { header: '구분', value: (p) => p.employmentType, width: 10 },
+              { header: '시작', value: (p) => p.startDate.slice(0, 10), width: 12 },
+              { header: '종료', value: (p) => p.endDate.slice(0, 10), width: 12 },
+              { header: '하루 공수', value: (p) => Number(p.manDays), width: 10 },
+              {
+                header: '계획 단가',
+                value: (p) => (p.employmentType === '정규직' ? '해당 없음' : p.unitCost ? Number(p.unitCost) : null),
+                width: 12,
+              },
+              { header: '비고', value: (p) => p.memo, width: 24 },
+            ]),
+          ]}
+        />
         <button type="button" onClick={() => setAdding(true)} className={`${primaryBtnCls} shrink-0`}>
           <Plus size={15} /> 공수 추가
         </button>

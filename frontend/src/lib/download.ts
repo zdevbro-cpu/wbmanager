@@ -3,9 +3,11 @@ import { auth } from './firebase';
 
 // 파일 내려받기 — API가 토큰을 요구하므로 <a href>로는 401이 난다.
 // 인증 헤더를 붙여 받아 온 뒤 브라우저 저장 흐름으로 넘긴다.
-export async function downloadFile(path: string, fallbackName: string) {
+// init — 화면의 줄을 보내 파일로 받을 때처럼 POST가 필요하면 method·body를 넘긴다.
+export async function downloadFile(path: string, fallbackName: string, init?: RequestInit) {
   const token = await auth.currentUser?.getIdToken();
   const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, Inbox, PackageMinus, Layers, Percent, ChevronDown, ChevronRight } from 'lucide-react';
 import { api } from '../api/client';
+import { ExcelDownloadButton, excelSheet, conditionText, type ExcelColumn } from '../components/ExcelDownloadButton';
 import { useProjects } from '../hooks/useMasters';
 import { SummaryCard } from '../components/ui/SummaryCard';
 import { FilterField } from '../components/FilterField';
@@ -25,6 +26,19 @@ function monthRange(month: string) {
   const to = `${month}-${String(lastDay).padStart(2, '0')}`;
   return { from, to };
 }
+
+// 소계표 엑셀 — 화면 소계표와 같은 열(중량 kg, 금액 원)
+const GROUP_COLUMNS: ExcelColumn<AggregationGroup>[] = [
+  { header: '항목', value: (g) => g.label, width: 24 },
+  { header: '입고', value: (g) => Math.round(g.inbound), width: 12 },
+  { header: '폐기물입고', value: (g) => Math.round(g.waste_inbound), width: 12 },
+  { header: '선별', value: (g) => Math.round(g.sorting), width: 12 },
+  { header: '매각', value: (g) => Math.round(g.outbound_sale), width: 12 },
+  { header: '폐기물반출', value: (g) => Math.round(g.waste_outbound), width: 12 },
+  { header: '매각금액', value: (g) => Math.round(g.saleAmount ?? 0), width: 14 },
+  { header: '폐기물비용', value: (g) => Math.round(g.wasteAmount ?? 0), width: 14 },
+  { header: '건수', value: (g) => g.count, width: 8 },
+];
 
 const kg = (v: number) => `${Math.round(v).toLocaleString()}kg`;
 const won = (v: number) => `${Math.round(v).toLocaleString()}원`;
@@ -86,6 +100,23 @@ export function AggregationPage() {
         <BarChart3 size={20} className="text-primary" />
         <h1 className={pageTitleCls}>자동집계 현황</h1>
         {month && <span className="ml-1 text-[13px] text-text-sub">{month}</span>}
+        {data && (
+          <ExcelDownloadButton
+            className="ml-auto"
+            fileName="자동집계"
+            conditions={conditionText([
+              ['기준 월', month || '전체 기간'],
+              ['프로젝트', projects.find((p) => p.id === projectId)?.roundName],
+            ])}
+            sheets={[
+              excelSheet('프로젝트별', data.byProject, GROUP_COLUMNS),
+              excelSheet('거래처별', data.byVendor, GROUP_COLUMNS),
+              excelSheet('품목별', data.byItem, GROUP_COLUMNS),
+              excelSheet('구분별', data.byType, GROUP_COLUMNS),
+              excelSheet('월별', data.byMonth, GROUP_COLUMNS),
+            ]}
+          />
+        )}
       </div>
 
       <div className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:180px_minmax(0,1fr)_minmax(0,2fr)]`}>

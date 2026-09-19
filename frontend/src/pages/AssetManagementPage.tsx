@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Boxes, Plus, Eye, Car, Wrench, RotateCcw, ScanLine, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
+import { ExcelDownloadButton, excelSheet, conditionText } from '../components/ExcelDownloadButton';
 import { useCommonCodes, useEmployees } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
 import { FilterField } from '../components/FilterField';
@@ -153,7 +154,40 @@ export function AssetManagementPage() {
       <>
       <div className="mb-4 flex items-center gap-2">
         <span className="text-[13px] text-text-sub">{assets.length}건</span>
-        <button type="button" onClick={() => setOpenForm(true)} className={`${primaryBtnCls} ml-auto`}>
+        <ExcelDownloadButton
+          className="ml-auto"
+          fileName="자산목록"
+          conditions={conditionText([
+            ['자산유형', assetType === 'VEHICLE' ? '차량' : assetType === 'EQUIPMENT' ? '장비' : ''],
+            ['분류', category],
+            ['상태', status],
+            ['검색어', q.trim()],
+          ])}
+          sheets={[
+            excelSheet('자산목록', assets, [
+              { header: '자산번호', value: (a) => a.assetNo, width: 14 },
+              { header: '유형', value: (a) => (a.assetType === 'VEHICLE' ? '차량' : '장비'), width: 8 },
+              { header: '분류', value: (a) => a.category, width: 12 },
+              { header: '자산명', value: (a) => a.name, width: 20 },
+              { header: '모델/규격', value: (a) => a.modelName ?? a.equipment?.spec, width: 16 },
+              { header: '차량번호/제조번호', value: (a) => a.vehicle?.plateNo ?? a.serialNo, width: 16 },
+              { header: '보유형태', value: (a) => a.ownershipType, width: 10 },
+              { header: '관리부서', value: (a) => a.ownerDept, width: 12 },
+              { header: '책임자', value: (a) => a.manager?.name, width: 10 },
+              { header: '위치', value: (a) => a.location, width: 16 },
+              { header: '상태', value: (a) => a.status, width: 10 },
+              {
+                header: '다음 일정',
+                value: (a) => {
+                  const next = nearestSchedule(a);
+                  return next ? `${next.scheduleType} ${next.dueDate.slice(0, 10)}` : '';
+                },
+                width: 22,
+              },
+            ]),
+          ]}
+        />
+        <button type="button" onClick={() => setOpenForm(true)} className={primaryBtnCls}>
           <Plus size={15} /> 자산 등록
         </button>
       </div>

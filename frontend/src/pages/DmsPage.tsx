@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api, API_BASE_URL } from '../api/client';
+import { ExcelDownloadButton, excelSheet, conditionText } from '../components/ExcelDownloadButton';
 import { auth } from '../lib/firebase';
 import { useProjects } from '../hooks/useMasters';
 import { kstStamp } from '../lib/datetime';
@@ -625,8 +626,32 @@ export function DmsPage() {
             <h2 className="text-[15px] font-extrabold text-text-strong">
               {selected ? selected.name : '전체 문서'} <span className="text-text-faint">· {projectName}</span>
             </h2>
+            <ExcelDownloadButton
+              className="ml-auto"
+              fileName="문서목록"
+              conditions={conditionText([
+                ['분류', selected?.name],
+                ['프로젝트', projectId ? projectName : ''],
+                ['검색어', q.trim()],
+                ['등록일', from || to ? `${from || '처음'} ~ ${to || '끝'}` : ''],
+                ['불러온 건수', `${docs.length}건(더 보기로 불러온 만큼)`],
+              ])}
+              sheets={[
+                excelSheet('문서목록', docs, [
+                  { header: '문서번호', value: (d) => d.docNo, width: 16 },
+                  { header: '제목', value: (d) => d.title, width: 36 },
+                  { header: '분류', value: (d) => d.type?.name, width: 16 },
+                  { header: '프로젝트', value: (d) => d.projects.map((p) => p.name).filter(Boolean).join(', '), width: 24 },
+                  { header: '실물', value: (d) => d.meta?.physicalStatus, width: 12 },
+                  { header: '버전', value: (d) => (isReport(d) ? '' : `v${d.versions[0]?.versionNo ?? 1}`), width: 8 },
+                  { header: '크기', value: (d) => size(d.versions[0]?.byteSize ?? null), width: 10 },
+                  { header: '첨부', value: (d) => d.attachments?.length || null, width: 8 },
+                  { header: '등록일', value: (d) => day(d.createdAt), width: 12 },
+                ]),
+              ]}
+            />
             {selected?.level === 3 && (
-              <button type="button" onClick={() => setUploadFor(selected)} className={`${primaryBtnCls} ml-auto`}>
+              <button type="button" onClick={() => setUploadFor(selected)} className={primaryBtnCls}>
                 <Upload size={15} /> 문서 등록
               </button>
             )}
