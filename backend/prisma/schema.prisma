@@ -13,6 +13,36 @@ datasource db {
 // ── 사용자 인증/승인 ──────────────────────
 
 // Firebase Authentication 계정과 매핑되는 내부 사용자. 가입 후 관리자 승인 전까지는 pending 상태.
+// 메뉴별 권한 (리뷰회의 1-7 · 5-18) — 「사용권한 체크목록」 본표를 담는다.
+// 값이 없으면 지금과 똑같이 동작한다. 화면이 늘면 여기에 한 줄 더하면 권한 화면에 바로 나타난다.
+model PermissionScreen {
+  key       String   @id @map("key")
+  area      String   @map("area")
+  name      String   @map("name")
+  sortOrder Int      @default(0) @map("sort_order")
+  memo      String?  @map("memo")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  permissions Permission[]
+
+  @@map("permission_screen")
+}
+
+model Permission {
+  id        String           @id @default(uuid())
+  roleKey   String           @map("role_key") // admin · operator · staff · viewer · field
+  screenKey String           @map("screen_key")
+  screen    PermissionScreen @relation(fields: [screenKey], references: [key], onDelete: Cascade)
+  canCreate Boolean          @default(false) @map("can_create")
+  canRead   Boolean          @default(false) @map("can_read")
+  canUpdate Boolean          @default(false) @map("can_update")
+  canDelete Boolean          @default(false) @map("can_delete")
+  updatedAt DateTime         @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([roleKey, screenKey])
+  @@map("permission")
+}
+
 model AppUser {
   id          String    @id @default(uuid())
   firebaseUid String    @unique @map("firebase_uid")
@@ -27,6 +57,9 @@ model AppUser {
   lastLoginIp String?   @map("last_login_ip") // 마지막 접속 IP
   loginCount  Int       @default(0) @map("login_count")
   // 출퇴근을 찍을 때 "나"가 누구인지. 비어 있으면 화면에서 직접 고른다.
+  // 다섯 계층 중 어디인지 — admin · operator · staff · viewer · field.
+  // 기존 role(admin/worker)은 그대로 두어 관리자 판정이 깨지지 않게 한다.
+  roleKey     String?   @map("role_key")
   employeeId  String?   @map("employee_id")
   employee    Employee? @relation(fields: [employeeId], references: [id])
   // 화면 모드 — dark(어두운 청색) | light(밝게) | system(기기 설정 따름). 고른 모드를 계정에 남겨 다음에도 그대로 연다.
@@ -121,6 +154,7 @@ model ItemMaster {
   createdBy String?  @map("created_by")
 
   sortings        Sorting[]          @relation("SortingItem")
+  inventoryMoves  InventoryMove[]
   sourceSortings  Sorting[]          @relation("SortingSourceItem")
   inventoryLedger InventoryLedger[]
   inbounds        Inbound[]
@@ -213,6 +247,7 @@ model Project {
   inbounds          Inbound[]
   wasteInbounds     WasteInbound[]
   sortings          Sorting[]
+  inventoryMoves    InventoryMove[]
   inventoryLedger   InventoryLedger[]
   outboundSales     OutboundSale[]
   wasteOutbounds    WasteOutbound[]
@@ -271,6 +306,9 @@ model Inbound {
   deletedAt      DateTime?   @map("deleted_at") // 소프트 삭제
 
   attachments Attachment[]
+  transport        Transport?
+  // 이 건에 든 운반비 — 저장하면 운반비 표에 한 줄로 들어간다(리뷰회의 5-6).
+  transportCost    Decimal?   @map("transport_cost") @db.Decimal(14, 2)
 
   @@map("inbound")
 }
@@ -290,6 +328,9 @@ model WasteInbound {
   driverName     String?     @map("driver_name")
   driverPhone    String?     @map("driver_phone")
   vehicleType    String?     @map("vehicle_type")
+  // 입고 · 운반 · 참고 — 운반만 한 건은 우리 재고가 아니다(리뷰회의 5-1).
+  // 「입고」만 재고·회수율에 들어가고, 나머지는 기록으로만 남는다.
+  kind           String      @default("입고") @map("kind")
   itemCode       String?     @map("item_code") // 제품명(폐합성수지/폐판넬/폐콘크리트 등)
   item           ItemMaster? @relation(fields: [itemCode], references: [itemCode])
   itemName       String?     @map("item_name")
@@ -318,12 +359,43 @@ model WasteInbound {
 
   attachments Attachment[]
 
+  @@index([kind])
+  transport       Transport?
+  transportCost   Decimal?  @map("transport_cost") @db.Decimal(14, 2)
   @@map("waste_inbound")
 }
 
 // 선별은 재고를 늘리는 행위가 아니라 품목을 바꾸는 재분류다.
 // 재고원장에는 원품목 OUT + 확정품목 IN(순증 0)으로 기록한다.
 // 근거: 갑지의 재고량 = 입고량 - 출고량 (원방_거래처별 스크랩 출고 현황_Sample.xlsx 갑지 시트)
+// 이동 — 우리 물건을 다른 자리로 옮긴 기록 (리뷰회의 5-5).
+// 판 것도 처리 맡긴 것도 아니라 재고 총량은 그대로다. 재고원장에는 넣지 않는다.
+model InventoryMove {
+  id          String      @id @default(uuid())
+  projectId   String      @map("project_id")
+  project     Project     @relation(fields: [projectId], references: [id])
+  moveDate    DateTime    @map("move_date")
+  itemCode    String?     @map("item_code")
+  item        ItemMaster? @relation(fields: [itemCode], references: [itemCode])
+  itemName    String?     @map("item_name")
+  fromPlace   String?     @map("from_place") // 원방 · 투플러스 · 크로스창고 · 도림리 …
+  toPlace     String?     @map("to_place")
+  weight      Decimal     @default(0) @map("weight") @db.Decimal(12, 3)
+  // 자리 간 운반에 든 비용 — 저장하면 운반비 표에 한 줄로 들어간다.
+  transportCost Decimal?  @map("transport_cost") @db.Decimal(14, 2)
+  vehicleNo   String?     @map("vehicle_no")
+  driverName  String?     @map("driver_name")
+  memo        String?     @map("memo")
+  createdById String?     @map("created_by_id")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  deletedAt   DateTime?   @map("deleted_at")
+
+  @@index([moveDate])
+  @@index([projectId])
+  transport   Transport?
+  @@map("inventory_move")
+}
+
 model Sorting {
   id             String      @id @default(uuid())
   projectId      String      @map("project_id")
@@ -397,6 +469,8 @@ model OutboundSale {
   deletedAt        DateTime?  @map("deleted_at") // 소프트 삭제
 
   attachments Attachment[]
+  transport        Transport?
+  transportCost    Decimal?   @map("transport_cost") @db.Decimal(14, 2)
 
   @@map("outbound_sale")
 }
@@ -471,6 +545,15 @@ model Transport {
   // 폐기물 반출에 적은 운반비로 자동 생성된 건이면 그 반출 건을 가리킨다.
   // 손으로 넣은 건은 비어 있다 — 자동 생성분만 반출 건을 따라 고쳐지고 지워진다.
   wasteOutboundId String?  @unique @map("waste_outbound_id")
+  // 입고·출고·폐기물 수집·이동에서 적은 운반비도 같은 방식으로 잇는다(리뷰회의 5-6).
+  inboundId       String?       @unique @map("inbound_id")
+  inbound         Inbound?      @relation(fields: [inboundId], references: [id])
+  outboundSaleId  String?       @unique @map("outbound_sale_id")
+  outboundSale    OutboundSale? @relation(fields: [outboundSaleId], references: [id])
+  wasteInboundId  String?       @unique @map("waste_inbound_id")
+  wasteInbound    WasteInbound? @relation(fields: [wasteInboundId], references: [id])
+  moveId          String?        @unique @map("move_id")
+  move            InventoryMove? @relation(fields: [moveId], references: [id])
 
   @@map("transport")
 }
@@ -709,6 +792,9 @@ model Asset {
 
   vehicle      AssetVehicle?
   equipment    AssetEquipment?
+  // 어태치먼트가 붙는 장비 / 이 장비에 붙는 어태치먼트 (리뷰회의 5-12)
+  fitsOn       AssetFit[] @relation("AttachmentFits")
+  fittedBy     AssetFit[] @relation("EquipmentFits")
   schedules    AssetSchedule[]
   maintenances AssetMaintenance[]
   movements    AssetMovement[]
@@ -797,6 +883,21 @@ model AssetMaintenance {
 }
 
 // 자산 이동 내역(현장 간 이동). 최신 도착지는 asset.location에 반영한다.
+// 어태치먼트 ↔ 장비. 글자로 적지 않고 자산끼리 이어 둔다 — 이름이 바뀌어도 따라간다.
+model AssetFit {
+  id                String   @id @default(uuid())
+  attachmentAssetId String   @map("attachment_asset_id")
+  attachmentAsset   Asset    @relation("AttachmentFits", fields: [attachmentAssetId], references: [id], onDelete: Cascade)
+  equipmentAssetId  String   @map("equipment_asset_id")
+  equipmentAsset    Asset    @relation("EquipmentFits", fields: [equipmentAssetId], references: [id], onDelete: Cascade)
+  memo              String?  @map("memo")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@unique([attachmentAssetId, equipmentAssetId])
+  @@index([equipmentAssetId])
+  @@map("asset_fit")
+}
+
 model AssetMovement {
   id        String   @id @default(uuid())
   assetId   String   @map("asset_id")

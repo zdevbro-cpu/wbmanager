@@ -6,6 +6,7 @@ backup/
 
 # 작업 전 생성한 원본 백업본 (로컬 보관용)
 *.backup
+*.backup[0-9]
 *.bak
 *.bak[0-9]
 *.backup

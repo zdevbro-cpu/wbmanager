@@ -5,14 +5,16 @@ import { useAuth } from '../context/AuthContext';
 import { MasterManagementPage } from './MasterManagementPage';
 import { UserApprovalPage } from './UserApprovalPage';
 import { AuditLogPage } from './AuditLogPage';
+import { PermissionPage } from './PermissionPage';
 import { RecentChangeFeed } from '../components/RecentChangeFeed';
 import { pageTitleCls } from '../components/ui/classes';
 
-type Tab = 'masters' | 'changes' | 'users' | 'audit';
+type Tab = 'masters' | 'changes' | 'users' | 'permissions' | 'audit';
 
 function initialTab(param: string | null, isAdmin: boolean): Tab {
   if (param === 'changes') return 'changes';
   if (param === 'users' && isAdmin) return 'users';
+  if (param === 'permissions' && isAdmin) return 'permissions';
   if (param === 'audit' && isAdmin) return 'audit';
   return 'masters';
 }
@@ -47,6 +49,12 @@ export function SystemAdminPage() {
             사용자 승인 관리
           </TabButton>
         )}
+        {/* 메뉴별 권한 — 「사용권한 체크목록」 본표를 여기서 고친다(리뷰회의 1-7 · 5-18). */}
+        {isAdmin && (
+          <TabButton active={tab === 'permissions'} onClick={() => setTab('permissions')}>
+            권한 관리
+          </TabButton>
+        )}
         {isAdmin && (
           <TabButton active={tab === 'audit'} onClick={() => setTab('audit')}>
             접속·변경 이력
@@ -56,6 +64,8 @@ export function SystemAdminPage() {
 
       {tab === 'changes' ? (
         <RecentChangeFeed />
+      ) : tab === 'permissions' && isAdmin ? (
+        <PermissionPage embedded />
       ) : tab === 'users' && isAdmin ? (
         <UserApprovalPage embedded />
       ) : tab === 'audit' && isAdmin ? (

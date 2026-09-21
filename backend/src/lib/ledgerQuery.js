@@ -36,6 +36,8 @@ export async function queryLedger(filters = {}) {
         itemName: r.item?.itemName ?? r.itemName,
         weight: r.netWeight,
         amount: null,
+        // 입고 · 운반 · 참고 — 재고에 잡히는 것은 「입고」뿐이다(리뷰회의 5-1).
+        kind: r.kind,
         attachmentCount: r.attachments.length,
       })),
     );
@@ -67,6 +69,38 @@ export async function queryLedger(filters = {}) {
         weight: r.netWeight,
         amount: null,
         attachmentCount: r.attachments.length,
+      })),
+    );
+  }
+
+  // 이동 — 판 것도 처리 맡긴 것도 아니라 재고를 바꾸지 않는다.
+  // 다만 "이 물건이 어디로 갔나"는 원장에서 함께 보여야 한다(리뷰회의 5-5).
+  if (!type || type === 'move') {
+    const moves = await prisma.inventoryMove.findMany({
+      where: {
+        deletedAt: null,
+        ...(projectId ? { projectId } : {}),
+        ...(itemCode ? { itemCode } : {}),
+        ...(Object.keys(dateRange).length ? { moveDate: dateRange } : {}),
+      },
+      include: { project: true, item: true },
+      orderBy: { moveDate: 'desc' },
+    });
+    rows.push(
+      ...moves.map((r) => ({
+        type: 'move',
+        id: r.id,
+        date: r.moveDate,
+        projectId: r.projectId,
+        projectName: r.project?.roundName ?? null,
+        siteName: r.project?.siteName ?? null,
+        vendorId: null,
+        vendorName: [r.fromPlace, r.toPlace].filter(Boolean).join(' → ') || null,
+        itemCode: r.itemCode,
+        itemName: r.item?.itemName ?? r.itemName,
+        weight: r.weight,
+        amount: null,
+        attachmentCount: 0,
       })),
     );
   }

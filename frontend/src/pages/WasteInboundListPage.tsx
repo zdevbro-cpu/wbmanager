@@ -18,8 +18,16 @@ const settled = (r: WasteInbound) => num(r.settledWeight) ?? num(r.netWeight);
 
 // 수집·운반 현황 — 화면에는 운반에 필요한 항목만 둔다.
 // 차종·총중량·공차중량·감량 등 계근 상세와 정산 항목은 행을 눌러 상세에서 본다.
+// 「입고」만 재고·회수율에 잡힌다. 운반·참고는 기록으로만 남는다(리뷰회의 5-1).
+const KIND_TONE: Record<string, 'green' | 'blue' | 'slate'> = { 입고: 'green', 운반: 'blue', 참고: 'slate' };
+
 const COLUMNS: Column<WasteInbound>[] = [
   { header: '상차일', nowrap: true, render: (r) => date(r.receiveDate) },
+  {
+    header: '구분',
+    nowrap: true,
+    render: (r) => <Badge tone={KIND_TONE[r.kind ?? '입고'] ?? 'slate'}>{r.kind ?? '입고'}</Badge>,
+  },
   { header: '인계일', nowrap: true, render: (r) => date(r.handoverDate) },
   {
     header: '올바로',
@@ -35,6 +43,7 @@ const COLUMNS: Column<WasteInbound>[] = [
 ];
 
 const DETAIL_FIELDS = (r: WasteInbound) => [
+  { label: '구분', value: r.kind ?? '입고' },
   { label: '상차일', value: date(r.receiveDate) },
   { label: '인계일', value: date(r.handoverDate) },
   { label: '올바로', value: r.olbaroReported ? 'O' : 'X' },

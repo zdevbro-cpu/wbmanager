@@ -149,15 +149,29 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
         ? null
         : actualWeightNum - Number(lossWeight || 0);
   const settledNum = settledWeight !== '' ? Number(settledWeight) : derivedSettledNum;
+  // 정산 기준 — 정산중량과 루베는 함께 쓰지 않는다. 숫자가 든 칸이 기준이 된다.
+  const cubicNum = cubicMeter !== '' ? Number(cubicMeter) : null;
+  const bothFilled = settledWeight !== '' && cubicNum !== null && cubicNum > 0;
+  const byCubic = cubicNum !== null && cubicNum > 0 && settledWeight === '';
+  const basisNum = byCubic ? cubicNum : settledNum;
+  const basisLabel = byCubic ? '루베' : '정산중량';
+  const basisUnit = byCubic ? '㎥' : 'kg';
+  const priceNum = unitPrice !== '' ? Number(unitPrice) : null;
   const amountNum =
     amount !== ''
       ? Number(amount)
-      : settledNum !== null && unitPrice !== ''
-        ? settledNum * Number(unitPrice)
+      : basisNum !== null && priceNum !== null
+        ? basisNum * priceNum
         : null;
+  const transportNum = transportCost !== '' ? Number(transportCost) : 0;
+  const netAmountNum = amountNum === null ? null : amountNum - transportNum;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (bothFilled) {
+      setError('정산중량과 루베는 함께 쓰지 않습니다. 정산에 쓸 쪽만 남기고 다른 쪽은 비워 주세요.');
+      return;
+    }
     setError('');
     setSubmitting(true);
     try {
@@ -406,6 +420,18 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
               placeholder={amountNum === null ? '' : formatNumber(Math.round(amountNum))}
             />
           </div>
+
+          {/* 무엇으로 계산했는지 그 자리에서 보여 준다 — 정산중량과 루베는 함께 쓰지 않는다. */}
+          <p className={`col-span-4 text-[12.5px] ${bothFilled ? 'font-semibold text-danger' : 'text-text-sub'}`}>
+            {bothFilled
+              ? '정산중량과 루베가 모두 채워져 있습니다. 정산에 쓸 쪽만 남기고 다른 쪽은 비워 주세요.'
+              : basisNum === null || priceNum === null
+                ? '정산 기준: 정산중량 또는 루베와 단가를 채우면 금액이 자동으로 계산됩니다.'
+                : `정산 기준: ${basisLabel} ${formatNumber(basisNum)}${basisUnit} × ${formatNumber(priceNum)}원 = ${formatNumber(Math.round(amountNum ?? 0))}원` +
+                  (transportNum > 0
+                    ? ` · 운반비 ${formatNumber(transportNum)}원을 빼면 ${formatNumber(Math.round(netAmountNum ?? 0))}원`
+                    : '')}
+          </p>
 
           <div className="col-span-2">
             <label className={labelCls}>올바로 메모(기준업체량 등)</label>

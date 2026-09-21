@@ -69,8 +69,9 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
     }
   };
 
-  const setRole = async (id: string, role: string) => {
-    await api.patch(`/api/auth/users/${id}/role`, { role });
+  // 다섯 계층 — 권한 표가 이 값으로 갈린다(리뷰회의 1-7 · 5-18).
+  const setRole = async (id: string, roleKey: string) => {
+    await api.patch(`/api/auth/users/${id}/role`, { roleKey });
     load();
   };
 
@@ -132,12 +133,16 @@ export function UserApprovalPage({ embedded = false }: { embedded?: boolean }) {
                 </td>
                 <td className={tdCls}>
                   <select
-                    value={u.role}
+                    value={u.roleKey ?? (u.role === 'admin' ? 'admin' : 'staff')}
                     onChange={(e) => setRole(u.id, e.target.value)}
+                    title="권한 관리 탭의 표가 이 계층으로 갈립니다"
                     className="rounded-[6px] border border-border bg-input px-2 py-1 text-[12.5px] text-input-text"
                   >
-                    <option value="worker">업무 담당자</option>
-                    <option value="admin">관리자</option>
+                    <option value="admin">시스템 관리자</option>
+                    <option value="operator">시스템 운영자</option>
+                    <option value="staff">직원</option>
+                    <option value="viewer">조회 전용</option>
+                    <option value="field">현장 인력</option>
                   </select>
                 </td>
                 <td className={tdCls}>

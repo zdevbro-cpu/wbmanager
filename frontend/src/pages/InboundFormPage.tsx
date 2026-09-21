@@ -61,6 +61,8 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
   const isEdit = !!record;
 
   const [projectId, setProjectId] = useState(record?.projectId ?? '');
+  // 이 건에 든 운반비 — 저장하면 운반비 관리에 한 줄로 들어간다(리뷰회의 5-6).
+  const [transportCost, setTransportCost] = useState(record?.transportCost ? String(Number(record.transportCost)) : '');
   const [inboundDate, setInboundDate] = useState(initDate(record?.inboundDate));
   const [unloadingPoint, setUnloadingPoint] = useState(record?.unloadingPoint ?? '');
   const [vehicleType, setVehicleType] = useState(record?.vehicleType ?? '');
@@ -176,6 +178,7 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
       const payload = {
         projectId,
         inboundDate,
+        transportCost: transportCost ? Number(transportCost) : undefined,
         unloadingPoint: unloadingPoint || undefined,
         vehicleType: vehicleType || undefined,
         vehicleNo: vehicleNo || undefined,
@@ -318,6 +321,12 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
               <AlertTriangle size={13} /> 재고반영중량이 입고량({netWeight}kg)과 일치하지 않습니다. 확인 후 저장하세요.
             </p>
           )}
+
+          <div>
+            <label className={labelCls}>운반비(원)</label>
+            <NumberInput value={transportCost} onChange={setTransportCost} />
+            <p className="mt-1 text-[12px] text-text-faint">적으면 운반비 관리에 자동으로 들어갑니다</p>
+          </div>
 
           <div className="col-span-4">
             <label className={labelCls}>비고</label>

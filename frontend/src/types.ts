@@ -111,11 +111,15 @@ export interface Inbound {
   project?: Project;
   item?: ItemMaster;
   attachments?: Attachment[];
+  /** 이 건에 든 운반비 — 운반비 관리에 자동으로 들어간다 */
+  transportCost?: string | null;
 }
 
 export interface WasteInbound {
   /** 모바일에서 올려 사무실 확인을 기다리는 건 */
   isDraft?: boolean;
+  /** 입고 · 운반 · 참고 — 「입고」만 재고·회수율에 잡힌다 */
+  kind?: string;
   id: string;
   projectId: string;
   receiveDate: string;
@@ -146,6 +150,8 @@ export interface WasteInbound {
   project?: Project;
   item?: ItemMaster;
   attachments?: Attachment[];
+  /** 이 건에 든 운반비 — 운반비 관리에 자동으로 들어간다 */
+  transportCost?: string | null;
 }
 
 export interface OutboundSale {
@@ -179,6 +185,8 @@ export interface OutboundSale {
   item?: ItemMaster;
   buyer?: Vendor;
   attachments?: Attachment[];
+  /** 이 건에 든 운반비 — 운반비 관리에 자동으로 들어간다 */
+  transportCost?: string | null;
 }
 
 export interface WasteOutbound {
@@ -307,6 +315,15 @@ export interface AssetMovement {
   memo?: string | null;
 }
 
+export interface AssetFit {
+  id: string;
+  attachmentAssetId: string;
+  equipmentAssetId: string;
+  memo?: string | null;
+  equipmentAsset?: { id: string; assetNo?: string; name: string; modelName?: string | null };
+  attachmentAsset?: { id: string; assetNo?: string; name: string; modelName?: string | null };
+}
+
 export interface Asset {
   id: string;
   assetNo: string;
@@ -337,6 +354,9 @@ export interface Asset {
   maintenances?: AssetMaintenance[];
   movements?: AssetMovement[];
   attachments?: Attachment[];
+  /** 이 어태치먼트가 붙는 장비 (리뷰회의 5-12) */
+  fitsOn?: AssetFit[];
+  fittedBy?: AssetFit[];
 }
 
 export interface AuditLog {
@@ -435,7 +455,7 @@ export interface ExpiringAlerts {
   imminent: ExpiringItem[];
 }
 
-export type LedgerType = 'inbound' | 'waste_inbound' | 'sorting' | 'outbound_sale' | 'waste_outbound';
+export type LedgerType = 'inbound' | 'waste_inbound' | 'sorting' | 'outbound_sale' | 'waste_outbound' | 'move';
 
 export interface LedgerRow {
   type: LedgerType;

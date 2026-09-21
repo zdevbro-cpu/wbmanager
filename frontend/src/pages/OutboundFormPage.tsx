@@ -43,6 +43,8 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
   const isEdit = !!record;
 
   const [projectId, setProjectId] = useState(record?.projectId ?? '');
+  // 이 건에 든 운반비 — 저장하면 운반비 관리에 한 줄로 들어간다(리뷰회의 5-6).
+  const [transportCost, setTransportCost] = useState(record?.transportCost ? String(Number(record.transportCost)) : '');
   const [itemCode, setItemCode] = useState(record?.itemCode ?? '');
   const [buyerId, setBuyerId] = useState(record?.buyerId ?? '');
   const [outboundDate, setOutboundDate] = useState(initDate(record?.outboundDate));
@@ -147,6 +149,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
       const payload = {
         projectId,
         itemCode,
+        transportCost: transportCost ? Number(transportCost) : undefined,
         buyerId: buyerId || undefined,
         outboundDate,
         loadingPoint: loadingPoint || undefined,
@@ -380,6 +383,12 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
               </span>
             )}
           </p>
+
+          <div>
+            <label className={labelCls}>운반비(원)</label>
+            <NumberInput value={transportCost} onChange={setTransportCost} />
+            <p className="mt-1 text-[12px] text-text-faint">적으면 운반비 관리에 자동으로 들어갑니다</p>
+          </div>
 
           <div className="col-span-4">
             <label className={labelCls}>비고(특이사항)</label>

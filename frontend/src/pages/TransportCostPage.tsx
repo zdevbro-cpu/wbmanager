@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Truck, Plus, Trash2 } from 'lucide-react';
+import { Truck, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { ExcelDownloadButton, excelSheet, excelNum, conditionText } from '../components/ExcelDownloadButton';
 import { useProjects, useVehicles, useCommonCodes, useItemMasters } from '../hooks/useMasters';
@@ -39,6 +39,12 @@ interface Transport {
   unitPrice?: string | null;
   supplyAmount?: string | null;
   taxAmount?: string | null;
+  /** 어느 거래에서 들어온 운반비인지 — 비어 있으면 손으로 넣은 건이다 */
+  wasteOutboundId?: string | null;
+  inboundId?: string | null;
+  outboundSaleId?: string | null;
+  wasteInboundId?: string | null;
+  moveId?: string | null;
 }
 
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
@@ -104,10 +110,14 @@ export function TransportCostPage() {
             ]),
           ]}
         />
-        <button type="button" onClick={() => setOpen(true)} className={primaryBtnCls}>
-          <Plus size={15} /> 운반비 등록
-        </button>
       </div>
+
+      {/* 운반비는 입고 · 출고 · 폐기물 수집 · 폐기물 반출 · 이동 등록에서 적는다(리뷰회의 5-6).
+          이 화면은 모아 보는 자리로 두고, 손으로 넣는 자리는 닫았다. */}
+      <p className="mb-3 rounded-[10px] border border-border bg-input px-3 py-2 text-[12.5px] text-text-sub">
+        운반비는 이제 <b className="text-text-strong">입고 · 출고 · 폐기물 수집·운반 · 폐기물 반출 · 이동 등록</b>의 운반비 칸에 적습니다.
+        여기서는 모아 보고 엑셀로 받습니다. 거래를 고치면 이 목록도 따라 바뀝니다.
+      </p>
 
       <div className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:minmax(0,320px)_minmax(0,1fr)]`}>
         <FilterField label="프로젝트">
@@ -160,14 +170,19 @@ export function TransportCostPage() {
                   {formatNumber(num(r.supplyAmount) + num(r.taxAmount))}
                 </td>
                 <td className={tdCls}>
-                  <button
-                    type="button"
-                    title="삭제"
-                    onClick={() => remove(r)}
-                    className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-danger"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  {/* 거래에서 들어온 줄은 그 거래에서 고친다. 옛 수동 입력분만 여기서 지울 수 있다. */}
+                  {r.wasteOutboundId || r.inboundId || r.outboundSaleId || r.wasteInboundId || r.moveId ? (
+                    <span className="text-[12px] text-text-faint">거래에서 수정</span>
+                  ) : (
+                    <button
+                      type="button"
+                      title="삭제"
+                      onClick={() => remove(r)}
+                      className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-danger"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

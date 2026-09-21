@@ -42,6 +42,10 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
   const { labels: unloadingPointOptions } = useCommonCodes('하차지');
 
   const [projectId, setProjectId] = useState(record?.projectId ?? '');
+  // 이 건에 든 운반비 — 저장하면 운반비 관리에 한 줄로 들어간다(리뷰회의 5-6).
+  const [transportCost, setTransportCost] = useState(record?.transportCost ? String(Number(record.transportCost)) : '');
+  // 입고 · 운반 · 참고 — 운반만 한 건은 우리 재고가 아니다(리뷰회의 5-1).
+  const [kind, setKind] = useState(record?.kind ?? '입고');
   const [receiveDate, setReceiveDate] = useState(initDate(record?.receiveDate));
   const [handoverDate, setHandoverDate] = useState(initDate(record?.handoverDate));
   const [olbaroReported, setOlbaroReported] = useState(record?.olbaroReported ?? false);
@@ -139,6 +143,8 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
     try {
       const payload = {
         projectId,
+        kind,
+        transportCost: transportCost ? Number(transportCost) : undefined,
         receiveDate,
         handoverDate: handoverDate || undefined,
         olbaroReported,
@@ -211,6 +217,15 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
                   {p.roundName}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div>
+            <label className={labelCls}>구분</label>
+            <select value={kind} onChange={(e) => setKind(e.target.value)} className={inputCls}>
+              <option value="입고">입고</option>
+              <option value="운반">운반</option>
+              <option value="참고">참고</option>
             </select>
           </div>
 
@@ -324,6 +339,19 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
             입고량(자동계산): <span className="tabular font-bold text-text-strong">{netWeight}</span> kg
             <span className="ml-1 text-text-faint">= 총중량 − 공차중량 − 감량</span>
           </p>
+          <p className="col-span-4 text-[12.5px] text-text-sub">
+            {kind === '입고'
+              ? '구분 「입고」 — 우리 물량으로 재고에 잡히고 회수율 계산에 들어갑니다.'
+              : kind === '운반'
+                ? '구분 「운반」 — 실어다 준 것이라 재고에 잡히지 않고 회수율에도 들어가지 않습니다. 기록과 올바로 신고에는 그대로 남습니다.'
+                : '구분 「참고」 — 기록으로만 남깁니다. 재고·회수율에 들어가지 않습니다.'}
+          </p>
+          <div>
+            <label className={labelCls}>운반비(원)</label>
+            <NumberInput value={transportCost} onChange={setTransportCost} />
+            <p className="mt-1 text-[12px] text-text-faint">적으면 운반비 관리에 자동으로 들어갑니다</p>
+          </div>
+
           <div className="col-span-3">
             <label className={labelCls}>비고</label>
             <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />

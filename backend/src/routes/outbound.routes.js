@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { postLedgerEntry, postInboundLedger } from '../lib/ledger.js';
+import { syncTransport } from '../lib/transportSync.js';
 import { toISO } from '../lib/date.js';
 import { rememberCodes } from '../lib/rememberCodes.js';
 import { rememberDriver } from '../lib/rememberDriver.js';
@@ -171,6 +172,15 @@ router.post('/', async (req, res) => {
       tx,
     );
 
+    // 이 건에 적은 운반비를 운반비 표에 한 줄로 남긴다(리뷰회의 5-6).
+    await syncTransport(tx, 'outboundSaleId', created, {
+      date: created.outboundDate,
+      origin: created.loadingPoint ?? null,
+      destination: created.unloadingPoint ?? null,
+      weight: created.settledWeight,
+      cost: created.transportCost,
+    });
+
     const directInboundId = await syncDirectInbound(tx, created);
     if (directInboundId) {
       return tx.outboundSale.update({ where: { id: created.id }, data: { directInboundId } });
@@ -238,6 +248,14 @@ router.patch('/:id', async (req, res) => {
       },
       tx,
     );
+
+    await syncTransport(tx, 'outboundSaleId', row, {
+      date: row.outboundDate,
+      origin: row.loadingPoint ?? null,
+      destination: row.unloadingPoint ?? null,
+      weight: row.settledWeight,
+      cost: row.transportCost,
+    });
 
     const directInboundId = await syncDirectInbound(tx, row);
     if (directInboundId !== (row.directInboundId ?? null)) {

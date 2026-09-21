@@ -5,6 +5,7 @@ import projectRoutes from './routes/project.routes.js';
 import inboundRoutes from './routes/inbound.routes.js';
 import outboundRoutes from './routes/outbound.routes.js';
 import sortingRoutes from './routes/sorting.routes.js';
+import inventoryMoveRoutes from './routes/inventoryMove.routes.js';
 import wasteInboundRoutes from './routes/wasteInbound.routes.js';
 import wasteOutboundRoutes from './routes/wasteOutbound.routes.js';
 import vendorRoutes from './routes/vendor.routes.js';
@@ -29,6 +30,7 @@ import alertRoutes from './routes/alert.routes.js';
 import listExportRoutes from './routes/listExport.routes.js';
 import ocrRoutes from './routes/ocr.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import permissionRoutes from './routes/permission.routes.js';
 import { requireAuth } from './middleware/auth.js';
 import { auditMutations } from './middleware/audit.js';
 import auditRoutes from './routes/audit.routes.js';
@@ -48,6 +50,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/permissions', permissionRoutes);
 app.use('/api', requireAuth);
 // 등록·수정·삭제는 누가 했는지 남긴다.
 app.use('/api', auditMutations);
@@ -56,6 +59,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/inbounds', inboundRoutes);
 app.use('/api/outbounds', outboundRoutes);
 app.use('/api/sortings', sortingRoutes);
+app.use('/api/inventory-moves', inventoryMoveRoutes);
 app.use('/api/waste-inbounds', wasteInboundRoutes);
 app.use('/api/waste-outbounds', wasteOutboundRoutes);
 app.use('/api/vendors', vendorRoutes);

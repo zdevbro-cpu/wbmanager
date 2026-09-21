@@ -9,6 +9,23 @@ import { Badge } from '../components/ui/Badge';
 import type { WasteOutbound } from '../types';
 
 const num = (v?: string | null) => (v == null ? null : Number(v));
+
+// 정산중량과 루베는 함께 쓰지 않는다. 숫자가 든 칸이 그 건의 정산 기준이다(고객 확인 2026-09-21).
+const byCubic = (r: WasteOutbound) => num(r.weight) == null || Number(r.weight) === 0 ? num(r.cubicMeter) != null : false;
+const basisOf = (r: WasteOutbound) => (byCubic(r) ? '루베' : '중량');
+// 금액 = 기준값 × 단가. 저장된 금액이 있으면 그것을 그대로 쓴다.
+const amountOf = (r: WasteOutbound) => {
+  const saved = num(r.amount);
+  if (saved != null) return saved;
+  const price = num(r.unitPrice);
+  const basis = byCubic(r) ? num(r.cubicMeter) : num(r.weight);
+  return price != null && basis != null ? basis * price : null;
+};
+// 순금액 = 금액 − 운반비 (화면에서만 계산한다. 손익은 운반비를 운반비 관리에서 따로 빼므로 건드리지 않는다)
+const netOf = (r: WasteOutbound) => {
+  const amt = amountOf(r);
+  return amt == null ? null : amt - (num(r.transportCost) ?? 0);
+};
 const show = (v?: string | null) => (v == null || v === '' ? '-' : v);
 const date = (v?: string | null) => (v ? v.slice(0, 10) : '-');
 
@@ -30,7 +47,10 @@ const COLUMNS: Column<WasteOutbound>[] = [
   { header: '정산 중량(kg)', align: 'right', render: (r) => num(r.weight)?.toLocaleString() ?? '-', sum: (r) => num(r.weight) },
   { header: '루베 적용', align: 'right', render: (r) => num(r.cubicMeter)?.toLocaleString() ?? '-' },
   { header: '단가(원)', align: 'right', render: (r) => num(r.unitPrice)?.toLocaleString() ?? '-' },
-  { header: '금액(원)', align: 'right', render: (r) => num(r.amount)?.toLocaleString() ?? '-', sum: (r) => num(r.amount) },
+  { header: '금액(원)', align: 'right', render: (r) => amountOf(r)?.toLocaleString() ?? '-', sum: (r) => amountOf(r) },
+  { header: '운반비(원)', align: 'right', render: (r) => num(r.transportCost)?.toLocaleString() ?? '-', sum: (r) => num(r.transportCost) },
+  { header: '순금액(원)', align: 'right', render: (r) => netOf(r)?.toLocaleString() ?? '-', sum: (r) => netOf(r) },
+  { header: '기준', nowrap: true, render: (r) => basisOf(r) },
   { header: '이체일', nowrap: true, render: (r) => date(r.transferDate) },
 ];
 
@@ -57,7 +77,9 @@ const DETAIL_FIELDS = (r: WasteOutbound) => [
   { label: '루베 적용', value: num(r.cubicMeter)?.toLocaleString() ?? '-' },
   { label: '단가(원)', value: num(r.unitPrice)?.toLocaleString() ?? '-' },
   { label: '운반비(원)', value: num(r.transportCost)?.toLocaleString() ?? '-' },
-  { label: '금액(원)', value: num(r.amount)?.toLocaleString() ?? '-' },
+  { label: '정산 기준', value: basisOf(r) },
+  { label: '금액(원)', value: amountOf(r)?.toLocaleString() ?? '-' },
+  { label: '순금액(원)', value: netOf(r)?.toLocaleString() ?? '-' },
   { label: '구분', value: show(r.category) },
   { label: '직출', value: r.isSubsidiary ? 'O' : '-' },
   { label: '이체일', value: date(r.transferDate) },
