@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { postInboundLedger } from '../lib/ledger.js';
+import { syncTransport } from '../lib/transportSync.js';
 import { toISO } from '../lib/date.js';
 import { rememberCodes } from '../lib/rememberCodes.js';
 import { rememberDriver } from '../lib/rememberDriver.js';
@@ -83,6 +84,14 @@ router.post('/', async (req, res) => {
       },
       tx,
     );
+    // 이 건에 적은 운반비를 운반비 표에 한 줄로 남긴다(리뷰회의 5-6).
+    await syncTransport(tx, 'inboundId', created, {
+      date: created.inboundDate,
+      origin: created.loadingPoint ?? null,
+      destination: created.unloadingPoint ?? null,
+      weight: netWeight,
+      cost: created.transportCost,
+    });
     return created;
   });
 
@@ -130,6 +139,13 @@ router.patch('/:id', async (req, res) => {
       },
       tx,
     );
+    await syncTransport(tx, 'inboundId', row, {
+      date: row.inboundDate,
+      origin: row.loadingPoint ?? null,
+      destination: row.unloadingPoint ?? null,
+      weight: netWeight,
+      cost: row.transportCost,
+    });
     return row;
   });
 

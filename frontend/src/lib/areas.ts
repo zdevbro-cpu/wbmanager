@@ -166,3 +166,39 @@ export function areaOfPath(pathname: string): Area | undefined {
 }
 
 export const findArea = (id: string | null) => AREAS.find((a) => a.id === id);
+
+// 메뉴 한 줄이 권한 표의 어느 화면인지 (리뷰회의 1-7 · 5-18).
+// 한 메뉴가 여러 화면을 품으면 그중 하나라도 볼 수 있을 때 메뉴를 보인다.
+export const SCREEN_KEYS: Record<string, string[]> = {
+  '/inbound': ['inbound'],
+  '/waste-inbound': ['waste-inbound'],
+  '/outbound': ['outbound'],
+  '/waste-outbound': ['waste-outbound'],
+  '/prices': ['prices.latest', 'prices.lookup', 'prices.entry', 'prices.notice', 'prices.lme'],
+  '/ledger': ['ledger'],
+  '/aggregation': ['aggregation'],
+  '/labor-plan': ['labor-plan'],
+  '/inventory': ['inventory'],
+  '/transports': ['transports'],
+  '/labors': ['labors'],
+  '/pnl': ['pnl'],
+  '/daily-report': ['daily-report'],
+  '/reports': ['reports'],
+  '/dms': ['dms'],
+  '/projects': ['projects'],
+  '/waste': ['waste'],
+  '/admin-alerts': ['admin-alerts'],
+  '/assets': ['assets'],
+  '/employees': ['employees'],
+  '/system': [
+    'master.common-code',
+    'master.vendor',
+    'master.item',
+    'master.vehicle',
+    'master.driver',
+    'master.vendor-item',
+    'sys.change-log',
+    'sys.users',
+    'sys.audit',
+  ],
+};

@@ -11,6 +11,7 @@ import { kstToday } from '../lib/datetime';
 import { pageTitleCls, primaryBtnCls, inputCls, tableWrapCls, thCls,
   thNumCls,
   tdNumCls, tdCls, trCls } from '../components/ui/classes';
+import { InventoryMoveTab } from '../components/InventoryMoveTab';
 import type { InventoryValuation, InventoryValuationRow, LedgerEntry } from '../types';
 import { DateField } from '../components/ui/DateField';
 
@@ -31,6 +32,8 @@ export function InventoryPage() {
   const [itemCode, setItemCode] = useState('');
   const [valuation, setValuation] = useState<InventoryValuation | null>(null);
   const [drilldown, setDrilldown] = useState<{ row: InventoryValuationRow; entries: LedgerEntry[] } | null>(null);
+  // 재고와 같은 맥락이라 메뉴를 늘리지 않고 탭으로 둔다(리뷰회의 5-5).
+  const [tab, setTab] = useState<'stock' | 'move'>('stock');
 
   const search = () => {
     const params = new URLSearchParams();
@@ -93,8 +96,22 @@ export function InventoryPage() {
       <div className="mb-5 flex items-center gap-2">
         <Boxes size={20} className="text-primary" />
         <h1 className={pageTitleCls}>재고 스냅샷 / 재고평가</h1>
+        <div className="ml-auto flex rounded-[9px] border border-border p-0.5">
+          {([['stock', '재고 · 재고평가'], ['move', '이동']] as const).map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setTab(k)}
+              className={`rounded-[7px] px-3 py-1.5 text-[13px] font-semibold ${
+                tab === k ? 'bg-primary text-white' : 'text-text-sub hover:bg-hover'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {tab === 'stock' && (
         <ExcelDownloadButton
-          className="ml-auto"
           fileName="재고평가"
           conditions={conditionText([
             ['프로젝트', projectId ? rows[0]?.projectName : ''],
@@ -114,9 +131,12 @@ export function InventoryPage() {
             ]),
           ]}
         />
+        )}
       </div>
 
-      {valuation && (
+      {tab === 'move' && <InventoryMoveTab projectId={projectId} itemCode={itemCode} />}
+
+      {tab === 'stock' && valuation && (
         <>
           <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <SummaryCard label="총 입고" value={`${formatNumber(totals.inWeight)}kg`} />
@@ -175,7 +195,7 @@ export function InventoryPage() {
         </div>
       </div>
 
-      {valuation && (
+      {tab === 'stock' && valuation && (
         <>
           <div className={`${tableWrapCls} mb-8`}>
             <table className="w-full border-collapse">

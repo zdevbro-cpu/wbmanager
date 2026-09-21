@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { LogOut, Moon, Sun, Monitor, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { AREAS, areaOfPath, findArea } from '../lib/areas';
+import { AREAS, areaOfPath, findArea, SCREEN_KEYS } from '../lib/areas';
+import { usePermissions } from '../hooks/usePermissions';
 import { readCachedTheme, type ThemeMode } from '../lib/theme';
 
 const THEME_OPTIONS: { mode: ThemeMode; icon: LucideIcon; label: string }[] = [
@@ -54,7 +55,13 @@ export function Layout() {
   }, [byPath, areaId]);
 
   const area = findArea(areaId) ?? AREAS[0];
-  const navGroups = area.groups;
+  // 볼 수 없는 메뉴는 아예 감춘다 — 권한 표의 R이 꺼져 있으면 그 계층에는 보이지 않는다(리뷰회의 1-7).
+  // 권한 값이 없는 계정은 지금까지처럼 전부 보인다.
+  const { can } = usePermissions();
+  const allowed = (to: string) => (SCREEN_KEYS[to] ?? []).length === 0 || SCREEN_KEYS[to].some((k) => can(k, 'r'));
+  const navGroups = area.groups
+    .map((g) => ({ ...g, items: g.items.filter((i) => allowed(i.to)) }))
+    .filter((g) => g.items.length > 0);
   const allItems = [
     ...AREAS.flatMap((a) => a.groups).flatMap((g) => g.items),
     ...AREAS.flatMap((a) => a.pinned ?? []),
@@ -109,9 +116,9 @@ export function Layout() {
         </nav>
 
         {/* 영역을 오가지 않고 닿아야 하는 메뉴 — 계정 줄 바로 위에 고정한다. */}
-        {area.pinned?.length ? (
+        {area.pinned?.filter((i) => allowed(i.to)).length ? (
           <div className="border-t border-border-top px-3 py-2">
-            {area.pinned.map((item) => (
+            {area.pinned.filter((i) => allowed(i.to)).map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

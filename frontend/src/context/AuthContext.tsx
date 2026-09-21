@@ -26,6 +26,8 @@ export interface AppUser {
   employeeId?: string | null;
   /** 화면 모드 — 계정에 저장된 것. 어느 기기에서 들어와도 이 모드로 연다. */
   themeMode?: ThemeMode;
+  /** 다섯 계층 — 권한 표가 이 값으로 갈린다 */
+  roleKey?: string | null;
 }
 
 interface AuthContextValue {

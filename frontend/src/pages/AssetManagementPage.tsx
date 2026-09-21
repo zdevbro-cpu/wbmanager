@@ -171,10 +171,14 @@ export function AssetManagementPage() {
               { header: '자산명', value: (a) => a.name, width: 20 },
               { header: '모델/규격', value: (a) => a.modelName ?? a.equipment?.spec, width: 16 },
               { header: '차량번호/제조번호', value: (a) => a.vehicle?.plateNo ?? a.serialNo, width: 16 },
-              { header: '보유형태', value: (a) => a.ownershipType, width: 10 },
-              { header: '관리부서', value: (a) => a.ownerDept, width: 12 },
-              { header: '책임자', value: (a) => a.manager?.name, width: 10 },
-              { header: '위치', value: (a) => a.location, width: 16 },
+              { header: '소유자', value: (a) => a.ownerDept, width: 12 },
+              { header: '관리자', value: (a) => a.manager?.name, width: 10 },
+              { header: '현재위치', value: (a) => a.location, width: 16 },
+              {
+                header: '사용 가능 장비',
+                value: (a) => (a.fitsOn ?? []).map((f) => f.equipmentAsset?.name).filter(Boolean).join(', '),
+                width: 24,
+              },
               { header: '상태', value: (a) => a.status, width: 10 },
               {
                 header: '다음 일정',
@@ -258,10 +262,10 @@ export function AssetManagementPage() {
               <th className={thCls}>자산명</th>
               <th className={thCls}>모델/규격</th>
               <th className={thCls}>차량번호/제조번호</th>
-              <th className={thCls}>보유형태</th>
-              <th className={thCls}>관리부서</th>
-              <th className={thCls}>책임자</th>
-              <th className={thCls}>위치</th>
+              <th className={thCls}>소유자</th>
+              <th className={thCls}>관리자</th>
+              <th className={thCls}>현재위치</th>
+              <th className={thCls}>사용 가능 장비</th>
               <th className={thCls}>상태</th>
               <th className={thCls}>다음 일정</th>
               <th className={thCls}>관리</th>
@@ -283,10 +287,14 @@ export function AssetManagementPage() {
                   <td className={tdCls}>{a.name}</td>
                   <td className={tdCls}>{show(a.modelName ?? a.equipment?.spec)}</td>
                   <td className={`${tdCls} whitespace-nowrap`}>{show(a.vehicle?.plateNo ?? a.serialNo)}</td>
-                  <td className={tdCls}>{show(a.ownershipType)}</td>
                   <td className={`${tdCls} whitespace-nowrap`}>{show(a.ownerDept)}</td>
                   <td className={`${tdCls} whitespace-nowrap`}>{show(a.manager?.name)}</td>
                   <td className={tdCls}>{show(a.location)}</td>
+                  <td className={tdCls}>
+                    {(a.fitsOn ?? []).length === 0
+                      ? '-'
+                      : (a.fitsOn ?? []).map((f) => f.equipmentAsset?.name).filter(Boolean).join(', ')}
+                  </td>
                   <td className={tdCls}>
                     <Badge tone={STATUS_TONE[a.status] ?? 'slate'}>{a.status}</Badge>
                   </td>
@@ -559,7 +567,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
           <input value={form.serialNo} onChange={(e) => set({ serialNo: e.target.value })} className={inputCls} />
         </div>
         <div>
-          <label className={labelCls}>관리부서</label>
+          <label className={labelCls}>소유자</label>
           <input list="asset-depts" value={form.ownerDept} onChange={(e) => set({ ownerDept: e.target.value })} className={inputCls} />
           <datalist id="asset-depts">
             {departments.map((d) => (
@@ -568,7 +576,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
           </datalist>
         </div>
         <div>
-          <label className={labelCls}>관리 책임자</label>
+          <label className={labelCls}>관리자</label>
           <select value={form.managerEmpId} onChange={(e) => set({ managerEmpId: e.target.value })} className={inputCls}>
             <option value="">선택</option>
             {employees.map((emp: Employee) => (
@@ -580,7 +588,7 @@ function AssetForm({ categories, onCreated }: { categories: string[]; onCreated:
         </div>
 
         <div>
-          <label className={labelCls}>보관/주차 위치</label>
+          <label className={labelCls}>현재위치</label>
           <input value={form.location} onChange={(e) => set({ location: e.target.value })} className={inputCls} />
         </div>
         <div>
@@ -857,6 +865,9 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
   const [addingMaint, setAddingMaint] = useState(false);
   const [moveDate, setMoveDate] = useState('');
   const [moveTo, setMoveTo] = useState('');
+  // 이전위치를 직접 적을 수 있게 한다. 비우면 지금 있는 자리가 들어간다(리뷰회의 5-11).
+  const [moveFrom, setMoveFrom] = useState('');
+  const [moveMemo, setMoveMemo] = useState('');
   const [dueDate, setDueDate] = useState('');
 
   const load = useCallback(() => {
@@ -873,6 +884,50 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
     await api.post(`/api/assets/${assetId}/schedules`, { scheduleType, dueDate });
     setScheduleType('');
     setDueDate('');
+    load();
+    onChanged();
+  };
+
+  // 사용 가능 장비 — 어태치먼트가 붙는 장비를 자산에서 골라 잇는다(리뷰회의 5-12).
+  const [fitTarget, setFitTarget] = useState('');
+  const [fitCandidates, setFitCandidates] = useState<Asset[]>([]);
+
+  useEffect(() => {
+    api.get<Asset[]>('/api/assets?isCompany=true').then((all) => setFitCandidates(all.filter((a) => a.id !== assetId)));
+  }, [assetId]);
+
+  const addFit = async () => {
+    if (!fitTarget) return;
+    await api.post(`/api/assets/${assetId}/fits`, { equipmentAssetId: fitTarget });
+    setFitTarget('');
+    load();
+    onChanged();
+  };
+
+  const removeFit = async (fitId: string) => {
+    await api.del(`/api/assets/${assetId}/fits/${fitId}`);
+    load();
+    onChanged();
+  };
+
+  // 잘못 적은 일정을 고친다. 지금까지는 「완료 처리」만 되고 날짜·구분을 못 고쳤다(리뷰회의 5-14).
+  const editSchedule = async (s: AssetSchedule) => {
+    const type = window.prompt('일정 구분', s.scheduleType);
+    if (type === null) return;
+    const due = window.prompt('예정일 (YYYY-MM-DD)', (s.dueDate ?? '').slice(0, 10));
+    if (due === null) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(due)) {
+      alert('예정일은 2026-09-30 처럼 적어 주세요.');
+      return;
+    }
+    await api.patch(`/api/assets/${assetId}/schedules/${s.id}`, { scheduleType: type.trim() || s.scheduleType, dueDate: due });
+    load();
+    onChanged();
+  };
+
+  const removeSchedule = async (s: AssetSchedule) => {
+    if (!window.confirm(`${s.scheduleType} ${(s.dueDate ?? '').slice(0, 10)} 일정을 지울까요?`)) return;
+    await api.del(`/api/assets/${assetId}/schedules/${s.id}`);
     load();
     onChanged();
   };
@@ -915,10 +970,10 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                 { label: '모델/규격', value: show(asset.modelName) },
                 { label: '제조사', value: show(asset.manufacturer) },
                 { label: '제조/차대번호', value: show(asset.serialNo) },
-                { label: '보유형태', value: show(asset.ownershipType) },
-                { label: '관리부서', value: show(asset.ownerDept) },
-                { label: '책임자', value: show(asset.manager?.name) },
-                { label: '위치', value: show(asset.location) },
+
+                { label: '소유자', value: show(asset.ownerDept) },
+                { label: '관리자', value: show(asset.manager?.name) },
+                { label: '현재위치', value: show(asset.location) },
                 { label: '취득일', value: date(asset.acquiredAt) },
                 { label: '취득가액', value: formatNumber(asset.acquireCost) },
                 { label: '내용연수(개월)', value: show(asset.usefulLifeMonth) },
@@ -1006,11 +1061,19 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                           <Badge tone={s.status === '완료' ? 'green' : 'amber'}>{s.status}</Badge>
                         </td>
                         <td className={tdCls}>
-                          {s.status !== '완료' && (
-                            <button type="button" onClick={() => completeSchedule(s)} className="text-[12px] font-bold text-primary">
-                              완료 처리
+                          <div className="flex items-center gap-2">
+                            {s.status !== '완료' && (
+                              <button type="button" onClick={() => completeSchedule(s)} className="text-[12px] font-bold text-primary">
+                                완료 처리
+                              </button>
+                            )}
+                            <button type="button" onClick={() => editSchedule(s)} className="text-[12px] font-bold text-text-sub hover:text-primary">
+                              수정
                             </button>
-                          )}
+                            <button type="button" onClick={() => removeSchedule(s)} className="text-[12px] font-bold text-text-sub hover:text-danger">
+                              삭제
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1029,10 +1092,33 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
             <div className="mb-5">
               <div className="mb-2 flex items-center gap-2">
                 <h3 className={`${sectionTitleCls} text-[15px]`}>정비 이력</h3>
+                <ExcelDownloadButton
+                  className="ml-auto"
+                  fileName={`정비내역_${asset.assetNo}`}
+                  conditions={conditionText([
+                    ['자산', `${asset.assetNo} ${asset.name}`],
+                    ['건수', String((asset.maintenances ?? []).length)],
+                  ])}
+                  sheets={[
+                    excelSheet('정비내역', asset.maintenances ?? [], [
+                      { header: '정비 구분', value: (m) => m.maintType, width: 14 },
+                      { header: '정비업체', value: (m) => m.vendor?.name, width: 18 },
+                      { header: '신청일', value: (m) => date(m.requestedAt), width: 12 },
+                      { header: '완료일', value: (m) => date(m.completedAt), width: 12 },
+                      { header: '다음 점검일', value: (m) => date(m.nextDueDate), width: 12 },
+                      { header: '계기판', value: (m) => (m.mileageAt == null ? '' : Number(m.mileageAt)), width: 10 },
+                      { header: '증상', value: (m) => m.symptom, width: 24 },
+                      { header: '조치', value: (m) => m.action, width: 24 },
+                      { header: '부품', value: (m) => m.parts, width: 20 },
+                      { header: '비용(원)', value: (m) => (m.cost == null ? '' : Number(m.cost)), width: 14 },
+                      { header: '상태', value: (m) => m.status, width: 10 },
+                    ]),
+                  ]}
+                />
                 <button
                   type="button"
                   onClick={() => setAddingMaint(!addingMaint)}
-                  className={`${outlineBtnCls} ml-auto h-8 px-3 text-[12.5px]`}
+                  className={`${outlineBtnCls} h-8 px-3 text-[12.5px]`}
                 >
                   <Plus size={14} /> 정비 등록
                 </button>
@@ -1117,11 +1203,15 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                   if (!moveDate) return;
                   await api.post(`/api/assets/${assetId}/movements`, {
                     moveDate,
-                    fromSite: asset.location || undefined,
+                    // 비우면 지금 있는 자리가 이전위치가 된다.
+                    fromSite: moveFrom.trim() || asset.location || undefined,
                     toSite: moveTo || undefined,
+                    memo: moveMemo.trim() || undefined,
                   });
                   setMoveDate('');
                   setMoveTo('');
+                  setMoveFrom('');
+                  setMoveMemo('');
                   load();
                   onChanged();
                 }}
@@ -1129,10 +1219,22 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
               >
                 <DateField value={moveDate} onChange={(e) => setMoveDate(e.target.value)} className={`${inputCls} w-[150px]`} />
                 <input
+                  value={moveFrom}
+                  onChange={(e) => setMoveFrom(e.target.value)}
+                  placeholder={`이전위치 (비우면 ${asset.location || '현재위치'})`}
+                  className={`${inputCls} w-[200px]`}
+                />
+                <input
                   value={moveTo}
                   onChange={(e) => setMoveTo(e.target.value)}
-                  placeholder="도착지(현장)"
+                  placeholder="현재위치(도착지)"
                   className={`${inputCls} w-[200px]`}
+                />
+                <input
+                  value={moveMemo}
+                  onChange={(e) => setMoveMemo(e.target.value)}
+                  placeholder="비고"
+                  className={`${inputCls} w-[180px]`}
                 />
                 <button type="submit" className={`${primaryBtnCls} shrink-0 whitespace-nowrap px-4`}>
                   이동 등록
@@ -1144,8 +1246,9 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                   <thead>
                     <tr className="border-y border-border">
                       <th className={thCls}>이동일</th>
-                      <th className={thCls}>출발지</th>
-                      <th className={thCls}>도착지</th>
+                      <th className={thCls}>이전위치</th>
+                      <th className={thCls}>현재위치</th>
+                      <th className={thCls}>비고</th>
                       <th className={thCls}>관리</th>
                     </tr>
                   </thead>
@@ -1155,6 +1258,7 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                         <td className={`${tdCls} tabular`}>{date(mv.moveDate)}</td>
                         <td className={tdCls}>{show(mv.fromSite)}</td>
                         <td className={tdCls}>{show(mv.toSite)}</td>
+                        <td className={tdCls}>{show(mv.memo)}</td>
                         <td className={tdCls}>
                           <button
                             type="button"
@@ -1202,7 +1306,52 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
                   ))}
                 </ul>
               )}
-              <FileUpload label="차량등록증 · 보험증권 · 검사증 · 매뉴얼 등" fileType="자산서류" parentType="asset" parentId={asset.id} />
+              {/* 고른 종류가 문서관리에서 들어갈 자리를 정한다 — 종류를 못 고르면 전부 미분류로 갔다(리뷰회의 5-9). */}
+              <FileUpload
+                label="서류 올리기 — 종류를 고르면 문서관리의 그 자리로 들어갑니다"
+                fileType="자산서류"
+                fileTypeOptions={['차량등록증', '보험증권', '검사증', '제원표', '계약서', '기타']}
+                parentType="asset"
+                parentId={asset.id}
+              />
+
+              {/* 사용 가능 장비 — 어태치먼트가 어느 장비에 붙는지(리뷰회의 5-12).
+                  글자로 적지 않고 자산끼리 이어 두어 장비 이름이 바뀌어도 따라간다. */}
+              <div className="mt-5 border-t border-border pt-4">
+                <h3 className={`${sectionTitleCls} mb-2 text-[15px]`}>사용 가능 장비 (어태치먼트인 경우)</h3>
+                <div className="mb-2 flex flex-wrap gap-2">
+                  <select value={fitTarget} onChange={(e) => setFitTarget(e.target.value)} className={`${inputCls} w-[260px]`}>
+                    <option value="">장비 선택</option>
+                    {fitCandidates.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.assetNo} · {c.name}
+                        {c.modelName ? ` (${c.modelName})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={addFit} disabled={!fitTarget} className={`${primaryBtnCls} px-4`}>
+                    장비 추가
+                  </button>
+                </div>
+                {(asset.fitsOn ?? []).length === 0 ? (
+                  <p className="text-[13px] text-text-faint">연결된 장비가 없습니다. 어태치먼트가 아니면 비워 두면 됩니다.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {(asset.fitsOn ?? []).map((f) => (
+                      <span
+                        key={f.id}
+                        className="inline-flex items-center gap-1.5 rounded-[8px] border border-border px-2.5 py-1 text-[12.5px] text-text"
+                      >
+                        {f.equipmentAsset?.name}
+                        {f.equipmentAsset?.modelName ? ` (${f.equipmentAsset.modelName})` : ''}
+                        <button type="button" onClick={() => removeFit(f.id)} className="text-text-faint hover:text-danger">
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* 문서 관리(DMS)에 등록된 이 자산의 문서 — 분류·버전·이력이 함께 남는다. */}
               <div className="mt-5 border-t border-border pt-4">

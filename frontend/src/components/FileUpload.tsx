@@ -5,14 +5,17 @@ import { api } from '../api/client';
 interface FileUploadProps {
   label: string;
   fileType: string;
+  /** 올리는 사람이 서류 종류를 고르게 한다. 종류가 문서관리에서 들어갈 자리를 정한다. */
+  fileTypeOptions?: string[];
   parentType: 'inbound' | 'waste_inbound' | 'outbound_sale' | 'waste_outbound' | 'vehicle_maintenance' | 'vehicle' | 'asset';
   parentId: string;
   onUploaded?: () => void;
 }
 
 // 계량증명서 등 증빙 파일을 Google Drive에 업로드하고 트랜잭션에 연결한다.
-export function FileUpload({ label, fileType, parentType, parentId, onUploaded }: FileUploadProps) {
+export function FileUpload({ label, fileType, fileTypeOptions, parentType, parentId, onUploaded }: FileUploadProps) {
   const [status, setStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
+  const [picked, setPicked] = useState(fileTypeOptions?.[0] ?? fileType);
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -20,7 +23,7 @@ export function FileUpload({ label, fileType, parentType, parentId, onUploaded }
 
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('fileType', fileType);
+    formData.append('fileType', fileTypeOptions ? picked : fileType);
     formData.append('parentType', parentType);
     formData.append('parentId', parentId);
 
@@ -37,6 +40,20 @@ export function FileUpload({ label, fileType, parentType, parentId, onUploaded }
   return (
     <div className="mb-3">
       <label className="mb-1.5 block text-[13px] font-semibold text-text-mid">{label}</label>
+      {fileTypeOptions && (
+        <select
+          value={picked}
+          onChange={(e) => setPicked(e.target.value)}
+          aria-label="서류 종류"
+          className="mb-1.5 w-full rounded-[8px] border border-border bg-input px-2 py-1.5 text-[12.5px] text-input-text"
+        >
+          {fileTypeOptions.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      )}
       <label
         className={[
           'flex h-[38px] w-fit cursor-pointer items-center gap-2 rounded-[8px] border border-border bg-input px-3 text-[13px] text-text-mid hover:bg-hover',

@@ -18,7 +18,8 @@ export async function getProjectPnl(projectId) {
     prisma.labor.aggregate({ where: { projectId }, _sum: { totalAmount: true } }),
     getInventoryValuation({ projectId }),
     prisma.inbound.aggregate({ where: { projectId, deletedAt: null }, _sum: { netWeight: true } }),
-    prisma.wasteInbound.aggregate({ where: { projectId, deletedAt: null }, _sum: { netWeight: true } }),
+    // 「입고」만 우리 물량이다. 운반·참고는 실어다 준 것이라 회수율 분모에 넣지 않는다(리뷰회의 5-1).
+    prisma.wasteInbound.aggregate({ where: { projectId, deletedAt: null, kind: '입고' }, _sum: { netWeight: true } }),
     prisma.outboundSale.findMany({
       where: { projectId, deletedAt: null },
       include: { item: true },

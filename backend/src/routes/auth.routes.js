@@ -199,11 +199,28 @@ router.post('/users/:id/employee', requireAuth, requireAdmin, async (req, res) =
 });
 
 router.patch('/users/:id/role', requireAuth, requireAdmin, async (req, res) => {
-  const { role } = req.body;
+  const { role, roleKey } = req.body;
+
+  // 다섯 계층 (리뷰회의 1-7). 기존 role(admin/worker)은 관리자 판정에 쓰이므로 함께 맞춰 둔다.
+  const ROLE_KEYS = ['admin', 'operator', 'staff', 'viewer', 'field'];
+  if (roleKey !== undefined) {
+    if (!ROLE_KEYS.includes(roleKey)) {
+      return res.status(400).json({ error: `계층은 ${ROLE_KEYS.join(' · ')} 중 하나여야 합니다.` });
+    }
+    const user = await prisma.appUser.update({
+      where: { id: req.params.id },
+      data: { roleKey, role: roleKey === 'admin' ? 'admin' : 'worker' },
+    });
+    return res.json(user);
+  }
+
   if (!['admin', 'worker'].includes(role)) {
     return res.status(400).json({ error: 'role은 admin/worker 중 하나여야 합니다.' });
   }
-  const user = await prisma.appUser.update({ where: { id: req.params.id }, data: { role } });
+  const user = await prisma.appUser.update({
+    where: { id: req.params.id },
+    data: { role, roleKey: role === 'admin' ? 'admin' : 'staff' },
+  });
   res.json(user);
 });
 

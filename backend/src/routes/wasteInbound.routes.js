@@ -1,11 +1,18 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { postInboundLedger } from '../lib/ledger.js';
+import { syncTransport } from '../lib/transportSync.js';
 import { toISO } from '../lib/date.js';
 import { rememberCodes } from '../lib/rememberCodes.js';
 import { rememberDriver } from '../lib/rememberDriver.js';
 
 const router = Router();
+
+// 입고 · 운반 · 참고 (리뷰회의 5-1)
+// 「운반」은 남의 물건을 실어다 준 것이고 「참고」는 기록만 남기는 것이다.
+// 둘 다 우리 재고가 아니므로 재고원장에 넣지 않고, 손익의 입고량·회수율에서도 빠진다.
+const KINDS = ['입고', '운반', '참고'];
+const stocked = (kind) => (kind ?? '입고') === '입고';
 
 // 폼에서 온 값만 반영한다. 관계·시스템 컬럼은 덮어쓰지 않는다.
 const OMIT = ['id', 'createdAt', 'deletedAt', 'project', 'item', 'buyer', 'attachments'];
@@ -45,6 +52,7 @@ router.get('/', async (req, res) => {
       ...(vehicleNo ? { vehicleNo } : {}),
       ...(driverName ? { driverName } : {}),
       ...(itemCode ? { itemCode } : {}),
+      ...(KINDS.includes(req.query.kind) ? { kind: req.query.kind } : {}),
       ...(olbaro ? { olbaroReported: olbaro === 'O' } : {}),
       ...(dischargerName ? { dischargerName: like(dischargerName) } : {}),
       ...(transporterName ? { transporterName: like(transporterName) } : {}),
@@ -69,6 +77,9 @@ router.post('/', async (req, res) => {
   }
   if (Number(grossWeight) < Number(tareWeight)) {
     return res.status(400).json({ error: '총중량은 공차중량보다 작을 수 없습니다.' });
+  }
+  if (req.body.kind != null && !KINDS.includes(req.body.kind)) {
+    return res.status(400).json({ error: `구분은 ${KINDS.join(' · ')} 중 하나여야 합니다.` });
   }
 
   // 입고량 = 총중량 - 공차중량 - 감량 (원본 엑셀 `폐기물 입고` 시트 기준)
@@ -101,17 +112,28 @@ router.post('/', async (req, res) => {
       },
     });
     // 갑지가 폐기물도 `재고량 = 입고량 - 출고량`으로 집계하므로 스크랩과 동일하게 IN 계상한다.
-    await postInboundLedger(
-      {
-        projectId,
-        itemCode: req.body.itemCode,
-        weight: netWeight,
-        ledgerDate: toISO(receiveDate),
-        refType: 'waste_inbound',
-        refId: created.id,
-      },
-      tx,
-    );
+    // 다만 운반·참고 건은 우리 물건이 아니라 재고에 넣지 않는다.
+    if (stocked(created.kind)) {
+      await postInboundLedger(
+        {
+          projectId,
+          itemCode: req.body.itemCode,
+          weight: netWeight,
+          ledgerDate: toISO(receiveDate),
+          refType: 'waste_inbound',
+          refId: created.id,
+        },
+        tx,
+      );
+    }
+    // 이 건에 적은 운반비를 운반비 표에 한 줄로 남긴다(리뷰회의 5-6).
+    await syncTransport(tx, 'wasteInboundId', created, {
+      date: created.receiveDate,
+      origin: created.dischargerName ?? null,
+      destination: created.unloadingPoint ?? null,
+      weight: netWeight,
+      cost: created.transportCost,
+    });
     return created;
   });
 
@@ -143,6 +165,9 @@ router.patch('/:id', async (req, res) => {
   const patch = editable(req.body);
   const merged = { ...existing, ...patch };
 
+  if (patch.kind != null && !KINDS.includes(patch.kind)) {
+    return res.status(400).json({ error: `구분은 ${KINDS.join(' · ')} 중 하나여야 합니다.` });
+  }
   if (Number(merged.grossWeight) < Number(merged.tareWeight)) {
     return res.status(400).json({ error: '총중량은 공차중량보다 작을 수 없습니다.' });
   }
@@ -176,18 +201,28 @@ router.patch('/:id', async (req, res) => {
           : {}),
       },
     });
+    // 구분을 「입고」에서 바꾸면 재고에서 빠지고, 「입고」로 되돌리면 다시 잡힌다.
     await tx.inventoryLedger.deleteMany({ where: { refType: 'waste_inbound', refId: row.id } });
-    await postInboundLedger(
-      {
-        projectId: row.projectId,
-        itemCode: row.itemCode,
-        weight: netWeight,
-        ledgerDate: row.receiveDate,
-        refType: 'waste_inbound',
-        refId: row.id,
-      },
-      tx,
-    );
+    if (stocked(row.kind)) {
+      await postInboundLedger(
+        {
+          projectId: row.projectId,
+          itemCode: row.itemCode,
+          weight: netWeight,
+          ledgerDate: row.receiveDate,
+          refType: 'waste_inbound',
+          refId: row.id,
+        },
+        tx,
+      );
+    }
+    await syncTransport(tx, 'wasteInboundId', row, {
+      date: row.receiveDate,
+      origin: row.dischargerName ?? null,
+      destination: row.unloadingPoint ?? null,
+      weight: netWeight,
+      cost: row.transportCost,
+    });
     return row;
   });
 

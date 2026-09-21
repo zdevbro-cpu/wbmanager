@@ -25,7 +25,16 @@ router.get('/', async (req, res) => {
           }
         : {}),
     },
-    include: { vehicle: true, equipment: true, manager: true, schedules: true, attachments: true },
+    include: {
+      vehicle: true,
+      equipment: true,
+      manager: true,
+      schedules: true,
+      attachments: true,
+      // 목록에서 「사용 가능 장비」를 바로 보여 주기 위해 함께 읽는다.
+      fitsOn: { include: { equipmentAsset: { select: { id: true, name: true, modelName: true } } } },
+      movements: { orderBy: { moveDate: 'desc' }, take: 1 },
+    },
     orderBy: { assetNo: 'asc' },
   });
   res.json(assets);
@@ -45,6 +54,9 @@ router.get('/:id', async (req, res) => {
         orderBy: [{ completedAt: 'desc' }, { requestedAt: 'desc' }],
       },
       movements: { orderBy: { moveDate: 'desc' } },
+      // 이 어태치먼트가 붙는 장비 / 이 장비에 붙는 어태치먼트 (리뷰회의 5-12)
+      fitsOn: { include: { equipmentAsset: { select: { id: true, assetNo: true, name: true, modelName: true } } } },
+      fittedBy: { include: { attachmentAsset: { select: { id: true, assetNo: true, name: true, modelName: true } } } },
     },
   });
   if (!asset) return res.status(404).json({ error: '자산을 찾을 수 없습니다.' });
@@ -354,6 +366,32 @@ router.patch('/:id/maintenances/:maintId', async (req, res) => {
 router.delete('/:id/maintenances/:maintId', async (req, res) => {
   const deleted = await prisma.assetMaintenance.delete({ where: { id: req.params.maintId } });
   res.json(deleted);
+});
+
+// ── 어태치먼트가 붙는 장비 ──
+// 글자로 적지 않고 자산끼리 잇는다. 장비 이름을 바꿔도 목록이 따라 바뀐다.
+router.post('/:id/fits', async (req, res) => {
+  const { equipmentAssetId, memo } = req.body;
+  if (!equipmentAssetId) return res.status(400).json({ error: '장비를 고르세요.' });
+  if (equipmentAssetId === req.params.id) return res.status(400).json({ error: '자기 자신은 고를 수 없습니다.' });
+
+  const target = await prisma.asset.findUnique({ where: { id: equipmentAssetId }, select: { id: true } });
+  if (!target) return res.status(404).json({ error: '장비를 찾을 수 없습니다.' });
+
+  const exists = await prisma.assetFit.findUnique({
+    where: { attachmentAssetId_equipmentAssetId: { attachmentAssetId: req.params.id, equipmentAssetId } },
+  });
+  if (exists) return res.json(exists);
+
+  const fit = await prisma.assetFit.create({
+    data: { attachmentAssetId: req.params.id, equipmentAssetId, memo: memo || null },
+  });
+  res.status(201).json(fit);
+});
+
+router.delete('/:id/fits/:fitId', async (req, res) => {
+  await prisma.assetFit.delete({ where: { id: req.params.fitId } });
+  res.status(204).end();
 });
 
 // ── 이동 내역 ──
