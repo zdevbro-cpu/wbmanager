@@ -50,11 +50,11 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/permissions', permissionRoutes);
 app.use('/api', requireAuth);
 // 등록·수정·삭제는 누가 했는지 남긴다.
 app.use('/api', auditMutations);
 
+app.use('/api/permissions', permissionRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/inbounds', inboundRoutes);
 app.use('/api/outbounds', outboundRoutes);
