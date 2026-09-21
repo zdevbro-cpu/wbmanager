@@ -352,7 +352,8 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
             <p className="mt-1 text-[12px] text-text-faint">적으면 운반비 관리에 자동으로 들어갑니다</p>
           </div>
 
-          <div className="col-span-3">
+          {/* 운반비 · 비고 · 올바로가 한 줄(4칸)에 들어가야 첨부 두 개도 다음 줄에 나란히 선다. */}
+          <div className="col-span-2">
             <label className={labelCls}>비고</label>
             <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
           </div>
