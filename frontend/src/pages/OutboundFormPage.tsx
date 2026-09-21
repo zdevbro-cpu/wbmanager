@@ -390,7 +390,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             <p className="mt-1 text-[12px] text-text-faint">적으면 운반비 관리에 자동으로 들어갑니다</p>
           </div>
 
-          <div className="col-span-4">
+          <div className="col-span-3">
             <label className={labelCls}>비고(특이사항)</label>
             <input value={memo} onChange={(e) => setMemo(e.target.value)} className={inputCls} />
           </div>

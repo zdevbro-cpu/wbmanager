@@ -421,6 +421,11 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
             />
           </div>
 
+          <div className="col-span-2">
+            <label className={labelCls}>올바로 메모(기준업체량 등)</label>
+            <input value={olbaroMemo} onChange={(e) => setOlbaroMemo(e.target.value)} className={inputCls} />
+          </div>
+
           {/* 무엇으로 계산했는지 그 자리에서 보여 준다 — 정산중량과 루베는 함께 쓰지 않는다. */}
           <p className={`col-span-4 text-[12.5px] ${bothFilled ? 'font-semibold text-danger' : 'text-text-sub'}`}>
             {bothFilled
@@ -432,11 +437,6 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
                     ? ` · 운반비 ${formatNumber(transportNum)}원을 빼면 ${formatNumber(Math.round(netAmountNum ?? 0))}원`
                     : '')}
           </p>
-
-          <div className="col-span-2">
-            <label className={labelCls}>올바로 메모(기준업체량 등)</label>
-            <input value={olbaroMemo} onChange={(e) => setOlbaroMemo(e.target.value)} className={inputCls} />
-          </div>
 
           <p className="col-span-4 text-[12.5px] text-text-faint">
             실중량 = 총중량 − 공차중량 · 정산중량 = 거래처 감량 전 실중량(없으면 실중량 − 감량)
