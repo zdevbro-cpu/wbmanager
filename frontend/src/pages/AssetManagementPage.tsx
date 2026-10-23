@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Boxes, Plus, Eye, Car, Wrench, RotateCcw, ScanLine, Trash2 } from 'lucide-react';
+import { Boxes, Plus, Eye, Car, Wrench, RotateCcw, ScanLine, Trash2, FileArchive, Upload } from 'lucide-react';
 import { api } from '../api/client';
 import { ExcelDownloadButton, excelSheet, conditionText } from '../components/ExcelDownloadButton';
 import { useCommonCodes, useEmployees } from '../hooks/useMasters';
@@ -9,6 +9,8 @@ import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
 import { AssetMaintenanceForm } from '../components/AssetMaintenanceForm';
 import { EntityDocuments } from '../components/EntityDocuments';
+import { ZipDownloadModal } from '../components/ZipDownloadModal';
+import { AssetBulkUploadModal } from '../components/AssetBulkUploadModal';
 import { MaintenancePage } from './MaintenancePage';
 import { uploadStagedFiles } from '../lib/uploadStaged';
 import { API_BASE_URL } from '../api/client';
@@ -104,23 +106,34 @@ export function AssetManagementPage() {
   const [assetType, setAssetType] = useState('');
   const [status, setStatus] = useState('');
   const [category, setCategory] = useState('');
+  const [location, setLocation] = useState('');
   const [q, setQ] = useState('');
   const [openForm, setOpenForm] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
 
   const { labels: categories } = useCommonCodes('자산 분류');
+  // 위치는 손으로 적는 칸이라 고를 거리를 자산에서 모은다.
+  // 거른 결과에서 모으면 한 곳을 고른 뒤 다른 곳이 사라지므로 통째로 한 번 읽는다.
+  const [locations, setLocations] = useState<string[]>([]);
+  useEffect(() => {
+    api.get<Asset[]>('/api/assets?isCompany=true').then((all) =>
+      setLocations([...new Set(all.map((a) => a.location).filter(Boolean) as string[])].sort()),
+    );
+  }, []);
 
   const load = useCallback(() => {
     const params = new URLSearchParams();
     if (assetType) params.set('assetType', assetType);
     if (status) params.set('status', status);
     if (category) params.set('category', category);
+    if (location) params.set('location', location);
     if (q) params.set('q', q);
     // 자산 대장에는 회사자산만 둔다. 운송만 맡는 외부 차량은
     // 「시스템 관리 > 마스터 > 계근 차량」에서 정리한다.
     params.set('isCompany', 'true');
     api.get<Asset[]>(`/api/assets?${params.toString()}`).then(setAssets);
-  }, [assetType, status, category, q]);
+  }, [assetType, status, category, location, q]);
 
   useEffect(() => {
     load();
@@ -161,6 +174,7 @@ export function AssetManagementPage() {
             ['자산유형', assetType === 'VEHICLE' ? '차량' : assetType === 'EQUIPMENT' ? '장비' : ''],
             ['분류', category],
             ['상태', status],
+            ['위치', location],
             ['검색어', q.trim()],
           ])}
           sheets={[
@@ -191,13 +205,17 @@ export function AssetManagementPage() {
             ]),
           ]}
         />
+        {/* 관리대장을 그대로 올려 넣는다(회의 2026-10-14 5-12). */}
+        <button type="button" onClick={() => setBulkOpen(true)} className={outlineBtnCls}>
+          <Upload size={15} /> 엑셀 일괄 등록
+        </button>
         <button type="button" onClick={() => setOpenForm(true)} className={primaryBtnCls}>
           <Plus size={15} /> 자산 등록
         </button>
       </div>
 
       <div
-        className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)_auto]`}
+        className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)_auto]`}
       >
         <FilterField label="자산유형">
           <select value={assetType} onChange={(e) => setAssetType(e.target.value)} className={`${inputCls} px-2`}>
@@ -229,11 +247,22 @@ export function AssetManagementPage() {
           </select>
         </FilterField>
 
+        <FilterField label="현재위치">
+          <select value={location} onChange={(e) => setLocation(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            {locations.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+
         <FilterField label="검색어">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="자산번호 / 자산명 / 모델 / 차대번호"
+            placeholder="자산번호 / 자산명 / 모델 / 차대번호 / 차량번호"
             className={inputCls}
           />
         </FilterField>
@@ -244,6 +273,7 @@ export function AssetManagementPage() {
             setAssetType('');
             setCategory('');
             setStatus('');
+            setLocation('');
             setQ('');
           }}
           className={`${outlineBtnCls} whitespace-nowrap px-3`}
@@ -332,6 +362,15 @@ export function AssetManagementPage() {
         </table>
       </div>
       </>
+      )}
+
+      {bulkOpen && (
+        <AssetBulkUploadModal
+          onClose={() => setBulkOpen(false)}
+          onDone={() => {
+            load();
+          }}
+        />
       )}
 
       {openForm && (
@@ -869,6 +908,7 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
   const [moveFrom, setMoveFrom] = useState('');
   const [moveMemo, setMoveMemo] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [zipOpen, setZipOpen] = useState(false);
 
   const load = useCallback(() => {
     api.get<Asset>(`/api/assets/${assetId}`).then(setAsset);
@@ -1289,7 +1329,13 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
             </div>
 
             <div className={cardPadCls}>
-              <h3 className={`${sectionTitleCls} mb-2 text-[15px]`}>첨부 서류</h3>
+              <div className="mb-2 flex items-center gap-2">
+                <h3 className={`${sectionTitleCls} text-[15px]`}>첨부 서류</h3>
+                {/* 체크로 골라 묶어 받는다(리뷰회의 5-2). */}
+                <button type="button" onClick={() => setZipOpen(true)} className={`${outlineBtnCls} ml-auto px-2 py-1 text-[12.5px]`}>
+                  <FileArchive size={14} /> 묶어 받기
+                </button>
+              </div>
               {(asset.attachments ?? []).length > 0 && (
                 <ul className="mb-3 space-y-1">
                   {(asset.attachments ?? []).map((a) => (
@@ -1361,6 +1407,8 @@ function AssetDetail({ assetId, onClose, onChanged }: { assetId: string; onClose
           </>
         )}
       </div>
+
+      {zipOpen && asset && <ZipDownloadModal scope="asset" id={asset.id} onClose={() => setZipOpen(false)} />}
     </div>
   );
 }

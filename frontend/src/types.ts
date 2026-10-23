@@ -455,7 +455,14 @@ export interface ExpiringAlerts {
   imminent: ExpiringItem[];
 }
 
-export type LedgerType = 'inbound' | 'waste_inbound' | 'sorting' | 'outbound_sale' | 'waste_outbound' | 'move';
+export type LedgerType =
+  | 'inbound'
+  | 'waste_inbound'
+  | 'sorting'
+  | 'outbound_sale'
+  | 'waste_outbound'
+  | 'move'
+  | 'adjust';
 
 export interface LedgerRow {
   type: LedgerType;

@@ -14,7 +14,11 @@ export async function getProjectPnl(projectId) {
       _sum: { amount: true, settledWeight: true },
     }),
     prisma.wasteOutbound.aggregate({ where: { projectId, deletedAt: null }, _sum: { amount: true, weight: true } }),
-    prisma.transport.aggregate({ where: { projectId }, _sum: { supplyAmount: true, taxAmount: true } }),
+    // 현장에 딸린 운반비만 손익에 넣는다. 본사·창고이동·기타는 현장 원가가 아니다(회의 2026-10-14 4번).
+    prisma.transport.aggregate({
+      where: { projectId, belongTo: '프로젝트' },
+      _sum: { supplyAmount: true, taxAmount: true },
+    }),
     prisma.labor.aggregate({ where: { projectId }, _sum: { totalAmount: true } }),
     getInventoryValuation({ projectId }),
     prisma.inbound.aggregate({ where: { projectId, deletedAt: null }, _sum: { netWeight: true } }),

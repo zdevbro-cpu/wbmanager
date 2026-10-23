@@ -16,6 +16,7 @@ import { DmsPage } from './pages/DmsPage';
 import { EntryPage } from './pages/EntryPage';
 import { MobileWeighPage } from './pages/MobileWeighPage';
 import { MobileAttendPage } from './pages/MobileAttendPage';
+import { MobileAssetPage } from './pages/MobileAssetPage';
 import { LedgerPage } from './pages/LedgerPage';
 import { AggregationPage } from './pages/AggregationPage';
 import { DailyReportPage } from './pages/DailyReportPage';
@@ -47,6 +48,8 @@ function Gate() {
       {/* 현장에서 휴대폰으로 쓰는 화면 — 사이드바 없이 한 화면만 쓴다. */}
       {/* 현장에서 여는 첫 화면은 출퇴근이다. 계근 등록은 관리자만 들어간다. */}
       <Route path="/mobile" element={<MobileAttendPage />} />
+      {/* 현장에서 장비를 찾아보는 화면 — 보기만 한다(회의 2026-10-14 5-6 · 5-7). */}
+      <Route path="/mobile/assets" element={<MobileAssetPage />} />
       {/* 사무실 출퇴근 단말 — 사이드바 없이 전체화면으로 종일 띄워 둔다. */}
       <Route path="/attend-gate" element={<AttendGatePage />} />
       <Route

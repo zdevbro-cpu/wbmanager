@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Truck, Trash2 } from 'lucide-react';
+import { Truck, Trash2, Plus } from 'lucide-react';
 import { api } from '../api/client';
 import { ExcelDownloadButton, excelSheet, excelNum, conditionText } from '../components/ExcelDownloadButton';
 import { useProjects, useVehicles, useCommonCodes, useItemMasters } from '../hooks/useMasters';
@@ -16,6 +16,7 @@ import {
   cardPadCls,
   primaryBtnCls,
   outlineBtnCls,
+  inputCls,
   tableWrapCls,
   thCls,
   thNumCls,
@@ -27,7 +28,10 @@ import type { Project } from '../types';
 
 interface Transport {
   id: string;
-  projectId: string;
+  /** 입출고에 딸리지 않는 운반은 현장이 없다 */
+  projectId?: string | null;
+  /** 프로젝트 / 본사 / 창고이동 / 기타 — 「프로젝트」만 현장 손익에 들어간다 */
+  belongTo?: string | null;
   transportDate: string;
   vehicleNo?: string | null;
   vehicleType?: string | null;
@@ -52,18 +56,23 @@ const show = (v?: string | null) => (v == null || v === '' ? '-' : v);
 const num = (v?: string | null) => (v == null ? 0 : Number(v));
 const day = (v?: string | null) => (v ? v.slice(0, 10) : '-');
 
+// 이 운반비가 어디에 속하는지 — 「프로젝트」만 그 현장 손익에 들어간다(회의 2026-10-14 4번).
+const BELONGS = ['프로젝트', '본사', '창고이동', '기타'] as const;
+
 // 운반비 관리 — 손익보고서의 운반비는 여기 등록된 금액(공급가액 + 세액)을 합산한다.
 export function TransportCostPage() {
   const { projects } = useProjects();
   const [rows, setRows] = useState<Transport[]>([]);
   const [projectId, setProjectId] = useState('');
+  const [belongTo, setBelongTo] = useState('');
   const [open, setOpen] = useState(false);
 
   const load = useCallback(() => {
     const params = new URLSearchParams();
     if (projectId) params.set('projectId', projectId);
+    if (belongTo) params.set('belongTo', belongTo);
     api.get<Transport[]>(`/api/transports?${params.toString()}`).then(setRows);
-  }, [projectId]);
+  }, [projectId, belongTo]);
 
   useEffect(() => {
     load();
@@ -79,7 +88,7 @@ export function TransportCostPage() {
     () => rows.reduce((sum, r) => sum + num(r.supplyAmount) + num(r.taxAmount), 0),
     [rows],
   );
-  const projectName = (id: string) => projects.find((p) => p.id === id)?.roundName ?? '-';
+  const projectName = (id?: string | null) => (id ? (projects.find((p) => p.id === id)?.roundName ?? '-') : '-');
 
   return (
     <div>
@@ -92,10 +101,14 @@ export function TransportCostPage() {
         <ExcelDownloadButton
           className="ml-auto"
           fileName="운반비"
-          conditions={conditionText([['프로젝트', projectId ? projectName(projectId) : '']])}
+          conditions={conditionText([
+            ['프로젝트', projectId ? projectName(projectId) : ''],
+            ['귀속', belongTo],
+          ])}
           sheets={[
             excelSheet('운반비', rows, [
               { header: '운반일', value: (r) => r.transportDate.slice(0, 10), width: 12 },
+              { header: '귀속', value: (r) => r.belongTo ?? '프로젝트', width: 10 },
               { header: '프로젝트', value: (r) => projectName(r.projectId), width: 24 },
               { header: '차량번호', value: (r) => r.vehicleNo, width: 12 },
               { header: '차종', value: (r) => r.vehicleType, width: 10 },
@@ -112,14 +125,15 @@ export function TransportCostPage() {
         />
       </div>
 
-      {/* 운반비는 입고 · 출고 · 폐기물 수집 · 폐기물 반출 · 이동 등록에서 적는다(리뷰회의 5-6).
-          이 화면은 모아 보는 자리로 두고, 손으로 넣는 자리는 닫았다. */}
+      {/* 거래에 딸린 운반비는 각 등록 화면에서 적고(리뷰회의 5-6), 거래가 없는 운반은
+          여기서 바로 적는다(회의 2026-10-14 4번). 귀속으로 둘을 가른다. */}
       <p className="mb-3 rounded-[10px] border border-border bg-input px-3 py-2 text-[12.5px] text-text-sub">
-        운반비는 이제 <b className="text-text-strong">입고 · 출고 · 폐기물 수집·운반 · 폐기물 반출 · 이동 등록</b>의 운반비 칸에 적습니다.
-        여기서는 모아 보고 엑셀로 받습니다. 거래를 고치면 이 목록도 따라 바뀝니다.
+        거래에 딸린 운반비는 <b className="text-text-strong">입고 · 출고 · 폐기물 수집·운반 · 폐기물 반출 · 이동 등록</b>의 운반비 칸에 적습니다 —
+        거래를 고치면 이 목록도 따라 바뀝니다. 창고끼리 옮기거나 본사 일로 차를 쓴 것처럼{' '}
+        <b className="text-text-strong">거래가 없는 운반</b>은 아래 「별도 등록」으로 바로 적습니다.
       </p>
 
-      <div className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:minmax(0,320px)_minmax(0,1fr)]`}>
+      <div className={`${cardCls} mb-4 grid items-end gap-3 p-3 [grid-template-columns:minmax(0,320px)_minmax(0,200px)_minmax(0,1fr)_auto]`}>
         <FilterField label="프로젝트">
           <SearchSelect
             ariaLabel="프로젝트"
@@ -128,9 +142,23 @@ export function TransportCostPage() {
             onChange={setProjectId}
           />
         </FilterField>
+        <FilterField label="귀속">
+          <select value={belongTo} onChange={(e) => setBelongTo(e.target.value)} className={`${inputCls} px-2`}>
+            <option value="">전체</option>
+            {BELONGS.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </FilterField>
         <p className="pb-2 text-[12.5px] text-text-faint">
-          여기 등록한 금액이 손익보고서의 운반비로 잡힙니다. 공급가액과 세액을 나눠 적으면 합계로 계산됩니다.
+          손익보고서의 운반비에는 귀속이 <b className="text-text-strong">「프로젝트」인 건만</b> 잡힙니다. 본사 · 창고이동 · 기타는
+          현장 원가에 섞이지 않습니다. 공급가액과 세액을 나눠 적으면 합계로 계산됩니다.
         </p>
+        <button type="button" onClick={() => setOpen(true)} className={`${primaryBtnCls} h-[38px] whitespace-nowrap`}>
+          <Plus size={15} /> 별도 등록
+        </button>
       </div>
 
       <div className={`${tableWrapCls} overflow-x-auto`}>
@@ -138,6 +166,7 @@ export function TransportCostPage() {
           <thead>
             <tr className="border-y border-border">
               <th className={thCls}>운반일</th>
+              <th className={thCls}>귀속</th>
               <th className={thCls}>프로젝트</th>
               <th className={thCls}>차량번호</th>
               <th className={thCls}>차종</th>
@@ -156,6 +185,7 @@ export function TransportCostPage() {
             {rows.map((r) => (
               <tr key={r.id} className={trCls}>
                 <td className={`${tdCls} tabular whitespace-nowrap`}>{day(r.transportDate)}</td>
+                <td className={`${tdCls} whitespace-nowrap`}>{r.belongTo ?? '프로젝트'}</td>
                 <td className={tdCls}>{projectName(r.projectId)}</td>
                 <td className={`${tdCls} whitespace-nowrap`}>{show(r.vehicleNo)}</td>
                 <td className={tdCls}>{show(r.vehicleType)}</td>
@@ -188,7 +218,7 @@ export function TransportCostPage() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={13} className="py-10 text-center text-[13px] text-text-faint">
+                <td colSpan={14} className="py-10 text-center text-[13px] text-text-faint">
                   등록된 운반비가 없습니다.
                 </td>
               </tr>
@@ -226,6 +256,7 @@ function TransportForm({
   onCancel: () => void;
 }) {
   const [f, setF] = useState({
+    belongTo: '프로젝트',
     projectId: defaultProjectId,
     transportDate: kstToday(),
     vehicleNo: '',
@@ -264,15 +295,16 @@ function TransportForm({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!f.projectId) {
-      setError('프로젝트를 고르세요.');
+    if (f.belongTo === '프로젝트' && !f.projectId) {
+      setError('귀속이 프로젝트면 현장을 고르세요. 현장이 없는 운반은 귀속을 본사·창고이동·기타로 바꾸세요.');
       return;
     }
     setError('');
     setSubmitting(true);
     try {
       await api.post('/api/transports', {
-        projectId: f.projectId,
+        belongTo: f.belongTo,
+        projectId: f.belongTo === '프로젝트' ? f.projectId : undefined,
         transportDate: f.transportDate,
         vehicleNo: f.vehicleNo || undefined,
         vehicleType: f.vehicleType || undefined,
@@ -296,16 +328,37 @@ function TransportForm({
   return (
     <form onSubmit={submit} className={cardPadCls}>
       <div className="grid grid-cols-4 gap-x-3 gap-y-3.5">
-        <div className="col-span-2">
+        <div>
           <label className={labelCls}>
-            프로젝트 <span className="text-danger">*</span>
+            귀속 <span className="text-danger">*</span>
           </label>
-          <SearchSelect
-            ariaLabel="프로젝트"
-            options={projects.map((p) => ({ value: p.id, label: p.roundName }))}
-            value={f.projectId}
-            onChange={(v) => set({ projectId: v })}
-          />
+          <select
+            value={f.belongTo}
+            onChange={(e) => set({ belongTo: e.target.value })}
+            className={`${inputCls} px-2`}
+          >
+            {BELONGS.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className={labelCls}>
+            프로젝트 {f.belongTo === '프로젝트' && <span className="text-danger">*</span>}
+          </label>
+          {f.belongTo === '프로젝트' ? (
+            <SearchSelect
+              ariaLabel="프로젝트"
+              options={projects.map((p) => ({ value: p.id, label: p.roundName }))}
+              value={f.projectId}
+              onChange={(v) => set({ projectId: v })}
+            />
+          ) : (
+            <input value="해당 없음" disabled className={`${inputCls} text-text-faint`} />
+          )}
         </div>
 
         <div>
