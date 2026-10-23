@@ -105,6 +105,39 @@ export async function queryLedger(filters = {}) {
     );
   }
 
+  // 보정 — 계근 차이·자연 감소·현금 출고. 재고 수량만 바꾸고 금액은 비어 있다.
+  if (!type || type === 'adjust') {
+    const adjusts = await prisma.inventoryAdjust.findMany({
+      where: {
+        deletedAt: null,
+        ...(projectId ? { projectId } : {}),
+        ...(itemCode ? { itemCode } : {}),
+        ...(Object.keys(dateRange).length ? { adjustDate: dateRange } : {}),
+      },
+      include: { project: true, item: true },
+      orderBy: { adjustDate: 'desc' },
+    });
+    rows.push(
+      ...adjusts.map((r) => ({
+        type: 'adjust',
+        id: r.id,
+        date: r.adjustDate,
+        projectId: r.projectId,
+        projectName: r.project?.roundName ?? null,
+        siteName: r.project?.siteName ?? null,
+        vendorId: null,
+        vendorName: null,
+        itemCode: r.itemCode,
+        itemName: r.item?.itemName ?? null,
+        // 빼는 보정은 음수로 보여 재고가 준 것을 한눈에 알게 한다.
+        weight: r.direction === 'OUT' ? -Number(r.weight) : Number(r.weight),
+        amount: null,
+        kind: r.kind,
+        attachmentCount: 0,
+      })),
+    );
+  }
+
   if (!type || type === 'sorting') {
     const sortings = await prisma.sorting.findMany({
       where: {

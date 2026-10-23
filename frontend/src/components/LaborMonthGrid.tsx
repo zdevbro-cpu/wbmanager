@@ -558,9 +558,9 @@ function DayEditor({
       setError('프로젝트를 고르세요.');
       return;
     }
-    // 공수는 0.25 단위(1 · 0.75 · 0.5 · 0.25). 서버도 같은 규칙으로 막는다.
-    if (f.totalManDays && Math.abs(Number(f.totalManDays) * 4 - Math.round(Number(f.totalManDays) * 4)) > 1e-9) {
-      setError('공수는 0.25 단위로 적어 주세요 (예: 1 · 0.75 · 0.5 · 0.25).');
+    // 공수는 소수 둘째 자리까지(1 · 0.88 · 0.75 · 0.5). 서버도 같은 규칙으로 막는다.
+    if (f.totalManDays && Math.abs(Number(f.totalManDays) * 100 - Math.round(Number(f.totalManDays) * 100)) > 1e-9) {
+      setError('공수는 소수 둘째 자리까지 적어 주세요 (예: 1 · 0.88 · 0.75 · 0.5).');
       return;
     }
     setError('');

@@ -57,12 +57,14 @@ async function logEdit(req, existing, data) {
   });
 }
 
-// 공수는 0.25 단위로만 받는다(리뷰회의 2-9 — 1 · 0.5 · 0.25).
-function assertQuarter(v) {
+// 공수는 소수 둘째 자리까지 받는다(회의 2026-10-14 · 2026-10-23 확정).
+// 전에는 0.25 단위만 받았는데 현장에서 그 사이 값을 쓴다고 하여 풀었다.
+// 둘째 자리로 고정한 것이라 0.875처럼 셋째 자리로 내려가는 값은 받지 않는다.
+function assertManDays(v) {
   if (v == null || v === '') return;
   const n = Number(v);
-  if (!Number.isFinite(n) || Math.abs(n * 4 - Math.round(n * 4)) > 1e-9) {
-    throw Object.assign(new Error('공수는 0.25 단위로 적어 주세요 (예: 1 · 0.75 · 0.5 · 0.25).'), { status: 400 });
+  if (!Number.isFinite(n) || Math.abs(n * 100 - Math.round(n * 100)) > 1e-9) {
+    throw Object.assign(new Error('공수는 소수 둘째 자리까지 적어 주세요 (예: 1 · 0.88 · 0.75 · 0.5).'), { status: 400 });
   }
 }
 
@@ -232,7 +234,7 @@ async function saveDay(req, month) {
       data.checkOutAt ?? existing?.checkOutAt,
     );
   }
-  assertQuarter(data.totalManDays);
+  assertManDays(data.totalManDays);
 
   // 단가·식대·기타비용을 적지 않았으면 그 사람에게 정해 둔 값으로 채운다.
   // 승인 자리에서 한 번 적어 두면 공수표에서는 날짜와 공수만 고르면 되게 하려는 것이다.
@@ -337,7 +339,7 @@ router.patch('/:id', async (req, res) => {
     if (body.workDate) await assertOpen(monthOf(body.workDate));
 
     delete body.editReason;
-    assertQuarter(body.totalManDays);
+    assertManDays(body.totalManDays);
     await logEdit(req, existing, body);
     const row = await prisma.labor.update({
       where: { id: req.params.id },

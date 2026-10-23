@@ -12,6 +12,7 @@ import { pageTitleCls, primaryBtnCls, inputCls, tableWrapCls, thCls,
   thNumCls,
   tdNumCls, tdCls, trCls } from '../components/ui/classes';
 import { InventoryMoveTab } from '../components/InventoryMoveTab';
+import { InventoryAdjustTab } from '../components/InventoryAdjustTab';
 import type { InventoryValuation, InventoryValuationRow, LedgerEntry } from '../types';
 import { DateField } from '../components/ui/DateField';
 
@@ -33,7 +34,7 @@ export function InventoryPage() {
   const [valuation, setValuation] = useState<InventoryValuation | null>(null);
   const [drilldown, setDrilldown] = useState<{ row: InventoryValuationRow; entries: LedgerEntry[] } | null>(null);
   // 재고와 같은 맥락이라 메뉴를 늘리지 않고 탭으로 둔다(리뷰회의 5-5).
-  const [tab, setTab] = useState<'stock' | 'move'>('stock');
+  const [tab, setTab] = useState<'stock' | 'move' | 'adjust'>('stock');
 
   const search = () => {
     const params = new URLSearchParams();
@@ -97,7 +98,7 @@ export function InventoryPage() {
         <Boxes size={20} className="text-primary" />
         <h1 className={pageTitleCls}>재고 스냅샷 / 재고평가</h1>
         <div className="ml-auto flex rounded-[9px] border border-border p-0.5">
-          {([['stock', '재고 · 재고평가'], ['move', '이동']] as const).map(([k, label]) => (
+          {([['stock', '재고 · 재고평가'], ['move', '이동'], ['adjust', '보정']] as const).map(([k, label]) => (
             <button
               key={k}
               type="button"
@@ -135,6 +136,8 @@ export function InventoryPage() {
       </div>
 
       {tab === 'move' && <InventoryMoveTab projectId={projectId} itemCode={itemCode} />}
+
+      {tab === 'adjust' && <InventoryAdjustTab projectId={projectId} itemCode={itemCode} />}
 
       {tab === 'stock' && valuation && (
         <>

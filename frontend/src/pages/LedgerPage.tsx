@@ -21,6 +21,8 @@ const TYPE_LABEL: Record<LedgerType, string> = {
   waste_outbound: '폐기물반출',
   // 이동 — 판 것도 처리 맡긴 것도 아니라 재고를 바꾸지 않는다. 오간 기록만 본다(리뷰회의 5-5).
   move: '이동',
+  // 보정 — 계근 차이·자연 감소·현금 출고. 수량만 맞추고 금액은 건드리지 않는다(회의 2026-10-14 3번).
+  adjust: '보정',
 };
 
 const TYPE_TONE: Record<LedgerType, BadgeTone> = {
@@ -30,6 +32,7 @@ const TYPE_TONE: Record<LedgerType, BadgeTone> = {
   outbound_sale: 'green',
   waste_outbound: 'amber',
   move: 'teal',
+  adjust: 'slate',
 };
 
 export function LedgerPage() {

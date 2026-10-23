@@ -270,12 +270,16 @@ export function MobileAttendPage() {
       <div className="mb-4 flex items-center gap-2">
         <img src="/원방로고.png" alt="원방" className="h-8 w-8 shrink-0 rounded-[9px] bg-white object-contain p-0.5" />
         <h1 className="text-[17px] font-extrabold text-text-strong">출퇴근</h1>
+        {/* 장비 조회는 누구나 본다 — 현장 기사님이 차 앞에서 서류를 꺼내는 자리다. */}
+        <Link to="/mobile/assets" className="ml-auto text-[12.5px] text-text-sub underline">
+          장비 조회
+        </Link>
         {isAdmin && (
-          <Link to="/mobile/weigh" className="ml-auto text-[12.5px] text-text-sub underline">
+          <Link to="/mobile/weigh" className="text-[12.5px] text-text-sub underline">
             계근 등록
           </Link>
         )}
-        <button type="button" onClick={logout} className={`${isAdmin ? '' : 'ml-auto '}text-[12.5px] text-text-sub underline`}>
+        <button type="button" onClick={logout} className="text-[12.5px] text-text-sub underline">
           로그아웃
         </button>
       </div>

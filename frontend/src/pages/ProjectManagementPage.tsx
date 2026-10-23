@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Layers, Plus, Eye, RotateCcw } from 'lucide-react';
+import { Layers, Plus, Eye, RotateCcw, FileArchive } from 'lucide-react';
+import { ZipDownloadModal } from '../components/ZipDownloadModal';
 import { api } from '../api/client';
 import { ExcelDownloadButton, excelSheet, excelNum, conditionText } from '../components/ExcelDownloadButton';
 import { useVendors, useEmployees } from '../hooks/useMasters';
@@ -49,6 +50,8 @@ export function ProjectManagementPage() {
   const [editing, setEditing] = useState<Project | null>(null);
   const [detail, setDetail] = useState<Project | null>(null);
   const [detailEdit, setDetailEdit] = useState(false);
+  // 그 현장의 서류를 묶어 받는다(리뷰회의 4-1).
+  const [zipFor, setZipFor] = useState<Project | null>(null);
 
   const reload = useCallback(async () => {
     const list = await api.get<Project[]>('/api/projects');
@@ -213,6 +216,14 @@ export function ProjectManagementPage() {
                     >
                       <Eye size={15} />
                     </button>
+                    <button
+                      type="button"
+                      title="서류 묶어 받기"
+                      onClick={() => setZipFor(p)}
+                      className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-primary"
+                    >
+                      <FileArchive size={15} />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -289,6 +300,8 @@ export function ProjectManagementPage() {
           />
         </FormModal>
       )}
+
+      {zipFor && <ZipDownloadModal scope="project" id={zipFor.id} onClose={() => setZipFor(null)} />}
     </div>
   );
 }

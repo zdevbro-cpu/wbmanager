@@ -1,0 +1,85 @@
+# 통합테스트 자료 정리 — 1회용 (2026-10-23 합의)
+#
+# 손으로만 돌아간다. 푸시로는 절대 돌지 않는다.
+# 기본은 미리보기이고, 지우려면 mode를 execute로 바꾸고 confirm에 「초기화」를 적어야 한다.
+#
+# !! 쓰고 나면 이 파일과 backend/scripts/one-off-clear-operational-data.mjs 를 지운다.
+
+name: (1회용) 통합테스트 자료 정리
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '미리보기(preview) / 실행(execute)'
+        required: true
+        default: preview
+        type: choice
+        options: [preview, execute]
+      profile:
+        description: 'full = 자산·차량도 비움(합의된 값) / standard = 자산·차량 남김'
+        required: true
+        default: full
+        type: choice
+        options: [full, standard]
+      drive:
+        description: '구글 드라이브 파일도 휴지통으로 보낼지'
+        required: true
+        default: 'trash'
+        type: choice
+        options: [trash, keep]
+      confirm:
+        description: '실행하려면 「초기화」라고 적으세요 (미리보기는 비워 둬도 됩니다)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  clear:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 실행이면 확인 문구를 먼저 본다. 틀리면 DB에 닿기 전에 멈춘다.
+      - name: 확인 문구 검사
+        if: ${{ inputs.mode == 'execute' }}
+        run: |
+          if [ "${{ inputs.confirm }}" != "초기화" ]; then
+            echo "확인 문구가 다릅니다. confirm 칸에 「초기화」라고 적어야 실행합니다."
+            exit 1
+          fi
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: 돌리기
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROXY }}
+          # 드라이브 파일을 휴지통으로 보내려면 업로드에 쓰는 것과 같은 자격이 필요하다.
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          GOOGLE_OAUTH_REDIRECT_URI: ${{ secrets.GOOGLE_OAUTH_REDIRECT_URI }}
+          GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
+          GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+        run: |
+          curl -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.0/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
+          ./cloud-sql-proxy --port 5432 crosswb-a7083:asia-northeast3:wbmanager-db &
+          for i in $(seq 1 30); do (echo > /dev/tcp/127.0.0.1/5432) >/dev/null 2>&1 && break; sleep 1; done
+          npx prisma generate
+          DRIVE_FLAG=""
+          if [ "${{ inputs.drive }}" = "keep" ]; then DRIVE_FLAG="--keep-drive"; fi
+          if [ "${{ inputs.mode }}" = "execute" ]; then
+            node scripts/one-off-clear-operational-data.mjs --profile=${{ inputs.profile }} $DRIVE_FLAG --execute --confirm=초기화
+          else
+            node scripts/one-off-clear-operational-data.mjs --profile=${{ inputs.profile }} $DRIVE_FLAG
+          fi

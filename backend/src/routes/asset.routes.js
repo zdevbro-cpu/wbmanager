@@ -4,14 +4,16 @@ import { toISO } from '../lib/date.js';
 
 const router = Router();
 
-// 자산 목록 — 유형·상태·분류·검색어 필터 (설계문서 4.관리자 2)
+// 자산 목록 — 유형·상태·분류·위치·검색어 필터 (설계문서 4.관리자 2)
+// 위치는 「원방에 지금 무엇이 있나」를 보려고 쓴다(회의 2026-10-14 5-3).
 router.get('/', async (req, res) => {
-  const { assetType, status, category, q, isCompany } = req.query;
+  const { assetType, status, category, location, q, isCompany } = req.query;
   const assets = await prisma.asset.findMany({
     where: {
       ...(assetType ? { assetType } : {}),
       ...(status ? { status } : {}),
       ...(category ? { category } : {}),
+      ...(location ? { location } : {}),
       // 'true'는 회사자산만, 'false'는 외부만. 없으면 둘 다 본다.
       ...(isCompany === 'true' ? { isCompanyAsset: true } : isCompany === 'false' ? { isCompanyAsset: false } : {}),
       ...(q
@@ -21,6 +23,8 @@ router.get('/', async (req, res) => {
               { name: { contains: q, mode: 'insensitive' } },
               { modelName: { contains: q, mode: 'insensitive' } },
               { serialNo: { contains: q, mode: 'insensitive' } },
+              // 차량번호로 찾는 것이 현장에서 가장 잦다(회의 2026-10-14 5-2).
+              { vehicle: { plateNo: { contains: q, mode: 'insensitive' } } },
             ],
           }
         : {}),

@@ -153,15 +153,16 @@ model ItemMaster {
   updatedAt DateTime @updatedAt @map("updated_at")
   createdBy String?  @map("created_by")
 
-  sortings        Sorting[]          @relation("SortingItem")
-  inventoryMoves  InventoryMove[]
-  sourceSortings  Sorting[]          @relation("SortingSourceItem")
-  inventoryLedger InventoryLedger[]
-  inbounds        Inbound[]
-  wasteInbounds   WasteInbound[]
-  outboundSales   OutboundSale[]
-  wasteOutbounds  WasteOutbound[]
-  priceHistory    ItemPriceHistory[]
+  sortings         Sorting[]          @relation("SortingItem")
+  inventoryAdjusts InventoryAdjust[]
+  inventoryMoves   InventoryMove[]
+  sourceSortings   Sorting[]          @relation("SortingSourceItem")
+  inventoryLedger  InventoryLedger[]
+  inbounds         Inbound[]
+  wasteInbounds    WasteInbound[]
+  outboundSales    OutboundSale[]
+  wasteOutbounds   WasteOutbound[]
+  priceHistory     ItemPriceHistory[]
 
   @@map("item_master")
 }
@@ -249,6 +250,7 @@ model Project {
   sortings          Sorting[]
   inventoryMoves    InventoryMove[]
   inventoryLedger   InventoryLedger[]
+  inventoryAdjusts  InventoryAdjust[]
   outboundSales     OutboundSale[]
   wasteOutbounds    WasteOutbound[]
   transports        Transport[]
@@ -305,10 +307,10 @@ model Inbound {
   createdAt      DateTime    @default(now()) @map("created_at")
   deletedAt      DateTime?   @map("deleted_at") // 소프트 삭제
 
-  attachments Attachment[]
-  transport        Transport?
+  attachments   Attachment[]
+  transport     Transport?
   // 이 건에 든 운반비 — 저장하면 운반비 표에 한 줄로 들어간다(리뷰회의 5-6).
-  transportCost    Decimal?   @map("transport_cost") @db.Decimal(14, 2)
+  transportCost Decimal?     @map("transport_cost") @db.Decimal(14, 2)
 
   @@map("inbound")
 }
@@ -357,11 +359,11 @@ model WasteInbound {
   amount          Decimal?  @map("amount") @db.Decimal(14, 2) // 금액 = 정산중량 × 단가
   transferDate    DateTime? @map("transfer_date") // 이체일
 
-  attachments Attachment[]
+  attachments   Attachment[]
+  transport     Transport?
+  transportCost Decimal?     @map("transport_cost") @db.Decimal(14, 2)
 
   @@index([kind])
-  transport       Transport?
-  transportCost   Decimal?  @map("transport_cost") @db.Decimal(14, 2)
   @@map("waste_inbound")
 }
 
@@ -371,28 +373,28 @@ model WasteInbound {
 // 이동 — 우리 물건을 다른 자리로 옮긴 기록 (리뷰회의 5-5).
 // 판 것도 처리 맡긴 것도 아니라 재고 총량은 그대로다. 재고원장에는 넣지 않는다.
 model InventoryMove {
-  id          String      @id @default(uuid())
-  projectId   String      @map("project_id")
-  project     Project     @relation(fields: [projectId], references: [id])
-  moveDate    DateTime    @map("move_date")
-  itemCode    String?     @map("item_code")
-  item        ItemMaster? @relation(fields: [itemCode], references: [itemCode])
-  itemName    String?     @map("item_name")
-  fromPlace   String?     @map("from_place") // 원방 · 투플러스 · 크로스창고 · 도림리 …
-  toPlace     String?     @map("to_place")
-  weight      Decimal     @default(0) @map("weight") @db.Decimal(12, 3)
+  id            String      @id @default(uuid())
+  projectId     String      @map("project_id")
+  project       Project     @relation(fields: [projectId], references: [id])
+  moveDate      DateTime    @map("move_date")
+  itemCode      String?     @map("item_code")
+  item          ItemMaster? @relation(fields: [itemCode], references: [itemCode])
+  itemName      String?     @map("item_name")
+  fromPlace     String?     @map("from_place") // 원방 · 투플러스 · 크로스창고 · 도림리 …
+  toPlace       String?     @map("to_place")
+  weight        Decimal     @default(0) @map("weight") @db.Decimal(12, 3)
   // 자리 간 운반에 든 비용 — 저장하면 운반비 표에 한 줄로 들어간다.
-  transportCost Decimal?  @map("transport_cost") @db.Decimal(14, 2)
-  vehicleNo   String?     @map("vehicle_no")
-  driverName  String?     @map("driver_name")
-  memo        String?     @map("memo")
-  createdById String?     @map("created_by_id")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  deletedAt   DateTime?   @map("deleted_at")
+  transportCost Decimal?    @map("transport_cost") @db.Decimal(14, 2)
+  vehicleNo     String?     @map("vehicle_no")
+  driverName    String?     @map("driver_name")
+  memo          String?     @map("memo")
+  createdById   String?     @map("created_by_id")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  deletedAt     DateTime?   @map("deleted_at")
+  transport     Transport?
 
   @@index([moveDate])
   @@index([projectId])
-  transport   Transport?
   @@map("inventory_move")
 }
 
@@ -425,6 +427,27 @@ model InventoryLedger {
   createdAt  DateTime   @default(now()) @map("created_at")
 
   @@map("inventory_ledger")
+}
+
+// 재고 보정 — 계근 차이·자연 감소·현금 출고처럼 정식 거래가 아닌 것을 적어 재고를 맞춘다.
+// 금액 칸을 두지 않는다. 수량만 맞추고 매입·매출은 건드리지 않는다(회신 2026-10-23 결정-6).
+// 한 줄이 재고원장 한 줄을 만든다. 지우면 원장에서도 빠져 재고가 되돌아온다.
+model InventoryAdjust {
+  id          String     @id @default(uuid())
+  projectId   String     @map("project_id")
+  project     Project    @relation(fields: [projectId], references: [id])
+  itemCode    String     @map("item_code")
+  item        ItemMaster @relation(fields: [itemCode], references: [itemCode])
+  adjustDate  DateTime   @map("adjust_date")
+  kind        String     @map("kind") // 보정(중량 오차) / 별도출고(현금 출고 등)
+  direction   String     @map("direction") // IN(+) / OUT(-)
+  weight      Decimal    @map("weight") @db.Decimal(12, 3)
+  reason      String?    @map("reason")
+  createdById String?    @map("created_by_id")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  deletedAt   DateTime?  @map("deleted_at")
+
+  @@map("inventory_adjust")
 }
 
 // 스크랩 출고(매각) — 원본 대조: 원방_거래처별 스크랩 출고 현황_Sample.xlsx `스크랩출고량`/거래처별 시트,
@@ -468,9 +491,9 @@ model OutboundSale {
   createdAt        DateTime   @default(now()) @map("created_at")
   deletedAt        DateTime?  @map("deleted_at") // 소프트 삭제
 
-  attachments Attachment[]
-  transport        Transport?
-  transportCost    Decimal?   @map("transport_cost") @db.Decimal(14, 2)
+  attachments   Attachment[]
+  transport     Transport?
+  transportCost Decimal?     @map("transport_cost") @db.Decimal(14, 2)
 
   @@map("outbound_sale")
 }
@@ -526,32 +549,37 @@ model WasteOutbound {
 // ── 비용 트랜잭션 ──────────────────────────
 
 model Transport {
-  id              String   @id @default(uuid())
-  projectId       String   @map("project_id")
-  project         Project  @relation(fields: [projectId], references: [id])
-  transportDate   DateTime @map("transport_date")
-  vehicleNo       String?  @map("vehicle_no")
-  weight          Decimal? @map("weight") @db.Decimal(12, 3)
-  vehicleType     String?  @map("vehicle_type")
-  origin          String?  @map("origin")
-  destination     String?  @map("destination")
+  id              String         @id @default(uuid())
+  // 입출고에 딸리지 않는 운반도 적는다(회의 2026-10-14 4번). 창고끼리 옮기거나
+  // 본사 일로 차를 쓴 건은 현장이 없으므로 프로젝트를 비워 둘 수 있다.
+  projectId       String?        @map("project_id")
+  project         Project?       @relation(fields: [projectId], references: [id])
+  // 이 운반비가 어디에 속하는지 — 프로젝트 / 본사 / 창고이동 / 기타.
+  // 「프로젝트」만 그 현장 손익에 들어간다. 나머지는 현장 손익에 섞이지 않는다.
+  belongTo        String         @default("프로젝트") @map("belong_to")
+  transportDate   DateTime       @map("transport_date")
+  vehicleNo       String?        @map("vehicle_no")
+  weight          Decimal?       @map("weight") @db.Decimal(12, 3)
+  vehicleType     String?        @map("vehicle_type")
+  origin          String?        @map("origin")
+  destination     String?        @map("destination")
   // 무엇을 얼마에 날랐는지 — 운반비가 어떻게 나온 값인지 남긴다.
-  itemCode        String?  @map("item_code")
-  itemName        String?  @map("item_name")
-  unitPrice       Decimal? @map("unit_price") @db.Decimal(14, 2) // 원/kg
-  supplyAmount    Decimal? @map("supply_amount") @db.Decimal(14, 2)
-  taxAmount       Decimal? @map("tax_amount") @db.Decimal(14, 2)
-  createdAt       DateTime @default(now()) @map("created_at")
+  itemCode        String?        @map("item_code")
+  itemName        String?        @map("item_name")
+  unitPrice       Decimal?       @map("unit_price") @db.Decimal(14, 2) // 원/kg
+  supplyAmount    Decimal?       @map("supply_amount") @db.Decimal(14, 2)
+  taxAmount       Decimal?       @map("tax_amount") @db.Decimal(14, 2)
+  createdAt       DateTime       @default(now()) @map("created_at")
   // 폐기물 반출에 적은 운반비로 자동 생성된 건이면 그 반출 건을 가리킨다.
   // 손으로 넣은 건은 비어 있다 — 자동 생성분만 반출 건을 따라 고쳐지고 지워진다.
-  wasteOutboundId String?  @unique @map("waste_outbound_id")
+  wasteOutboundId String?        @unique @map("waste_outbound_id")
   // 입고·출고·폐기물 수집·이동에서 적은 운반비도 같은 방식으로 잇는다(리뷰회의 5-6).
-  inboundId       String?       @unique @map("inbound_id")
-  inbound         Inbound?      @relation(fields: [inboundId], references: [id])
-  outboundSaleId  String?       @unique @map("outbound_sale_id")
-  outboundSale    OutboundSale? @relation(fields: [outboundSaleId], references: [id])
-  wasteInboundId  String?       @unique @map("waste_inbound_id")
-  wasteInbound    WasteInbound? @relation(fields: [wasteInboundId], references: [id])
+  inboundId       String?        @unique @map("inbound_id")
+  inbound         Inbound?       @relation(fields: [inboundId], references: [id])
+  outboundSaleId  String?        @unique @map("outbound_sale_id")
+  outboundSale    OutboundSale?  @relation(fields: [outboundSaleId], references: [id])
+  wasteInboundId  String?        @unique @map("waste_inbound_id")
+  wasteInbound    WasteInbound?  @relation(fields: [wasteInboundId], references: [id])
   moveId          String?        @unique @map("move_id")
   move            InventoryMove? @relation(fields: [moveId], references: [id])
 
@@ -793,8 +821,8 @@ model Asset {
   vehicle      AssetVehicle?
   equipment    AssetEquipment?
   // 어태치먼트가 붙는 장비 / 이 장비에 붙는 어태치먼트 (리뷰회의 5-12)
-  fitsOn       AssetFit[] @relation("AttachmentFits")
-  fittedBy     AssetFit[] @relation("EquipmentFits")
+  fitsOn       AssetFit[]         @relation("AttachmentFits")
+  fittedBy     AssetFit[]         @relation("EquipmentFits")
   schedules    AssetSchedule[]
   maintenances AssetMaintenance[]
   movements    AssetMovement[]
