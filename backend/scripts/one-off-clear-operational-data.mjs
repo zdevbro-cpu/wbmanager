@@ -1,9 +1,10 @@
 /**
- * 통합테스트 자료 정리 — 1회용 (2026-10-23 합의)
+ * 시범운영 자료 정리 — 한시적 (2026-10-23 합의)
  *
- * 지금까지 쌓인 것은 운영 전 통합테스트 자료다. 마스터만 남기고 나머지를 비운다.
- * 상시 기능으로 두면 사고 한 번에 끝나므로 화면에는 단추를 만들지 않았다.
- * 이 파일과 짝이 되는 워크플로는 **쓰고 나면 지운다**.
+ * 시범운영(~2026-12-31) 동안 쌓이는 시험 자료를 마스터만 남기고 비운다.
+ * 기간 중 두세 번 더 쓸 수 있어 남겨 두지만, 상시 기능은 아니다 —
+ * 화면에 단추를 만들지 않았고, 2027-01-01 실운영이 시작되면 스스로 막힌다.
+ * 그날 전에 이 파일과 짝이 되는 워크플로를 지운다.
  *
  * 쓰는 법
  *   node scripts/one-off-clear-operational-data.mjs                      미리보기(기본)
@@ -24,6 +25,12 @@ const arg = (name, fallback = null) => {
   return hit ? hit.slice(name.length + 3) : fallback;
 };
 const has = (name) => process.argv.includes(`--${name}`);
+
+// 시범운영 기간에만 쓴다. 2027-01-01 실운영이 시작되면 스스로 막는다.
+// 그날 이후에는 이 파일과 .github/workflows/one-off-clear-data.yml 을 지운다.
+const EXPIRES = '2027-01-01'; // 한국 시각 기준, 이 날짜부터 거부
+const kstToday = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+const daysLeft = () => Math.ceil((new Date(`${EXPIRES}T00:00:00Z`) - new Date(`${kstToday()}T00:00:00Z`)) / 86400000);
 
 const profile = arg('profile', 'standard');
 const execute = has('execute');
@@ -165,11 +172,20 @@ async function preview(keepAssets) {
 const pad = (s, n) => String(s).padEnd(n);
 
 async function main() {
+  // 기한이 지나면 미리보기조차 하지 않는다. 운영이 시작된 뒤에 남아 있을 물건이 아니다.
+  if (kstToday() >= EXPIRES) {
+    console.error(`\n이 작업은 ${EXPIRES}부터 쓸 수 없습니다. 시범운영 기간(~2026-12-31)에만 쓰는 1회용입니다.`);
+    console.error('이 파일과 .github/workflows/one-off-clear-data.yml 을 지워 주세요.\n');
+    process.exitCode = 1;
+    return;
+  }
+
   const keepAssets = profile === 'standard';
   const { rows, keep } = await preview(keepAssets);
   const total = rows.reduce((s, [, n]) => s + n, 0);
 
   console.log(`\n묶음: ${profile}  (${keepAssets ? '자산·차량은 남김' : '자산·차량도 비움'})`);
+  console.log(`쓸 수 있는 기간: ${EXPIRES} 전까지 — 오늘 기준 ${daysLeft()}일 남음`);
   console.log('\n■ 지울 것');
   for (const [name, n] of rows) if (n) console.log('   ', pad(name, 18), String(n).padStart(7), '건');
   console.log('   ', pad('합계', 18), String(total).padStart(7), '건');

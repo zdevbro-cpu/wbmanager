@@ -1,11 +1,13 @@
-# 통합테스트 자료 정리 — 1회용 (2026-10-23 합의)
+# 시범운영 자료 정리 — 한시적 (2026-10-23 합의)
 #
+# 시범운영(~2026-12-31) 동안만 쓴다. 기간 중 두세 번 더 쓸 수 있어 남겨 둔다.
 # 손으로만 돌아간다. 푸시로는 절대 돌지 않는다.
 # 기본은 미리보기이고, 지우려면 mode를 execute로 바꾸고 confirm에 「초기화」를 적어야 한다.
 #
-# !! 쓰고 나면 이 파일과 backend/scripts/one-off-clear-operational-data.mjs 를 지운다.
+# !! 2027-01-01 실운영이 시작되면 스크립트가 스스로 막는다.
+#    그 전에 이 파일과 backend/scripts/one-off-clear-operational-data.mjs 를 지운다.
 
-name: (1회용) 통합테스트 자료 정리
+name: (시범운영 전용 ~26.12.31) 자료 정리
 
 on:
   workflow_dispatch:
