@@ -29,6 +29,10 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
+      # 버전을 박아 둔다. 박아 두지 않으면 npx가 매번 최신을 받아 오는데,
+      # 10월에 15.30.2 → 15.34.1로 올라가면서 배포 전에 serviceusage API를
+      # 조회하는 절차가 생겼고, wbmanager-deployer에 그 권한이 없어 403으로 멈췄다.
+      # 배포 계정에 roles/serviceusage.serviceUsageViewer를 주면 최신으로 올려도 된다.
       - name: Deploy to Firebase Hosting
         working-directory: frontend
-        run: npx firebase-tools deploy --only hosting:wbmanager --project crosswb-a7083 --non-interactive
+        run: npx firebase-tools@15.30.2 deploy --only hosting:wbmanager --project crosswb-a7083 --non-interactive
