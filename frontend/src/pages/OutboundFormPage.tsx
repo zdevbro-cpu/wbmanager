@@ -89,6 +89,18 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
         const matched = items.find((i) => i.itemName === f.itemName);
         if (matched) setItemCode(matched.itemCode);
       }
+      // 계량증명서 아래쪽 업체명을 거래처로 잡아 둔다(요청 2026-11-13).
+      // 이름이 꼭 같지 않아도 되도록 띄어쓰기와 (주)·㈜ 같은 표기를 떼고 견준다.
+      // 맞는 거래처가 없으면 비워 둔다 — 새로 만들지는 않는다. 다르면 다시 고르시면 된다.
+      if (f.companyName && !buyerId) {
+        const tidy = (t: string) =>
+          t.replace(/\(주\)|㈜|주식회사/g, '').replace(/\s+/g, '').toLowerCase();
+        const want = tidy(f.companyName);
+        const matchedVendor =
+          vendors.find((v) => tidy(v.name) === want) ??
+          vendors.find((v) => tidy(v.name).includes(want) || want.includes(tidy(v.name)));
+        if (matchedVendor) setBuyerId(matchedVendor.id);
+      }
   };
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [created, setCreated] = useState<OutboundSale | null>(null);

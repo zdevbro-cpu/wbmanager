@@ -25,6 +25,63 @@ const SOURCE_LABEL: Record<string, string> = {
   none: '단가 없음',
 };
 
+
+// 적용단가를 누르면 그 자리에서 품목 기준단가를 적을 수 있다(요청 2026-11-13).
+// 「품목 추정단가 등록이 너무 어렵다, 보이는 데이터에서 기준단가를 누르면 쓰는 란이 뜨면 좋겠다」는 말씀 그대로다.
+// 비우고 저장하면 기준단가를 지워 묶음 평균단가로 돌아간다.
+function BasePriceCell({ row, onSaved }: { row: InventoryValuationRow; onSaved: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const raw = draft.trim();
+      await api.put(`/api/inventory/item-price/${encodeURIComponent(row.itemCode)}`, {
+        basePrice: raw === '' ? null : Number(raw),
+      });
+      onSaved();
+    } finally {
+      setBusy(false);
+      setEditing(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => setDraft(e.target.value.replace(/[^\d.]/g, ''))}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+          if (e.key === 'Escape') setEditing(false);
+        }}
+        className={`${inputCls} tabular h-7 w-[92px] px-1.5 text-right text-[13px]`}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      title="눌러서 기준단가를 적습니다"
+      onClick={(e) => {
+        e.stopPropagation();
+        setDraft(row.priceSource === 'base' && row.unitPrice ? String(row.unitPrice) : '');
+        setEditing(true);
+      }}
+      className="tabular rounded-[6px] px-1 underline decoration-dotted underline-offset-2 hover:bg-hover"
+    >
+      {formatNumber(row.unitPrice)}
+    </button>
+  );
+}
+
 const REF_TYPE_LABEL: Record<string, string> = {
   inbound: '입고',
   waste_inbound: '폐기물입고',
@@ -244,7 +301,9 @@ export function InventoryPage() {
                     <td className={tdNumCls}>{formatNumber(r.inWeight)}</td>
                     <td className={tdNumCls}>{formatNumber(r.outWeight)}</td>
                     <td className={`${tdNumCls} font-bold text-text-strong`}>{formatNumber(r.remaining)}</td>
-                    <td className={tdNumCls}>{formatNumber(r.unitPrice)}</td>
+                    <td className={tdNumCls}>
+                      <BasePriceCell row={r} onSaved={search} />
+                    </td>
                     <td className={tdCls}>{SOURCE_LABEL[r.priceSource]}</td>
                     <td className={tdNumCls}>{formatNumber(r.valuationAmount)}</td>
                   </tr>

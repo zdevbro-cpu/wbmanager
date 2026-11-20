@@ -4,6 +4,7 @@ import { ZipDownloadModal } from '../components/ZipDownloadModal';
 import { api } from '../api/client';
 import { ExcelDownloadButton, excelSheet, excelNum, conditionText } from '../components/ExcelDownloadButton';
 import { useVendors, useEmployees } from '../hooks/useMasters';
+import { MasterSelect } from '../components/MasterSelect';
 import { FormModal } from '../components/FormModal';
 import { EntityDocuments } from '../components/EntityDocuments';
 import { FileDropField } from '../components/FileDropField';
@@ -425,7 +426,7 @@ function ProjectForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const { vendors } = useVendors();
+  const { vendors, quickCreate: quickCreateVendor } = useVendors();
   const { employees } = useEmployees();
 
   const [f, setF] = useState({
@@ -456,16 +457,12 @@ function ProjectForm({
 
   const set = (patch: Partial<typeof f>) => setF({ ...f, ...patch });
 
-  const vendorOptions = (label: string) => (
-    <>
-      <option value="">{label}</option>
-      {vendors.map((v: Vendor) => (
-        <option key={v.id} value={v.id}>
-          {v.name}
-        </option>
-      ))}
-    </>
-  );
+  // 프로젝트의 발주처 · 시공사 · 매입처에 매출 거래처가 끼면 목록이 너무 길어진다(요청 2026-11-13).
+  // 「프로젝트 업체와 출고 거래처는 다르게 관리해야 하는 것 같다」는 말씀대로 매각처는 뺀다.
+  // 구분이 적혀 있지 않은 거래처는 어느 쪽인지 모르므로 남겨 둔다.
+  const projectVendorOptions = vendors
+    .filter((v: Vendor) => v.vendorType !== '매각처')
+    .map((v: Vendor) => ({ value: v.id, label: v.name, isTemporary: v.isTemporary }));
 
   // 계약서를 프로젝트 문서로 붙인다. 분류는 「현장 관리 > 프로젝트 > 매입계약서」로 정해져 있어 묻지 않는다.
   // 파일이 없으면 아무 일도 하지 않는다 — 계약서가 아직 없는 채로 프로젝트를 여는 경우가 있다.
@@ -540,22 +537,31 @@ function ProjectForm({
         </div>
 
         <div>
-          <label className={labelCls}>발주처(원청)</label>
-          <select value={f.ordererId} onChange={(e) => set({ ordererId: e.target.value })} className={inputCls}>
-            {vendorOptions('선택')}
-          </select>
+          <MasterSelect
+            label="발주처(원청)"
+            options={projectVendorOptions}
+            value={f.ordererId}
+            onChange={(v) => set({ ordererId: v })}
+            onQuickCreate={quickCreateVendor}
+          />
         </div>
         <div>
-          <label className={labelCls}>시공사(계약상대)</label>
-          <select value={f.contractorId} onChange={(e) => set({ contractorId: e.target.value })} className={inputCls}>
-            {vendorOptions('선택')}
-          </select>
+          <MasterSelect
+            label="시공사(계약상대)"
+            options={projectVendorOptions}
+            value={f.contractorId}
+            onChange={(v) => set({ contractorId: v })}
+            onQuickCreate={quickCreateVendor}
+          />
         </div>
         <div>
-          <label className={labelCls}>매입처</label>
-          <select value={f.buyerId} onChange={(e) => set({ buyerId: e.target.value })} className={inputCls}>
-            {vendorOptions('선택')}
-          </select>
+          <MasterSelect
+            label="매입처"
+            options={projectVendorOptions}
+            value={f.buyerId}
+            onChange={(v) => set({ buyerId: v })}
+            onQuickCreate={quickCreateVendor}
+          />
         </div>
 
         <div>

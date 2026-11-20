@@ -38,6 +38,7 @@ export interface InventoryMove {
   weight?: string | null;
   /** 자리 간 운반에 든 비용 — 운반비 관리에 자동으로 들어간다 */
   transportCost?: string | null;
+  transportTax?: string | null;
   vehicleNo?: string | null;
   driverName?: string | null;
   memo?: string | null;
@@ -318,6 +319,7 @@ function MoveForm({
     toPlace: record?.toPlace ?? '',
     weight: record?.weight ? String(Number(record.weight)) : '',
     transportCost: record?.transportCost ? String(Number(record.transportCost)) : '',
+    transportTax: record?.transportTax ? String(Number(record.transportTax)) : '',
     vehicleNo: record?.vehicleNo ?? '',
     driverName: record?.driverName ?? '',
     memo: record?.memo ?? '',
@@ -348,6 +350,7 @@ function MoveForm({
         toPlace: f.toPlace || undefined,
         weight: f.weight ? Number(f.weight) : 0,
         transportCost: f.transportCost ? Number(f.transportCost) : undefined,
+        transportTax: f.transportTax ? Number(f.transportTax) : undefined,
         vehicleNo: f.vehicleNo || undefined,
         driverName: f.driverName || undefined,
         memo: f.memo || undefined,
@@ -424,6 +427,12 @@ function MoveForm({
           <label className={labelCls}>운반비(원)</label>
           <NumberInput value={f.transportCost} onChange={(v) => set({ transportCost: v })} />
           <p className="mt-1 text-[12px] text-text-faint">적으면 운반비 관리에 자동으로 들어갑니다</p>
+        </div>
+
+        <div>
+          <label className={labelCls}>운반비 세액(원)</label>
+          <NumberInput value={f.transportTax} onChange={(v) => set({ transportTax: v })} />
+          <p className="mt-1 text-[12px] text-text-faint">비우면 공급가액의 10%로 채웁니다</p>
         </div>
 
         <div>

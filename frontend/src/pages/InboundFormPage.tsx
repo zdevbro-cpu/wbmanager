@@ -66,6 +66,9 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
   const [transportCost, setTransportCost] = useState(record?.transportCost ? String(Number(record.transportCost)) : '');
   // 세금계산서와 맞추려 공급가액과 따로 적는다. 비우면 10%로 채운다(요청 2026-11-13).
   const [transportTax, setTransportTax] = useState(record?.transportTax ? String(Number(record.transportTax)) : '');
+  // 설비 · 펌프처럼 한 덩어리로 들어올 때 적는다(요청 2026-11-13).
+  const [ct, setCt] = useState(record?.ct ?? '');
+  const [unitPrice, setUnitPrice] = useState(record?.unitPrice ? String(Number(record.unitPrice)) : '');
   const [inboundDate, setInboundDate] = useState(initDate(record?.inboundDate));
   const [unloadingPoint, setUnloadingPoint] = useState(record?.unloadingPoint ?? '');
   const [vehicleType, setVehicleType] = useState(record?.vehicleType ?? '');
@@ -183,6 +186,8 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
         inboundDate,
         transportCost: transportCost ? Number(transportCost) : undefined,
         transportTax: transportTax ? Number(transportTax) : undefined,
+        ct: ct || undefined,
+        unitPrice: unitPrice ? Number(unitPrice) : undefined,
         unloadingPoint: unloadingPoint || undefined,
         vehicleType: vehicleType || undefined,
         vehicleNo: vehicleNo || undefined,
@@ -325,6 +330,16 @@ export function InboundFormPage({ embedded = false, onCreated, record = null, on
               <AlertTriangle size={13} /> 재고반영중량이 입고량({netWeight}kg)과 일치하지 않습니다. 확인 후 저장하세요.
             </p>
           )}
+
+          <div>
+            <label className={labelCls}>C/T</label>
+            <input value={ct} onChange={(e) => setCt(e.target.value)} placeholder="예: 설비 1식" className={inputCls} />
+          </div>
+
+          <div>
+            <label className={labelCls}>단가(원)</label>
+            <NumberInput value={unitPrice} onChange={setUnitPrice} />
+          </div>
 
           <div>
             <label className={labelCls}>운반비(원)</label>

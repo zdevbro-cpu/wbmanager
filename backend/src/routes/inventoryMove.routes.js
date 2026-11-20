@@ -57,6 +57,7 @@ router.post('/', async (req, res) => {
       driverName: req.body.driverName || null,
       memo: req.body.memo || null,
       transportCost: num(req.body.transportCost) ?? null,
+      transportTax: num(req.body.transportTax) ?? null,
       createdById: req.appUser?.id ?? null,
     },
     });
@@ -104,6 +105,7 @@ router.patch('/:id', async (req, res) => {
       ...set('driverName', b.driverName || null),
       ...set('memo', b.memo || null),
       ...set('transportCost', num(b.transportCost) ?? null),
+      ...set('transportTax', num(b.transportTax) ?? null),
     },
     });
     await syncTransport(tx, 'moveId', done, {

@@ -65,6 +65,8 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
   const [cubicMeter, setCubicMeter] = useState(initNum(record?.cubicMeter));
   const [unitPrice, setUnitPrice] = useState(initNum(record?.unitPrice));
   const [transportCost, setTransportCost] = useState(initNum(record?.transportCost));
+  // 세금계산서와 맞추려 공급가액과 따로 적는다. 비우면 10%로 채운다(요청 2026-11-13).
+  const [transportTax, setTransportTax] = useState(initNum(record?.transportTax));
   const [amount, setAmount] = useState(initNum(record?.amount));
   const [category, setCategory] = useState(record?.category ?? '출고');
   const [isSubsidiary, setIsSubsidiary] = useState(record?.isSubsidiary ?? false);
@@ -198,6 +200,7 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
         unitPrice: unitPrice ? Number(unitPrice) : undefined,
         cubicMeter: cubicMeter ? Number(cubicMeter) : undefined,
         transportCost: transportCost ? Number(transportCost) : undefined,
+        transportTax: transportTax ? Number(transportTax) : undefined,
         amount: amount ? Number(amount) : undefined,
         category: category || undefined,
         isSubsidiary,
@@ -411,6 +414,12 @@ export function WasteOutboundFormPage({ embedded = false, onCreated, record = nu
           <div>
             <label className={labelCls}>운반비(원)</label>
             <NumberInput value={transportCost} onChange={setTransportCost} />
+          </div>
+
+          <div>
+            <label className={labelCls}>운반비 세액(원)</label>
+            <NumberInput value={transportTax} onChange={setTransportTax} />
+            <p className="mt-1 text-[12px] text-text-faint">비우면 공급가액의 10%로 채웁니다</p>
           </div>
 
           <div>

@@ -108,6 +108,10 @@ export interface Inbound {
   netWeight: string;
   stockWeight?: string | null;
   memo?: string | null;
+  /** 설비 · 펌프처럼 한 덩어리로 들어올 때 적는 구분 */
+  ct?: string | null;
+  /** 덩어리로 들어올 때의 단가 */
+  unitPrice?: string | null;
   project?: Project;
   item?: ItemMaster;
   attachments?: Attachment[];
