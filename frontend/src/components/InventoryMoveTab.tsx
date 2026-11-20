@@ -51,7 +51,8 @@ const day = (v?: string | null) => (v ? v.slice(0, 10) : '-');
 const labelCls = 'mb-1.5 block text-[13px] font-semibold text-text-mid';
 
 export function InventoryMoveTab({ projectId, itemCode }: { projectId: string; itemCode: string }) {
-  const { projects } = useProjects();
+  // 끝난 현장은 고르는 목록에서 뺀다(요청 2026-11-13).
+  const { activeProjects: projects } = useProjects();
   const [rows, setRows] = useState<InventoryMove[]>([]);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');

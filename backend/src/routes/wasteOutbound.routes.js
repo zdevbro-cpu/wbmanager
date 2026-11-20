@@ -17,6 +17,8 @@ const editable = (body) => Object.fromEntries(Object.entries(body).filter(([k]) 
 // 운반비를 지우거나 반출을 삭제하면 짝이 된 건도 걷어낸다.
 async function syncTransportCost(tx, row) {
   const cost = Number(row.transportCost ?? 0);
+  // 세액을 비워 두면 공급가액의 10%로 채운다(요청 2026-11-13).
+  const taxAmount = row.transportTax == null ? Math.round(cost * 0.1) : Number(row.transportTax);
   const existing = await tx.transport.findUnique({ where: { wasteOutboundId: row.id } });
 
   if (cost > 0) {
@@ -29,6 +31,7 @@ async function syncTransportCost(tx, row) {
       destination: row.unloadingPoint,
       weight: row.weight,
       supplyAmount: cost,
+      taxAmount,
       wasteOutboundId: row.id,
     };
     if (existing) await tx.transport.update({ where: { id: existing.id }, data });

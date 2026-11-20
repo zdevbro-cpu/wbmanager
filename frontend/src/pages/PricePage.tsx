@@ -4,6 +4,7 @@ import { pageTitleCls } from '../components/ui/classes';
 import { LatestPriceTab } from '../components/price/LatestPriceTab';
 import { PriceLookupTab } from '../components/price/PriceLookupTab';
 import { PriceEntryTab } from '../components/price/PriceEntryTab';
+import { ConfirmFromOutbound } from '../components/price/ConfirmFromOutbound';
 import { PriceNoticeTab } from '../components/price/PriceNoticeTab';
 import { LmeTab } from '../components/price/LmeTab';
 
@@ -57,7 +58,13 @@ export function PricePage() {
 
       {tab === 'latest' && <LatestPriceTab onOpenItem={openLookup} />}
       {tab === 'lookup' && <PriceLookupTab initialItemId={focusItemId} />}
-      {tab === 'entry' && <PriceEntryTab />}
+      {tab === 'entry' && (
+        <div className="flex flex-col gap-4">
+          {/* 출고 실적에서 단가를 확정해 올리는 자리(요청 2026-11-13). */}
+          <ConfirmFromOutbound />
+          <PriceEntryTab />
+        </div>
+      )}
       {tab === 'notice' && <PriceNoticeTab />}
       {tab === 'lme' && <LmeTab />}
     </div>

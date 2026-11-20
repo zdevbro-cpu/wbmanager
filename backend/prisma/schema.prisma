@@ -155,6 +155,7 @@ model ItemMaster {
 
   sortings         Sorting[]          @relation("SortingItem")
   inventoryAdjusts InventoryAdjust[]
+  outboundSplits   OutboundSplit[]
   inventoryMoves   InventoryMove[]
   sourceSortings   Sorting[]          @relation("SortingSourceItem")
   inventoryLedger  InventoryLedger[]
@@ -168,6 +169,16 @@ model ItemMaster {
 }
 
 // 품목 추정단가 이력 — 재고평가에 사용. projectId가 null이면 전체 적용, 값이 있으면 해당 차수만 적용. (S-YZTHIZ)
+// 묶음(품목 분류)별 평균단가 — 품목에 제 단가가 없을 때 쓴다(요청 2026-11-13).
+model ItemGroupPrice {
+  category  String   @id @map("category")
+  price     Decimal  @map("price") @db.Decimal(14, 2)
+  memo      String?  @map("memo")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("item_group_price")
+}
+
 model ItemPriceHistory {
   id            String     @id @default(uuid())
   itemCode      String     @map("item_code")
@@ -251,6 +262,7 @@ model Project {
   inventoryMoves    InventoryMove[]
   inventoryLedger   InventoryLedger[]
   inventoryAdjusts  InventoryAdjust[]
+  outboundSplits    OutboundSplit[]
   outboundSales     OutboundSale[]
   wasteOutbounds    WasteOutbound[]
   transports        Transport[]
@@ -296,6 +308,10 @@ model Inbound {
   grossWeight    Decimal     @map("gross_weight") @db.Decimal(12, 3) // 총중량
   tareWeight     Decimal     @map("tare_weight") @db.Decimal(12, 3) // 공차중량
   lossWeight     Decimal?    @map("loss_weight") @db.Decimal(12, 3) // 감량
+  // 설비·펌프처럼 덩어리로 들어오는 건을 위한 칸(요청 2026-11-13).
+  // C/T 는 무엇을 적는 칸인지 확인 전이라 글자로 받아 둔다.
+  ct             String?     @map("ct")
+  unitPrice      Decimal?    @map("unit_price") @db.Decimal(14, 2)
   netWeight      Decimal     @map("net_weight") @db.Decimal(12, 3) // 입고량 = 총중량 - 공차중량 - 감량
   stockWeight    Decimal?    @map("stock_weight") @db.Decimal(12, 3) // 재고반영중량(ecount 필수) — 기본값은 입고량과 동기화
   storageZone    String?     @map("storage_zone")
@@ -311,6 +327,8 @@ model Inbound {
   transport     Transport?
   // 이 건에 든 운반비 — 저장하면 운반비 표에 한 줄로 들어간다(리뷰회의 5-6).
   transportCost Decimal?     @map("transport_cost") @db.Decimal(14, 2)
+  // 세금계산서와 맞추려 공급가액과 따로 적는다(요청 2026-11-13).
+  transportTax  Decimal?     @map("transport_tax") @db.Decimal(14, 2)
 
   @@map("inbound")
 }
@@ -362,6 +380,8 @@ model WasteInbound {
   attachments   Attachment[]
   transport     Transport?
   transportCost Decimal?     @map("transport_cost") @db.Decimal(14, 2)
+  // 세금계산서와 맞추려 공급가액과 따로 적는다(요청 2026-11-13).
+  transportTax  Decimal?     @map("transport_tax") @db.Decimal(14, 2)
 
   @@index([kind])
   @@map("waste_inbound")
@@ -385,6 +405,8 @@ model InventoryMove {
   weight        Decimal     @default(0) @map("weight") @db.Decimal(12, 3)
   // 자리 간 운반에 든 비용 — 저장하면 운반비 표에 한 줄로 들어간다.
   transportCost Decimal?    @map("transport_cost") @db.Decimal(14, 2)
+  // 세금계산서와 맞추려 공급가액과 따로 적는다(요청 2026-11-13).
+  transportTax  Decimal?    @map("transport_tax") @db.Decimal(14, 2)
   vehicleNo     String?     @map("vehicle_no")
   driverName    String?     @map("driver_name")
   memo          String?     @map("memo")
@@ -491,11 +513,33 @@ model OutboundSale {
   createdAt        DateTime   @default(now()) @map("created_at")
   deletedAt        DateTime?  @map("deleted_at") // 소프트 삭제
 
-  attachments   Attachment[]
-  transport     Transport?
-  transportCost Decimal?     @map("transport_cost") @db.Decimal(14, 2)
+  attachments    Attachment[]
+  transport      Transport?
+  transportCost  Decimal?        @map("transport_cost") @db.Decimal(14, 2)
+  // 세금계산서와 맞추려 공급가액과 따로 적는다(요청 2026-11-13).
+  transportTax   Decimal?        @map("transport_tax") @db.Decimal(14, 2)
+  outboundSplits OutboundSplit[]
 
   @@map("outbound_sale")
+}
+
+// 계량증명서 한 장을 여러 현장·품목으로 나눈 줄 (요청 2026-11-13).
+// 줄이 있으면 재고는 줄마다 빠지고, 없으면 출고 한 건이 통째로 빠진다.
+model OutboundSplit {
+  id             String       @id @default(uuid())
+  outboundSaleId String       @map("outbound_sale_id")
+  outboundSale   OutboundSale @relation(fields: [outboundSaleId], references: [id], onDelete: Cascade)
+  projectId      String       @map("project_id")
+  project        Project      @relation(fields: [projectId], references: [id])
+  itemCode       String       @map("item_code")
+  item           ItemMaster   @relation(fields: [itemCode], references: [itemCode])
+  weight         Decimal      @map("weight") @db.Decimal(12, 3)
+  amount         Decimal?     @map("amount") @db.Decimal(14, 2)
+  memo           String?      @map("memo")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([outboundSaleId])
+  @@map("outbound_split")
 }
 
 // 폐기물 반출 — 원본 대조: 원방_거래처별 스크랩 출고 현황_Sample.xlsx `폐기물출고량` 시트(헤더 4행)
@@ -526,6 +570,8 @@ model WasteOutbound {
   unitPrice       Decimal?    @map("unit_price") @db.Decimal(12, 2) // 단가
   cubicMeter      Decimal?    @map("cubic_meter") @db.Decimal(10, 2) // 루베 적용
   transportCost   Decimal?    @map("transport_cost") @db.Decimal(14, 2) // 운반비 — 보고 양식의 운반비 칸
+  // 세금계산서와 맞추려 공급가액과 따로 적는다(요청 2026-11-13).
+  transportTax    Decimal?    @map("transport_tax") @db.Decimal(14, 2)
   amount          Decimal?    @map("amount") @db.Decimal(14, 2) // 지출 = 정산중량 × 단가(처리비)
   category        String?     @map("category") // 구분: 출고/이동
   memo            String?     @map("memo") // 비고

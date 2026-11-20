@@ -133,6 +133,7 @@ router.post('/', async (req, res) => {
       destination: created.unloadingPoint ?? null,
       weight: netWeight,
       cost: created.transportCost,
+      tax: created.transportTax,
     });
     return created;
   });
@@ -222,6 +223,7 @@ router.patch('/:id', async (req, res) => {
       destination: row.unloadingPoint ?? null,
       weight: netWeight,
       cost: row.transportCost,
+      tax: row.transportTax,
     });
     return row;
   });

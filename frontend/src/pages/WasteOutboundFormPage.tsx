@@ -31,7 +31,8 @@ const initDate = (v?: string | null) => (v ? v.slice(0, 10) : '');
 const initNum = (v?: string | number | null) => (v == null ? '' : String(Number(v)));
 
 export function WasteOutboundFormPage({ embedded = false, onCreated, record = null, onSaved }: Props = {}) {
-  const { projects } = useProjects();
+  // 끝난 현장은 새로 적을 일이 없어 고르는 목록에서 뺀다(요청 2026-11-13).
+  const { activeProjects: projects } = useProjects();
   const { employees } = useEmployees();
   const { drivers } = useExternalDrivers();
   const { vendors, quickCreate: quickCreateVendor } = useVendors();

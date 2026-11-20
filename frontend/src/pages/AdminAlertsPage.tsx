@@ -236,7 +236,7 @@ function AlertRow({ item }: { item: ExpiringItem }) {
       </td>
       <td className={tdCls}>
         <Link
-          to={meta.to}
+          to={`${meta.to}?from=alerts`}
           title={`${meta.label} 화면으로 이동`}
           aria-label={`${meta.label} 화면으로 이동`}
           className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] border border-border text-primary hover:bg-hover"

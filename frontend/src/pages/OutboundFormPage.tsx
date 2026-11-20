@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { PackageMinus, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { PackageMinus, CheckCircle2, AlertTriangle, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { registerVehicleAfterSave } from '../lib/vehicleRegister';
 import { formatPhone } from '../lib/phone';
 import { useProjects, useVendors, useItemMasters, useCommonCodes, useEmployees, useExternalDrivers } from '../hooks/useMasters';
 import { MasterSelect } from '../components/MasterSelect';
+import { SearchSelect } from '../components/SearchSelect';
 import { VehicleDriverFields } from '../components/VehicleDriverFields';
 import { FileUpload } from '../components/FileUpload';
 import { StagedFileUpload } from '../components/StagedFileUpload';
@@ -33,7 +34,8 @@ const initDate = (v?: string | null) => (v ? v.slice(0, 10) : '');
 const initNum = (v?: string | number | null) => (v == null ? '' : String(Number(v)));
 
 export function OutboundFormPage({ embedded = false, onCreated, record = null, onSaved }: Props = {}) {
-  const { projects } = useProjects();
+  // 끝난 현장은 새로 적을 일이 없어 고르는 목록에서 뺀다(요청 2026-11-13).
+  const { activeProjects: projects } = useProjects();
   const { employees } = useEmployees();
   const { drivers } = useExternalDrivers();
   const { vendors, quickCreate: quickCreateVendor } = useVendors();
@@ -45,6 +47,8 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
   const [projectId, setProjectId] = useState(record?.projectId ?? '');
   // 이 건에 든 운반비 — 저장하면 운반비 관리에 한 줄로 들어간다(리뷰회의 5-6).
   const [transportCost, setTransportCost] = useState(record?.transportCost ? String(Number(record.transportCost)) : '');
+  // 세금계산서와 맞추려 공급가액과 따로 적는다. 비우면 10%로 채운다(요청 2026-11-13).
+  const [transportTax, setTransportTax] = useState(record?.transportTax ? String(Number(record.transportTax)) : '');
   const [itemCode, setItemCode] = useState(record?.itemCode ?? '');
   const [buyerId, setBuyerId] = useState(record?.buyerId ?? '');
   const [outboundDate, setOutboundDate] = useState(initDate(record?.outboundDate));
@@ -137,6 +141,52 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
 
   // 공급가액 = 정산중량 × 단가, 부가세 = 공급가액 10%
   // 공급가액은 정산중량 × 단가로 잡되, 손으로 적으면 그 값이 우선한다(끝자리 절사·협의 금액 대응).
+  // 거래처와 제품명이 정해지면 그 조합의 최근 단가를 끌어온다(요청 2026-11-13).
+  // 이미 적어 둔 값은 덮지 않는다 — 고쳐 쓴 값을 지우면 안 되기 때문이다.
+  const [priceHint, setPriceHint] = useState('');
+  useEffect(() => {
+    if (!buyerId || !itemCode) {
+      setPriceHint('');
+      return;
+    }
+    let alive = true;
+    api
+      .get<{ found: boolean; price?: number; priceType?: string; effectiveDate?: string }>(
+        `/api/prices/recent?vendorId=${buyerId}&itemCode=${encodeURIComponent(itemCode)}`,
+      )
+      .then((r) => {
+        if (!alive) return;
+        if (!r.found) {
+          setPriceHint('이 거래처·품목의 등록된 단가가 없습니다');
+          return;
+        }
+        setPriceHint(`최근 단가 ${formatNumber(r.price ?? 0)}원 (${r.priceType ?? ''} · ${(r.effectiveDate ?? '').slice(0, 10)})`);
+        setUnitPrice((cur) => (cur ? cur : String(r.price ?? '')));
+      })
+      .catch(() => {
+        if (alive) setPriceHint('');
+      });
+    return () => {
+      alive = false;
+    };
+  }, [buyerId, itemCode]);
+  // 계량증명서 한 장을 여러 현장·품목으로 나눠 적는다(요청 2026-11-13).
+  // 줄이 없으면 지금까지처럼 한 현장·한 품목으로 통째로 들어간다.
+  type Split = { projectId: string; itemCode: string; weight: string; memo: string };
+  const [splits, setSplits] = useState<Split[]>(
+    (record?.splits ?? []).map((sp) => ({
+      projectId: sp.projectId,
+      itemCode: sp.itemCode,
+      weight: String(Number(sp.weight)),
+      memo: sp.memo ?? '',
+    })),
+  );
+  const splitSum = splits.reduce((acc, sp) => acc + (sp.weight ? Number(sp.weight) : 0), 0);
+  const splitOff = splits.length > 0 && Math.abs(splitSum - (settledWeightNum ?? 0)) > 0.001;
+  const setSplit = (i: number, patch: Partial<Split>) =>
+    setSplits((prev) => prev.map((sp, k) => (k === i ? { ...sp, ...patch } : sp)));
+
+
   const autoAmountNum = settledWeightNum !== null && unitPrice ? settledWeightNum * Number(unitPrice) : null;
   const amountNum = amount !== '' ? Number(amount) : autoAmountNum;
   const vatNum = amountNum === null ? null : Math.round(amountNum * 0.1);
@@ -150,6 +200,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
         projectId,
         itemCode,
         transportCost: transportCost ? Number(transportCost) : undefined,
+        transportTax: transportTax ? Number(transportTax) : undefined,
         buyerId: buyerId || undefined,
         outboundDate,
         loadingPoint: loadingPoint || undefined,
@@ -163,6 +214,8 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
         lossWeight: lossWeight ? Number(lossWeight) : undefined,
         stockWeight: stockWeight ? Number(stockWeight) : undefined,
         unitPrice: unitPrice ? Number(unitPrice) : undefined,
+        // 비어 있으면 보내지 않는다 — 다른 칸만 고치러 들어왔을 때 줄이 지워지면 안 된다.
+        ...(splits.length > 0 || record ? { splits: splits.filter((sp) => sp.projectId && sp.itemCode && sp.weight) } : {}),
         amount: amount !== '' ? Number(amount) : undefined,
         category: category || undefined,
         isSubsidiary,
@@ -308,6 +361,7 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
           <div>
             <label className={labelCls}>단가(원)</label>
             <NumberInput value={unitPrice} onChange={setUnitPrice} />
+            {priceHint && <p className="mt-1 text-[12px] text-text-faint">{priceHint}</p>}
           </div>
 
           <VehicleDriverFields
@@ -388,6 +442,76 @@ export function OutboundFormPage({ embedded = false, onCreated, record = null, o
             <label className={labelCls}>운반비(원)</label>
             <NumberInput value={transportCost} onChange={setTransportCost} />
             <p className="mt-1 text-[12px] text-text-faint">적으면 운반비 관리에 자동으로 들어갑니다</p>
+          </div>
+
+          <div>
+            <label className={labelCls}>운반비 세액(원)</label>
+            <NumberInput value={transportTax} onChange={setTransportTax} />
+            <p className="mt-1 text-[12px] text-text-faint">비우면 공급가액의 10%로 채웁니다</p>
+          </div>
+
+          {/* 계량증명서 한 장을 여러 현장·품목으로 나눠 적는 자리(요청 2026-11-13).
+              줄을 더하지 않으면 위에서 고른 현장·품목으로 통째로 들어간다. */}
+          <div className="col-span-3 rounded-[10px] border border-border p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-[13px] font-bold text-text-strong">현장 · 품목 나누기</span>
+              <span className="text-[12px] text-text-faint">
+                한 계량증명서가 여러 현장이나 품목으로 갈릴 때만 씁니다
+              </span>
+              <button
+                type="button"
+                onClick={() => setSplits((prev) => [...prev, { projectId: '', itemCode: '', weight: '', memo: '' }])}
+                className={`${outlineBtnCls} ml-auto px-2 py-1 text-[12.5px]`}
+              >
+                줄 추가
+              </button>
+            </div>
+
+            {splits.length === 0 ? (
+              <p className="text-[12.5px] text-text-faint">
+                나누지 않으면 위에서 고른 현장과 제품명으로 {settledWeight}kg 전부가 들어갑니다.
+              </p>
+            ) : (
+              <>
+                {splits.map((sp, i) => (
+                  <div key={i} className="mb-2 grid grid-cols-[minmax(0,2fr)_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_auto] items-center gap-2">
+                    <SearchSelect
+                      ariaLabel="나눌 현장"
+                      options={projects.map((pr) => ({ value: pr.id, label: pr.roundName }))}
+                      value={sp.projectId}
+                      onChange={(v) => setSplit(i, { projectId: v })}
+                      placeholder="현장"
+                    />
+                    <SearchSelect
+                      ariaLabel="나눌 품목"
+                      options={items.map((it) => ({ value: it.itemCode, label: it.itemName }))}
+                      value={sp.itemCode}
+                      onChange={(v) => setSplit(i, { itemCode: v })}
+                      placeholder="품목"
+                    />
+                    <NumberInput value={sp.weight} onChange={(v) => setSplit(i, { weight: v })} />
+                    <input
+                      value={sp.memo}
+                      onChange={(e) => setSplit(i, { memo: e.target.value })}
+                      placeholder="비고 (예: 검수에서 갈림)"
+                      className={inputCls}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSplits((prev) => prev.filter((_, k) => k !== i))}
+                      className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-danger"
+                      title="이 줄 지우기"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+                <p className={`text-[12.5px] ${splitOff ? 'font-semibold text-danger' : 'text-text-faint'}`}>
+                  나눈 합계 {formatNumber(splitSum)}kg / 정산중량 {settledWeight}kg
+                  {splitOff && ' — 두 값이 같아야 저장됩니다'}
+                </p>
+              </>
+            )}
           </div>
 
           <div className="col-span-3">

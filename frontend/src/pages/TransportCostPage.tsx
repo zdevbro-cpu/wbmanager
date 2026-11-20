@@ -61,7 +61,8 @@ const BELONGS = ['프로젝트', '본사', '창고이동', '기타'] as const;
 
 // 운반비 관리 — 손익보고서의 운반비는 여기 등록된 금액(공급가액 + 세액)을 합산한다.
 export function TransportCostPage() {
-  const { projects } = useProjects();
+  // 필터와 이름 조회에는 끝난 현장도 있어야 한다. 고르는 자리에만 activeProjects를 쓴다.
+  const { projects, activeProjects } = useProjects();
   const [rows, setRows] = useState<Transport[]>([]);
   const [projectId, setProjectId] = useState('');
   const [belongTo, setBelongTo] = useState('');
@@ -230,7 +231,7 @@ export function TransportCostPage() {
       {open && (
         <FormModal title="운반비 등록" icon={Truck} onClose={() => setOpen(false)}>
           <TransportForm
-            projects={projects}
+            projects={activeProjects}
             defaultProjectId={projectId}
             onDone={() => {
               setOpen(false);

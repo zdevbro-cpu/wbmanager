@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Layers, Plus, Eye, RotateCcw, FileArchive } from 'lucide-react';
+import { Layers, Plus, Eye, RotateCcw, FileArchive, CheckCircle2 } from 'lucide-react';
 import { ZipDownloadModal } from '../components/ZipDownloadModal';
 import { api } from '../api/client';
 import { ExcelDownloadButton, excelSheet, excelNum, conditionText } from '../components/ExcelDownloadButton';
@@ -72,6 +72,23 @@ export function ProjectManagementPage() {
   const changeDetailStatus = async (p: Project, next: string) => {
     await api.patch(`/api/projects/${p.id}`, { status: next });
     await syncDetail(p.id);
+  };
+
+  // 목록에서 한 번에 종결하고 되살린다. 종결은 「완료」와 같은 것으로 둔다(합의 2026-11-20).
+  // 재고·거래·보고서는 그대로 남는다 — 고르는 목록에서만 빠진다.
+  const toggleDone = async (p: Project) => {
+    const next = p.status === '완료' ? '진행' : '완료';
+    const word = next === '완료' ? '종결' : '되살리기';
+    if (!window.confirm(`${p.roundName}
+
+${word} 하시겠습니까?
+${
+      next === '완료'
+        ? '등록 화면의 고르는 목록에서 빠집니다. 재고와 지난 자료는 그대로 남습니다.'
+        : '등록 화면의 고르는 목록에 다시 나옵니다.'
+    }`)) return;
+    await api.patch(`/api/projects/${p.id}`, { status: next });
+    await reload();
   };
 
   // 건수가 많지 않아 화면에서 거른다. 계약기간은 구간이 겹치는 건을 남긴다.
@@ -223,6 +240,18 @@ export function ProjectManagementPage() {
                       className="rounded-[6px] p-1 text-text-sub hover:bg-hover hover:text-primary"
                     >
                       <FileArchive size={15} />
+                    </button>
+                    {/* 끝난 현장은 등록 화면의 고르는 목록에서 빠진다.
+                        되살리면 다시 나온다 — 재고와 지난 자료는 건드리지 않는다. */}
+                    <button
+                      type="button"
+                      title={p.status === '완료' ? '되살리기 (진행으로)' : '종결 (완료로)'}
+                      onClick={() => toggleDone(p)}
+                      className={`rounded-[6px] p-1 hover:bg-hover ${
+                        p.status === '완료' ? 'text-success hover:text-primary' : 'text-text-sub hover:text-success'
+                      }`}
+                    >
+                      {p.status === '완료' ? <RotateCcw size={15} /> : <CheckCircle2 size={15} />}
                     </button>
                   </div>
                 </td>

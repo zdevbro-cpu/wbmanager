@@ -848,10 +848,39 @@ router.post('/documents/:id/links', async (req, res) => {
 });
 
 // 소프트 삭제 — 드라이브 파일은 남긴다. 되돌릴 여지를 두기 위해서다.
+//
+// 입고·출고에 붙인 증빙은 올릴 때 문서관리로 자동 편철되므로, 같은 드라이브 파일을
+// 두 곳이 가리킨다. 문서만 지우면 거래 화면에는 그대로 남아 두 화면이 어긋난다
+// (요청 2026-11-13). 그래서 여기서 거래 쪽 첨부 줄도 함께 거둔다.
 router.delete('/documents/:id', async (req, res) => {
   const doc = await prisma.document.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } });
+
+  const keys = (
+    await prisma.documentVersion.findMany({
+      where: { documentId: doc.id, NOT: { storageKey: null } },
+      select: { storageKey: true },
+    })
+  ).map((v) => v.storageKey);
+
+  let detached = 0;
+  if (keys.length) {
+    // 거래에 매달린 것만 거둔다. 자산·차량 서류는 문서관리와 따로 관리하므로 둔다.
+    const { count } = await prisma.attachment.deleteMany({
+      where: {
+        driveFileId: { in: keys },
+        OR: [
+          { NOT: { inboundId: null } },
+          { NOT: { wasteInboundId: null } },
+          { NOT: { outboundSaleId: null } },
+          { NOT: { wasteOutboundId: null } },
+        ],
+      },
+    });
+    detached = count;
+  }
+
   recordDocAudit(req, { documentId: doc.id, action: 'doc_delete', detail: doc.title });
-  res.json({ ok: true });
+  res.json({ ok: true, 거래첨부에서뺌: detached });
 });
 
 // 문서 이력 — 등록·수정·버전·열람 기록을 시간순으로 준다.

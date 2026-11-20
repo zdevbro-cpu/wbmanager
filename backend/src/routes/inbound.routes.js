@@ -32,7 +32,9 @@ router.get('/', async (req, res) => {
       ...(itemCode ? { itemCode } : {}),
     },
     include: { project: true, item: true, attachments: true },
-    orderBy: { inboundDate: 'desc' },
+    // 등록한 차례대로 본다(요청 2026-11-13). 같은 날 여러 건이 섞이지 않게
+    // 날짜가 아니라 등록 시각을 기준으로 둔다.
+    orderBy: { createdAt: 'desc' },
   });
   res.json(inbounds);
 });
@@ -91,6 +93,7 @@ router.post('/', async (req, res) => {
       destination: created.unloadingPoint ?? null,
       weight: netWeight,
       cost: created.transportCost,
+      tax: created.transportTax,
     });
     return created;
   });
@@ -145,6 +148,7 @@ router.patch('/:id', async (req, res) => {
       destination: row.unloadingPoint ?? null,
       weight: netWeight,
       cost: row.transportCost,
+      tax: row.transportTax,
     });
     return row;
   });

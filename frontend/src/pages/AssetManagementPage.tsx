@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Boxes, Plus, Eye, Car, Wrench, RotateCcw, ScanLine, Trash2, FileArchive, Upload } from 'lucide-react';
 import { api } from '../api/client';
+import { BackToAlerts } from '../components/BackToAlerts';
 import { ExcelDownloadButton, excelSheet, conditionText } from '../components/ExcelDownloadButton';
 import { useCommonCodes, useEmployees } from '../hooks/useMasters';
 import { FormModal } from '../components/FormModal';
@@ -147,6 +148,7 @@ export function AssetManagementPage() {
 
   return (
     <div>
+      <BackToAlerts />
       <div className="mb-4 flex items-center gap-2">
         <Boxes size={20} className="text-primary" />
         <h1 className={pageTitleCls}>자산 관리 (차량 · 장비)</h1>

@@ -367,7 +367,7 @@ export async function buildDailyXlsx(payload) {
   const s2 = wb.addWorksheet('스크랩반출List');
   setWidths(s2, [2, 5, 15, 12, 11, 13, 13, 8, 12, 14, 8]);
 
-  const s2Num = [8, 9, 10]; // 단가·스크랩중량·결제금액
+  const s2Num = [8, 9, 10]; // 단가·정산중량·결제금액
   const s2Money = 10;       // 결제금액 — 양식과 같이 연녹색 배경
   days.forEach((d) => {
     const rows = rowsOf(d).filter((r) => r.type === 'outbound_sale');
@@ -375,7 +375,7 @@ export async function buildDailyXlsx(payload) {
 
     listTitle(s2, '□ 원방 스크랩 반출보고', d.date + ' 기준', 11);
     listHeader(s2, [
-      'No', '프로잭트명', '반출날짜', '상차지', '거래처', '상차제품', '단가', '스크랩중량', '결제금액', '입금여부',
+      'No', '프로잭트명', '반출날짜', '상차지', '거래처', '상차제품', '단가', '정산중량', '결제금액', '입금여부',
     ]);
 
     rows.forEach((r, i) => {
@@ -410,7 +410,7 @@ export async function buildDailyXlsx(payload) {
   const s3 = wb.addWorksheet('폐기물반출List');
   setWidths(s3, [2, 5, 15, 12, 11, 12, 11, 14, 16, 8, 11, 7, 12, 12, 12]);
 
-  const s3Num = [10, 11, 12, 13, 14, 15]; // 단가·스크랩중량·루베·운반비·처리비·합계
+  const s3Num = [10, 11, 12, 13, 14, 15]; // 단가·정산중량·루베·운반비·처리비·합계
   const s3Money = [13, 14, 15];           // 운반비·처리비·합계 — 양식과 같이 연녹색 배경
   const carryOf = (r) => Number(r.transportCost ?? 0);
   const treatOf = (r) => Number(r.amount ?? 0);
@@ -424,7 +424,7 @@ export async function buildDailyXlsx(payload) {
       s3,
       [
         'No', '프로젝트명', '반출날짜', '상차지', '배출자', '운반자', '처리자', '상차제품',
-        '단가', '스크랩중량', '루베', '운반비', '처리비', '합계',
+        '단가', '정산중량', '루베', '운반비', '처리비', '합계',
       ],
       { fill: WASTE_LIST_HEADER_FILL },
     );

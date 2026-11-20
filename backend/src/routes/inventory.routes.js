@@ -18,6 +18,46 @@ router.get('/snapshot/:projectId/:itemCode/entries', async (req, res) => {
   res.json(entries);
 });
 
+// 묶음(품목 분류)별 평균단가 — 보고 고친다(요청 2026-11-13).
+// 품목마다 단가를 넣기 어려워, 묶음 하나로 그 안의 품목을 모두 평가하는 길이다.
+router.get('/group-prices', async (_req, res) => {
+  const rows = await prisma.itemGroupPrice.findMany({ orderBy: { category: 'asc' } });
+  res.json(rows.map((r) => ({ ...r, price: Number(r.price) })));
+});
+
+router.put('/group-prices/:category', async (req, res) => {
+  const price = Number(req.body?.price);
+  if (!Number.isFinite(price) || price < 0) {
+    return res.status(400).json({ error: '단가는 0 이상의 숫자로 적어 주세요.' });
+  }
+  const row = await prisma.itemGroupPrice.upsert({
+    where: { category: req.params.category },
+    update: { price, memo: req.body?.memo ?? null },
+    create: { category: req.params.category, price, memo: req.body?.memo ?? null },
+  });
+  res.json({ ...row, price: Number(row.price) });
+});
+
+// 품목 기준단가를 재고평가 화면에서 바로 고친다 —
+// 「보이는 데이터에서 기준단가를 누르면 쓰는 란이 뜨면 좋겠다」는 말씀에 따른 것이다.
+router.put('/item-price/:itemCode', async (req, res) => {
+  const raw = req.body?.basePrice;
+  const price = raw === null || raw === '' ? null : Number(raw);
+  if (price !== null && (!Number.isFinite(price) || price < 0)) {
+    return res.status(400).json({ error: '단가는 0 이상의 숫자로 적어 주세요.' });
+  }
+  try {
+    const row = await prisma.itemMaster.update({
+      where: { itemCode: req.params.itemCode },
+      data: { basePrice: price },
+      select: { itemCode: true, itemName: true, basePrice: true },
+    });
+    res.json({ ...row, basePrice: row.basePrice == null ? null : Number(row.basePrice) });
+  } catch {
+    res.status(404).json({ error: '품목을 찾지 못했습니다.' });
+  }
+});
+
 router.get('/valuation', async (req, res) => {
   const { projectId, asOf } = req.query;
   const result = await getInventoryValuation({ projectId, asOf });

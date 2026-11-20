@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { api } from '../api/client';
 import type { Vendor, ItemMaster, Project, Vehicle, Employee, CommonCode, Asset, ExternalDriver } from '../types';
 
@@ -64,7 +64,12 @@ export function useProjects() {
     reload();
   }, [reload]);
 
-  return { projects, reload };
+  // 끝난 현장은 새로 적을 일이 없으므로 등록 화면에서는 뺀다(요청 2026-11-13).
+  // 조회·필터는 projects를 그대로 쓴다 — 완료한 현장도 재고와 손익에는 남아 있고,
+  // 지난 자료를 들여다볼 때 목록에서 사라지면 찾을 길이 없어진다.
+  const activeProjects = useMemo(() => projects.filter((p) => p.status !== '완료'), [projects]);
+
+  return { projects, activeProjects, reload };
 }
 
 // 입출고 등록의 차량번호는 자산 관리에 등록된 차량에서 선택한다.

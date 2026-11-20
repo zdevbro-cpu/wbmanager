@@ -6,7 +6,8 @@ import { pageTitleCls } from '../components/ui/classes';
 // 현장인력계획 — 프로젝트별로 어느 구간에 어떤 인력을 얼마나 쓸지 잡고,
 // 공수표에 쌓인 실행과 견준다. 공수표 안 탭이 아니라 그 자체로 보는 화면이다.
 export function LaborPlanPage() {
-  const { projects } = useProjects();
+  // 끝난 현장은 고르는 목록에서 뺀다(요청 2026-11-13).
+  const { activeProjects: projects } = useProjects();
 
   return (
     <div>

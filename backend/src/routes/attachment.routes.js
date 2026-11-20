@@ -92,7 +92,26 @@ router.delete('/:id', async (req, res) => {
   }
 
   await prisma.attachment.delete({ where: { id: item.id } });
-  res.json({ ok: true });
+
+  // 올릴 때 문서관리로 자동 편철된 건이면 그쪽도 함께 거둔다 —
+  // 한쪽에서만 사라지면 두 화면이 어긋난다(요청 2026-11-13).
+  let filed = 0;
+  if (item.driveFileId) {
+    const docs = await prisma.documentVersion.findMany({
+      where: { storageKey: item.driveFileId },
+      select: { documentId: true },
+    });
+    const ids = [...new Set(docs.map((d) => d.documentId))];
+    if (ids.length) {
+      const { count } = await prisma.document.updateMany({
+        where: { id: { in: ids }, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+      filed = count;
+    }
+  }
+
+  res.json({ ok: true, 문서관리에서뺌: filed });
 });
 
 export default router;

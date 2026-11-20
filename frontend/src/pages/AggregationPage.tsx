@@ -50,6 +50,8 @@ export function AggregationPage() {
   const [data, setData] = useState<Aggregation | null>(null);
   // 소계표는 기본으로 접어 둔다 — 첫 화면은 지표와 그래프만 보이게 한다.
   const [showTables, setShowTables] = useState(false);
+  // 월·업체 통계를 무엇으로 묶을지 — 상차일(기본) 또는 입금일(요청 2026-11-13).
+  const [basis, setBasis] = useState<'date' | 'paid'>('date');
 
   const search = () => {
     const { from, to } = monthRange(month);
@@ -57,6 +59,7 @@ export function AggregationPage() {
     if (from) params.set('from', from);
     if (to) params.set('to', to);
     if (projectId) params.set('projectId', projectId);
+    if (basis === 'paid') params.set('basis', 'paid');
     api.get<Aggregation>(`/api/reports/aggregation?${params.toString()}`).then((res) =>
       setData({
         ...res,
@@ -67,6 +70,7 @@ export function AggregationPage() {
         byType: res.byType ?? [],
         byMonth: res.byMonth ?? [],
         byDay: res.byDay ?? [],
+        byVendorMonth: res.byVendorMonth ?? [],
         totals: res.totals ?? { inbound: 0, waste_inbound: 0, sorting: 0, outbound_sale: 0, waste_outbound: 0, amount: 0 },
       }),
     );
@@ -76,7 +80,7 @@ export function AggregationPage() {
   useEffect(() => {
     search();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, projectId]);
+  }, [month, projectId, basis]);
 
   // 금액은 유형별로 성격이 다르다 — 매각은 매출, 폐기물반출은 처리비(비용)라 카드에서 갈라 보여 준다.
   const amountOf = (type: string) => Number(data?.byType?.find((g) => g.key === type)?.amount ?? 0);
@@ -86,10 +90,15 @@ export function AggregationPage() {
     if (!data) return null;
     const inTotal = data.totals.inbound + data.totals.waste_inbound;
     const outTotal = data.totals.outbound_sale + data.totals.waste_outbound;
+    // 보정은 더한 것이 양수, 뺀 것이 음수로 들어온다. 그래서 그냥 더하면 된다.
+    // 이것을 빼먹으면 「재고 / 재고평가」와 숫자가 어긋난다 — 그쪽은 원장을 직접 읽는다.
+    const adjust = data.totals.adjust ?? 0;
     return {
       inTotal,
       outTotal,
-      remain: Math.max(0, inTotal - outTotal),
+      adjust,
+      // 0으로 깎지 않는다. 재고평가와 같은 값이어야 하므로 음수면 음수대로 보여 준다.
+      remain: inTotal - outTotal + adjust,
       rate: inTotal > 0 ? (outTotal / inTotal) * 100 : 0,
     };
   }, [data]);
@@ -179,7 +188,7 @@ export function AggregationPage() {
           </div>
 
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
-            <ShareCard title="품목 구성 (중량 상위 6)" groups={data.byItem} metric="weight" color="#60a5fa" />
+            <ShareCard title="품목 구성 (출고 상위 6)" groups={data.byItem} metric="outWeight" color="#60a5fa" />
             <ShareCard title="거래처 구성 (금액 상위 6)" groups={data.byVendor} metric="amount" color="#22c55e" />
           </div>
 
@@ -200,9 +209,69 @@ export function AggregationPage() {
           <div className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4 ${showTables ? '' : 'hidden'}`}>
             <GroupTable title="① 프로젝트별 소계" groups={data.byProject} rowSlots={pairRows(data.byProject, data.byVendor)} />
             <GroupTable title="② 거래처별 소계" groups={data.byVendor} rowSlots={pairRows(data.byProject, data.byVendor)} />
-            <GroupTable title="③ 품목별 소계" groups={data.byItem} rowSlots={pairRows(data.byItem, data.byType)} />
-            <GroupTable title="④ 구분별 소계" groups={data.byType} rowSlots={pairRows(data.byItem, data.byType)} />
-            <GroupTable title="⑤ 월별 소계" groups={data.byMonth} rowSlots={pairRows(data.byMonth)} />
+            {/* 품목은 가짓수가 많아 좌우로 나누면 잘린다. 한 줄을 통째로 쓰고 묶어 보여 준다. */}
+            <div className="col-span-2">
+              <GroupTable title="③ 품목별 소계 (입고 · 출고 묶음)" groups={data.byItem} grouped />
+            </div>
+            {/* 월별 · 업체별 통계 — 기준일을 상차일/입금일로 바꿔 본다(요청 2026-11-13). */}
+            <div className="col-span-2">
+              <div className="mb-2 flex items-center gap-2">
+                <h2 className={`${sectionTitleCls} text-[15px]`}>④ 월별 · 업체별 통계</h2>
+                <div className="flex rounded-[8px] border border-border p-0.5">
+                  {([['date', '상차일'], ['paid', '입금일']] as const).map(([k, label]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setBasis(k)}
+                      className={`rounded-[6px] px-2.5 py-1 text-[12.5px] font-semibold ${
+                        basis === k ? 'bg-primary text-white' : 'text-text-sub hover:bg-hover'
+                      }`}
+                    >
+                      {label} 기준
+                    </button>
+                  ))}
+                </div>
+                {basis === 'paid' && (data.undated ?? 0) > 0 && (
+                  <span className="text-[12.5px] text-warning">입금일이 없는 {data.undated}건은 빠졌습니다</span>
+                )}
+              </div>
+              <div className={`${tableWrapCls} overflow-auto`}>
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0 z-[1] bg-card">
+                    <tr className="border-y border-border">
+                      <th className={thCls}>월</th>
+                      <th className={thCls}>분기</th>
+                      <th className={thCls}>거래처</th>
+                      <th className={`${thCls} text-right`}>출고중량</th>
+                      <th className={`${thCls} text-right`}>금액</th>
+                      <th className={`${thCls} text-right`}>건수</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(data.byVendorMonth ?? []).map((c) => (
+                      <tr key={c.key} className={trCls}>
+                        <td className={`${tdCls} tabular whitespace-nowrap`}>{c.month}</td>
+                        <td className={`${tdCls} whitespace-nowrap text-text-sub`}>{c.quarter}</td>
+                        <td className={tdCls}>{c.vendorName ?? '-'}</td>
+                        <td className={`${tdCls} tabular text-right`}>{Math.round(c.outWeight).toLocaleString()}</td>
+                        <td className={`${tdCls} tabular text-right`}>{Math.round(c.amount).toLocaleString()}</td>
+                        <td className={`${tdCls} tabular text-right`}>{c.count}</td>
+                      </tr>
+                    ))}
+                    {(data.byVendorMonth ?? []).length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-[13px] text-text-faint">
+                          거래처가 적힌 자료가 없습니다
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <GroupTable title="⑤ 구분별 소계" groups={data.byType} rowSlots={pairRows(data.byType, data.byMonth)} />
+            <GroupTable title="⑥ 월별 소계" groups={data.byMonth} rowSlots={pairRows(data.byType, data.byMonth)} />
           </div>
         </div>
       )}
@@ -211,7 +280,11 @@ export function AggregationPage() {
 }
 
 // 반입 → 처리 흐름. 남은 물량이 곧 야적장 재고라 회수율과 함께 본다.
-function FlowCard({ flow }: { flow: { inTotal: number; outTotal: number; remain: number; rate: number } }) {
+function FlowCard({
+  flow,
+}: {
+  flow: { inTotal: number; outTotal: number; adjust: number; remain: number; rate: number };
+}) {
   const outPct = flow.inTotal > 0 ? (flow.outTotal / flow.inTotal) * 100 : 0;
 
   return (
@@ -227,10 +300,12 @@ function FlowCard({ flow }: { flow: { inTotal: number; outTotal: number; remain:
         <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, outPct)}%` }} />
       </div>
 
-      <dl className="grid grid-cols-3 gap-3">
+      <dl className="grid grid-cols-4 gap-3">
         {[
           { label: '반입 합계', value: kg(flow.inTotal) },
           { label: '처리 합계', value: kg(flow.outTotal) },
+          // 더한 것과 뺀 것을 합한 값이다. 뺀 쪽이 많으면 음수로 보인다.
+          { label: '조정', value: kg(flow.adjust) },
           { label: '잔여(재고)', value: kg(flow.remain) },
         ].map((f) => (
           <div key={f.label} className="rounded-[8px] border border-border px-3 py-2">
@@ -299,11 +374,15 @@ function ShareCard({
 }: {
   title: string;
   groups: AggregationGroup[];
-  metric: 'weight' | 'amount';
+  metric: 'weight' | 'amount' | 'outWeight';
   color: string;
 }) {
-  const value = (g: AggregationGroup) =>
-    metric === 'amount' ? g.amount : g.inbound + g.waste_inbound + g.outbound_sale + g.waste_outbound;
+  const value = (g: AggregationGroup) => {
+    if (metric === 'amount') return g.amount;
+    // 품목 구성은 나간 것을 기준으로 본다(요청 2026-11-13) — 무엇이 팔려 나갔는지가 궁금한 자리다.
+    if (metric === 'outWeight') return g.outbound_sale + g.waste_outbound;
+    return g.inbound + g.waste_inbound + g.outbound_sale + g.waste_outbound;
+  };
 
   const rows = [...(groups ?? [])].sort((a, b) => value(b) - value(a)).slice(0, 6);
   const total = rows.reduce((sum, g) => sum + value(g), 0);
@@ -353,17 +432,83 @@ function GroupTable({
   groups,
   emptyText,
   rowSlots,
+  grouped,
 }: {
   title: string;
   groups: AggregationGroup[];
   emptyText?: string;
   rowSlots?: number;
+  /** 입고 계열과 출고 계열을 묶어 보여 준다. 칸이 적어 품목이 많아도 잘리지 않는다. */
+  grouped?: boolean;
 }) {
   const rows = groups ?? [];
+  // 묶어 보기 — 들어온 것, 나간 것, 조정, 남은 것 넷으로만 센다(요청 2026-11-13).
+  const inOf = (g: AggregationGroup) => g.inbound + g.waste_inbound;
+  const outOf = (g: AggregationGroup) => g.outbound_sale + g.waste_outbound;
+  const adjOf = (g: AggregationGroup) => g.adjust ?? 0;
+  const leftOf = (g: AggregationGroup) => inOf(g) - outOf(g) + adjOf(g);
+  const sumOf = (fn: (g: AggregationGroup) => number) => rows.reduce((acc, g) => acc + fn(g), 0);
   const sum = (key: keyof AggregationGroup) => rows.reduce((acc, g) => acc + Number(g[key] ?? 0), 0);
   // 자료가 모자라면 빈 줄로 채워 좌우 표의 높이를 맞춘다.
   const blanks = rowSlots && rows.length > 0 ? Math.max(0, rowSlots - rows.length) : 0;
   const bodyHeight = rowSlots ? ROW_HEIGHT * rowSlots + 66 : undefined;
+
+  if (grouped) {
+    return (
+      <div>
+        <h2 className={`${sectionTitleCls} mb-2 text-[15px]`}>{title}</h2>
+        <div className={`${tableWrapCls} overflow-auto`}>
+          <table className="w-full border-collapse">
+            <thead className="sticky top-0 z-[1] bg-card">
+              <tr className="border-y border-border">
+                <th className={thCls}>품목</th>
+                <th className={`${thCls} text-right`}>입고계</th>
+                <th className={`${thCls} text-right`}>출고계</th>
+                <th className={`${thCls} text-right`}>조정</th>
+                <th className={`${thCls} text-right`}>잔여</th>
+                <th className={`${thCls} text-right`}>매각금액</th>
+                <th className={`${thCls} text-right`}>건수</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((g) => (
+                <tr key={g.key} className={trCls}>
+                  <td className={tdCls}>{g.label}</td>
+                  <td className={`${tdCls} tabular text-right`}>{Math.round(inOf(g)).toLocaleString()}</td>
+                  <td className={`${tdCls} tabular text-right`}>{Math.round(outOf(g)).toLocaleString()}</td>
+                  <td className={`${tdCls} tabular text-right`}>{Math.round(adjOf(g)).toLocaleString()}</td>
+                  <td className={`${tdCls} tabular text-right font-semibold text-text-strong`}>
+                    {Math.round(leftOf(g)).toLocaleString()}
+                  </td>
+                  <td className={`${tdCls} tabular text-right`}>{Math.round(g.saleAmount ?? 0).toLocaleString()}</td>
+                  <td className={`${tdCls} tabular text-right`}>{g.count}</td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-[13px] text-text-faint">
+                    {emptyText ?? '데이터 없음'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+            {rows.length > 0 && (
+              <tfoot className="sticky bottom-0 z-[1]">
+                <tr className="border-t-2 border-border bg-hover">
+                  <td className={`${tdCls} font-bold text-text-strong`}>합계</td>
+                  {[sumOf(inOf), sumOf(outOf), sumOf(adjOf), sumOf(leftOf), sum('saleAmount'), sum('count')].map((v, i) => (
+                    <td key={i} className={`${tdCls} tabular text-right font-bold text-text-strong`}>
+                      {Math.round(v).toLocaleString()}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

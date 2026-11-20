@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Truck } from 'lucide-react';
+import { Truck, Upload } from 'lucide-react';
+import { outlineBtnCls } from '../components/ui/classes';
 import { api } from '../api/client';
 import { TransactionListLayout, EMPTY_FILTER, type Column, type TxFilter } from '../components/TransactionListLayout';
+import { InboundBulkUploadModal } from '../components/InboundBulkUploadModal';
 import { useFilterSuggestions } from '../hooks/useFilterSuggestions';
 import { FormModal } from '../components/FormModal';
 import { InboundFormPage } from './InboundFormPage';
@@ -41,6 +43,7 @@ export function InboundListPage() {
   const [rows, setRows] = useState<Inbound[]>([]);
   const [filter, setFilter] = useState<TxFilter>(EMPTY_FILTER);
   const [open, setOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const { suggestions, collect } = useFilterSuggestions();
 
   const load = () => {
@@ -78,6 +81,11 @@ export function InboundListPage() {
         setFilter={setFilter}
         suggestions={suggestions}
         onAdd={() => setOpen(true)}
+        headerExtra={
+          <button type="button" onClick={() => setBulkOpen(true)} className={outlineBtnCls}>
+            <Upload size={15} /> 엑셀 일괄 등록
+          </button>
+        }
         onDelete={remove}
         reload={load}
         isDraft={(r) => r.isDraft === true}
@@ -98,6 +106,8 @@ export function InboundListPage() {
         exportName="입고현황"
         emptyText="등록된 입고 내역이 없습니다."
       />
+      {bulkOpen && <InboundBulkUploadModal onClose={() => setBulkOpen(false)} onDone={load} />}
+
 
       {open && (
         <FormModal title="입고(반입) 등록" icon={Truck} wide onClose={() => setOpen(false)}>

@@ -87,6 +87,8 @@ interface Props<T> {
   filter: TxFilter;
   setFilter: (f: TxFilter) => void;
   onAdd: () => void;
+  /** 등록 단추 옆에 더 붙일 것 — 쓰지 않는 화면은 그대로다 */
+  headerExtra?: ReactNode;
   onDelete: (row: T) => void;
   /** 엑셀 내보내기 대상 — /api/list-exports/{exportType} 로 현재 필터가 그대로 전달된다. */
   exportType?: 'inbound' | 'waste_inbound' | 'outbound_sale' | 'waste_outbound';
@@ -119,6 +121,7 @@ export function TransactionListLayout<T>({
   filter,
   setFilter,
   onAdd,
+  headerExtra,
   onDelete,
   exportType,
   exportName,
@@ -243,6 +246,7 @@ export function TransactionListLayout<T>({
               <Download size={15} /> 엑셀 다운로드
             </button>
           )}
+          {headerExtra}
           <button type="button" onClick={onAdd} className={primaryBtnCls}>
             <Plus size={15} /> {addLabel}
           </button>

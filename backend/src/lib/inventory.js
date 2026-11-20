@@ -38,6 +38,9 @@ export async function getInventorySnapshot({ projectId, itemCode } = {}) {
     ...r,
     projectName: projectMap.get(r.projectId)?.roundName ?? null,
     itemName: itemMap.get(r.itemCode)?.itemName ?? null,
+    // 묶음별로 모아 보기 위해 분류도 함께 싣는다(요청 2026-11-13).
+    category: itemMap.get(r.itemCode)?.category ?? null,
+    basePrice: itemMap.get(r.itemCode)?.basePrice ?? null,
   }));
 }
 
@@ -180,7 +183,15 @@ export async function resolveUnitPrice(itemCode, projectId, asOfDate) {
   if (global) return { price: Number(global.price), source: 'global' };
 
   const item = await prisma.itemMaster.findUnique({ where: { itemCode } });
-  return { price: Number(item?.basePrice ?? 0), source: 'base' };
+  if (item?.basePrice != null) return { price: Number(item.basePrice), source: 'base' };
+
+  // 품목에 제 단가가 없으면 묶음(고철·비철·구리·폐기물) 평균단가를 쓴다(요청 2026-11-13).
+  // 품목마다 하나하나 넣기 어렵다는 말씀에 따라 둔 길이다.
+  if (item?.category) {
+    const group = await prisma.itemGroupPrice.findUnique({ where: { category: item.category } });
+    if (group && Number(group.price) > 0) return { price: Number(group.price), source: 'group' };
+  }
+  return { price: 0, source: 'none' };
 }
 
 // 재고평가(미실현 손익) = 잔량 × 적용단가 (F-KGKYJL)
@@ -192,5 +203,20 @@ export async function getInventoryValuation({ projectId, asOf } = {}) {
     valued.push({ ...row, unitPrice: price, priceSource: source, valuationAmount: row.remaining * price });
   }
   const totalValuation = valued.reduce((sum, r) => sum + r.valuationAmount, 0);
-  return { rows: valued, totalValuation };
+  // 잔여량 합계도 함께 준다 — 평가금액만으로는 얼마나 남았는지 알 수 없다(요청 2026-11-13).
+  const totalRemaining = valued.reduce((sum, r) => sum + Number(r.remaining ?? 0), 0);
+
+  // 묶음별 소계. 품목이 많아 한눈에 안 들어온다는 말씀에 따라 묶어 준다.
+  const groupMap = new Map();
+  for (const r of valued) {
+    const key = r.category ?? '미분류';
+    if (!groupMap.has(key)) groupMap.set(key, { category: key, remaining: 0, valuationAmount: 0, itemCount: 0 });
+    const g = groupMap.get(key);
+    g.remaining += Number(r.remaining ?? 0);
+    g.valuationAmount += r.valuationAmount;
+    g.itemCount += 1;
+  }
+  const groups = [...groupMap.values()].sort((a, b) => b.remaining - a.remaining);
+
+  return { rows: valued, totalValuation, totalRemaining, groups };
 }

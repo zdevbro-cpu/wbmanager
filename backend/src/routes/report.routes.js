@@ -23,8 +23,9 @@ function eachDate(from, to) {
 
 // 갑지 자동 집계 — 기간/프로젝트/거래처/품목 기준 소계 (F-SDUKJY, S-TCUYZO)
 router.get('/aggregation', async (req, res) => {
-  const rows = await queryLedger(req.query);
-  res.json(buildAggregation(rows));
+  const { basis, ...filters } = req.query;
+  const rows = await queryLedger(filters);
+  res.json(buildAggregation(rows, { basis: basis === 'paid' ? 'paid' : 'date' }));
 });
 
 const TYPE_LABEL = {

@@ -7,8 +7,10 @@
 // 폐기물 반출은 예전부터 제 함수로 같은 일을 하고 있어 그대로 둔다.
 
 // key: 'inboundId' | 'outboundSaleId' | 'wasteInboundId' | 'moveId'
-export async function syncTransport(tx, key, row, { date, origin, destination, weight, cost }) {
+export async function syncTransport(tx, key, row, { date, origin, destination, weight, cost, tax }) {
   const amount = Number(cost ?? 0);
+  // 세액을 비워 두면 공급가액의 10%로 채운다 — 손으로 넣는 운반비 등록과 같은 규칙이다.
+  const taxAmount = tax == null || tax === '' ? Math.round(amount * 0.1) : Number(tax);
   const existing = await tx.transport.findUnique({ where: { [key]: row.id } });
 
   if (!(amount > 0)) {
@@ -27,6 +29,7 @@ export async function syncTransport(tx, key, row, { date, origin, destination, w
     itemCode: row.itemCode ?? null,
     itemName: row.itemName ?? null,
     supplyAmount: amount,
+    taxAmount,
     [key]: row.id,
   };
 

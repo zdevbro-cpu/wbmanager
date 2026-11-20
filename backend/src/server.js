@@ -9,6 +9,7 @@ import inventoryMoveRoutes from './routes/inventoryMove.routes.js';
 import inventoryAdjustRoutes from './routes/inventoryAdjust.routes.js';
 import zipRoutes from './routes/zip.routes.js';
 import assetBulkRoutes from './routes/assetBulk.routes.js';
+import inboundBulkRoutes from './routes/inboundBulk.routes.js';
 import wasteInboundRoutes from './routes/wasteInbound.routes.js';
 import wasteOutboundRoutes from './routes/wasteOutbound.routes.js';
 import vendorRoutes from './routes/vendor.routes.js';
@@ -59,6 +60,8 @@ app.use('/api', auditMutations);
 
 app.use('/api/permissions', permissionRoutes);
 app.use('/api/projects', projectRoutes);
+// 일괄 등록을 먼저 건다. 뒤에 걸면 inboundRoutes 의 /:id 가 /template 을 가로챈다.
+app.use('/api/inbounds', inboundBulkRoutes);
 app.use('/api/inbounds', inboundRoutes);
 app.use('/api/outbounds', outboundRoutes);
 app.use('/api/sortings', sortingRoutes);

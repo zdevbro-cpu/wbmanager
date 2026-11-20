@@ -13,10 +13,17 @@ import { pageTitleCls, primaryBtnCls, inputCls, tableWrapCls, thCls,
   tdNumCls, tdCls, trCls } from '../components/ui/classes';
 import { InventoryMoveTab } from '../components/InventoryMoveTab';
 import { InventoryAdjustTab } from '../components/InventoryAdjustTab';
+import { GroupPriceBar } from '../components/GroupPriceBar';
 import type { InventoryValuation, InventoryValuationRow, LedgerEntry } from '../types';
 import { DateField } from '../components/ui/DateField';
 
-const SOURCE_LABEL: Record<string, string> = { project: '프로젝트전용', global: '전체적용', base: '기준단가' };
+const SOURCE_LABEL: Record<string, string> = {
+  project: '프로젝트전용',
+  global: '전체적용',
+  base: '기준단가',
+  group: '묶음 평균',
+  none: '단가 없음',
+};
 
 const REF_TYPE_LABEL: Record<string, string> = {
   inbound: '입고',
@@ -98,7 +105,7 @@ export function InventoryPage() {
         <Boxes size={20} className="text-primary" />
         <h1 className={pageTitleCls}>재고 스냅샷 / 재고평가</h1>
         <div className="ml-auto flex rounded-[9px] border border-border p-0.5">
-          {([['stock', '재고 · 재고평가'], ['move', '이동'], ['adjust', '보정']] as const).map(([k, label]) => (
+          {([['stock', '재고 · 재고평가'], ['move', '이동'], ['adjust', '조정']] as const).map(([k, label]) => (
             <button
               key={k}
               type="button"
@@ -141,10 +148,15 @@ export function InventoryPage() {
 
       {tab === 'stock' && valuation && (
         <>
-          <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {/* 묶음 평균단가 — 고치면 아래 평가금액이 바로 다시 계산된다(요청 2026-11-13). */}
+          <GroupPriceBar onSaved={search} />
+
+          <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-4">
             <SummaryCard label="총 입고" value={`${formatNumber(totals.inWeight)}kg`} />
             <SummaryCard label="총 출고" value={`${formatNumber(totals.outWeight)}kg`} />
-            <SummaryCard label="재고평가 합계" value={`${formatNumber(totalValuation)}원`} highlight />
+            {/* 얼마나 남았는지를 먼저 보여 주고, 그 값에 단가를 곱한 평가금액을 뒤에 둔다(요청 2026-11-13). */}
+            <SummaryCard label="재고(잔여)량" value={`${formatNumber(totals.inWeight - totals.outWeight)}kg`} highlight />
+            <SummaryCard label="재고평가 금액" value={`${formatNumber(totalValuation)}원`} />
           </div>
 
           <div className="mb-4 rounded-[12px] border border-border bg-card px-4 py-3">

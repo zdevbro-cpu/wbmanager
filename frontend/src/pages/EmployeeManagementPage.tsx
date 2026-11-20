@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Users, Plus, Trash2, CheckCircle2, Eye, RotateCcw } from 'lucide-react';
 import { api } from '../api/client';
+import { BackToAlerts } from '../components/BackToAlerts';
 import { ExcelDownloadButton, excelSheet, excelNum, conditionText } from '../components/ExcelDownloadButton';
 import { formatNumber } from '../lib/number';
 import { formatPhone } from '../lib/phone';
@@ -173,6 +174,7 @@ export function EmployeeManagementPage({ embedded = false }: { embedded?: boolea
 
   return (
     <div>
+      <BackToAlerts />
       <div className="mb-5 flex items-center gap-2">
         {!embedded && <Users size={20} className="text-primary" />}
         {!embedded && <h1 className={pageTitleCls}>임직원 관리</h1>}

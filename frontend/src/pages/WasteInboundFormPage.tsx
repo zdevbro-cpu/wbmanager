@@ -31,7 +31,8 @@ const initDate = (v?: string | null) => (v ? v.slice(0, 10) : '');
 const initNum = (v?: string | number | null) => (v == null ? '' : String(Number(v)));
 
 export function WasteInboundFormPage({ embedded = false, onCreated, record = null, onSaved }: Props = {}) {
-  const { projects } = useProjects();
+  // 끝난 현장은 새로 적을 일이 없어 고르는 목록에서 뺀다(요청 2026-11-13).
+  const { activeProjects: projects } = useProjects();
   const { employees } = useEmployees();
   const { drivers } = useExternalDrivers();
   const { items, quickCreate: quickCreateItem } = useItemMasters();
@@ -44,6 +45,8 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
   const [projectId, setProjectId] = useState(record?.projectId ?? '');
   // 이 건에 든 운반비 — 저장하면 운반비 관리에 한 줄로 들어간다(리뷰회의 5-6).
   const [transportCost, setTransportCost] = useState(record?.transportCost ? String(Number(record.transportCost)) : '');
+  // 세금계산서와 맞추려 공급가액과 따로 적는다. 비우면 10%로 채운다(요청 2026-11-13).
+  const [transportTax, setTransportTax] = useState(record?.transportTax ? String(Number(record.transportTax)) : '');
   // 입고 · 운반 · 참고 — 운반만 한 건은 우리 재고가 아니다(리뷰회의 5-1).
   const [kind, setKind] = useState(record?.kind ?? '입고');
   const [receiveDate, setReceiveDate] = useState(initDate(record?.receiveDate));
@@ -145,6 +148,7 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
         projectId,
         kind,
         transportCost: transportCost ? Number(transportCost) : undefined,
+        transportTax: transportTax ? Number(transportTax) : undefined,
         receiveDate,
         handoverDate: handoverDate || undefined,
         olbaroReported,
@@ -350,6 +354,12 @@ export function WasteInboundFormPage({ embedded = false, onCreated, record = nul
             <label className={labelCls}>운반비(원)</label>
             <NumberInput value={transportCost} onChange={setTransportCost} />
             <p className="mt-1 text-[12px] text-text-faint">적으면 운반비 관리에 자동으로 들어갑니다</p>
+          </div>
+
+          <div>
+            <label className={labelCls}>운반비 세액(원)</label>
+            <NumberInput value={transportTax} onChange={setTransportTax} />
+            <p className="mt-1 text-[12px] text-text-faint">비우면 공급가액의 10%로 채웁니다</p>
           </div>
 
           {/* 운반비 · 비고 · 올바로가 한 줄(4칸)에 들어가야 첨부 두 개도 다음 줄에 나란히 선다. */}

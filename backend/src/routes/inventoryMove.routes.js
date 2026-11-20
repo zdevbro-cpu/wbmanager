@@ -67,6 +67,7 @@ router.post('/', async (req, res) => {
       destination: made.toPlace,
       weight: made.weight,
       cost: made.transportCost,
+      tax: made.transportTax,
     });
     return made;
   });
@@ -111,6 +112,7 @@ router.patch('/:id', async (req, res) => {
       destination: done.toPlace,
       weight: done.weight,
       cost: done.transportCost,
+      tax: done.transportTax,
     });
     return done;
   });

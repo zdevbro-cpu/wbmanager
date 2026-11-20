@@ -31,7 +31,7 @@ const TYPE_LABEL = {
   outbound_sale: '매각(출고)',
   waste_outbound: '폐기물반출',
   move: '이동',
-  adjust: '보정',
+  adjust: '조정',
 };
 
 router.get('/export', async (req, res) => {

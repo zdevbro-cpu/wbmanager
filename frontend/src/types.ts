@@ -113,6 +113,8 @@ export interface Inbound {
   attachments?: Attachment[];
   /** 이 건에 든 운반비 — 운반비 관리에 자동으로 들어간다 */
   transportCost?: string | null;
+  /** 운반비 세액 — 비우면 공급가액의 10% */
+  transportTax?: string | null;
 }
 
 export interface WasteInbound {
@@ -152,6 +154,20 @@ export interface WasteInbound {
   attachments?: Attachment[];
   /** 이 건에 든 운반비 — 운반비 관리에 자동으로 들어간다 */
   transportCost?: string | null;
+  /** 운반비 세액 — 비우면 공급가액의 10% */
+  transportTax?: string | null;
+}
+
+/** 계량증명서 한 장을 여러 현장·품목으로 나눈 줄 */
+export interface OutboundSplit {
+  id: string;
+  projectId: string;
+  itemCode: string;
+  weight: string;
+  amount?: string | null;
+  memo?: string | null;
+  project?: { roundName: string };
+  item?: { itemName: string };
 }
 
 export interface OutboundSale {
@@ -187,6 +203,10 @@ export interface OutboundSale {
   attachments?: Attachment[];
   /** 이 건에 든 운반비 — 운반비 관리에 자동으로 들어간다 */
   transportCost?: string | null;
+  /** 운반비 세액 — 비우면 공급가액의 10% */
+  transportTax?: string | null;
+  /** 나눠 적은 줄 — 없으면 한 현장·한 품목이다 */
+  splits?: OutboundSplit[];
 }
 
 export interface WasteOutbound {
@@ -214,6 +234,8 @@ export interface WasteOutbound {
   unitPrice?: string | null;
   cubicMeter?: string | null;
   transportCost?: string | null;
+  /** 운반비 세액 — 비우면 공급가액의 10% */
+  transportTax?: string | null;
   amount?: string | null;
   category?: string | null;
   memo?: string | null;
@@ -507,6 +529,10 @@ export interface AggregationGroup {
   sorting: number;
   outbound_sale: number;
   waste_outbound: number;
+  /** 이동 — 재고 총량은 바뀌지 않지만 유형별 소계에는 나온다 */
+  move?: number;
+  /** 조정(보정·별도출고) — 뺀 것은 음수로 온다 */
+  adjust?: number;
   amount: number;
   count: number;
 }
@@ -518,6 +544,21 @@ export interface Aggregation {
   byItem: AggregationGroup[];
   byType: AggregationGroup[];
   byMonth: AggregationGroup[];
+  /** 업체 × 월 교차 — 「월별 업체별 통계」 */
+  byVendorMonth?: {
+    key: string;
+    vendorId: string;
+    vendorName: string | null;
+    month: string;
+    quarter: string;
+    outWeight: number;
+    amount: number;
+    count: number;
+  }[];
+  /** 'date' 상차일 | 'paid' 입금일 */
+  basis?: string;
+  /** 입금일 기준일 때 입금일이 없어 빠진 건수 */
+  undated?: number;
   byDay: AggregationGroup[];
   totals: Omit<AggregationGroup, 'key' | 'label' | 'count'>;
 }
@@ -580,6 +621,10 @@ export interface InventoryValuationRow extends InventorySnapshotRow {
 export interface InventoryValuation {
   rows: InventoryValuationRow[];
   totalValuation: number;
+  /** 잔여 중량 합계 — 평가금액보다 먼저 보여 준다 */
+  totalRemaining?: number;
+  /** 묶음(품목 분류)별 소계 */
+  groups?: { category: string; remaining: number; valuationAmount: number; itemCount: number }[];
 }
 
 export interface LedgerEntryDetail {
