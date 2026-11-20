@@ -518,7 +518,7 @@ model OutboundSale {
   transportCost  Decimal?        @map("transport_cost") @db.Decimal(14, 2)
   // 세금계산서와 맞추려 공급가액과 따로 적는다(요청 2026-11-13).
   transportTax   Decimal?        @map("transport_tax") @db.Decimal(14, 2)
-  outboundSplits OutboundSplit[]
+  splits         OutboundSplit[]
 
   @@map("outbound_sale")
 }
